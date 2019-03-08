@@ -1,0 +1,4 @@
+irec
+*.o
+*.as
+*.out
