@@ -2,6 +2,10 @@
 #include<stdlib.h>
 #include<string.h>
 #include<errno.h>
+#include<unistd.h>
+#include<getopt.h>
+#include<sys/types.h>
+#include<sys/wait.h>
 
 #define BADUSAGE 1
 #define NOFILE -1
@@ -17,7 +21,6 @@
 #define CONDITIONAL 5
 #define ASM 6
 #define INVALID -1
-extern int compile(long sz, char* data);
 // Data structures
 
 //linked list
@@ -29,8 +32,14 @@ typedef struct List{
 typedef struct State{
     List* variables;
     List* functions;
+    int comp_asm;
+    char* outputfile;
+    int verbose;
+    int annotate;
     FILE* fp;
 } State;
+
+extern void compile(State* state, char* data, long sz);
 extern int matches(char* big, char* small);
 extern char* proc_str(char* data, long max, int* index);
 extern char* integer(int i);
@@ -47,40 +56,133 @@ extern int get_token_type(char* token);
 
 int main(int argc, char **argv)
 {
-   if(argc != 2){
-      printf("usage: irec file\n");
-      return BADUSAGE;
-   }
-   char* filename = argv[1];
-   printf("compiling %s\n", filename);
-   FILE* fp;
-   if((fp = fopen(filename, "r")) == NULL){
-      return -ENOENT;
-   }
-   fseek(fp, 0L, SEEK_END);
-   long sz = ftell(fp);
-   rewind(fp);
-   printf("%ld\n", sz);
-   char* data;
-   if((data = (char*) malloc(sz)) == NULL){
-      printf("cannot allocate memory to read file");
-      return -ENOMEM;
-   }
+    struct option options[] = {
+    {"asm", 0, NULL, 'a'},
+    {"output", 0, NULL, 'o'},
+    {"verbose", 0, NULL, 'v'},
+    {"annotate", 0, NULL, 'n'},
+    };
+    State *state = (State*) malloc(sizeof (State));
+    state->comp_asm = 0;
+    state->outputfile = NULL;
+    state->verbose = 0;
+    state->annotate = 0;
+    char c = 0;
+    int ind = 0;
+    while((c = getopt_long(argc, argv, "ao:vn", options, &ind)) != -1){
+        switch(c){
+            case 'a':
+                state->comp_asm = 1;
+                break;
+            case 'o':
+                state->outputfile = optarg;
+                break;
+            case 'v':
+                state->verbose = 1;
+                break;
+            case 'n':
+                state->annotate = 1;
+                break;
+            case '?':
+                printf("Try %s --help for usage.", argv[0]);
+                return 1;
+        }
+    }
+    char* filename = argv[optind];
+    printf("compiling %s, ", filename);
+    FILE* fp;
+    if((fp = fopen(filename, "r")) == NULL){
+       return -ENOENT;
+    }
+    fseek(fp, 0L, SEEK_END);
+    long sz = ftell(fp);
+    rewind(fp);
+    printf("%ld bytes\n", sz);
+    char* data;
+    if((data = (char*) malloc(sz)) == NULL){
+        printf("cannot allocate memory to read file");
+        return -ENOMEM;
+    }
     fread(data, 1, sz, fp);
     data[sz] = '\0';
-    int index0 = -1;
-    int index1 = -1;
-    int multiline = 0;
-   
+    if(state->outputfile == NULL){
+        char* indx = strchr(filename, '.');
+        if(indx == NULL) indx = strchr(filename, 0);
+        char* outputfile = (char*) malloc(indx-filename+4);
+        memcpy(outputfile, filename, (indx-filename)+1);
+        char* ind01 = strchr(outputfile, '.');
+        if(state->comp_asm){
+            if(ind01 == NULL){
+                ind01 = strchr(outputfile, 0);
+                ind01[0] = '.';
+            }
+            ind01[1] = 'a';
+            ind01[2] = 's';
+            ind01[3] = 0;
+        }
+        else{
+            if(ind01 == NULL){
+                ind01[0] = '0';
+                ind01[1] = '0';
+                ind01[2] = 0;
+            }
+            else{
+                ind01[0] = 0;
+            }
+        }
+        state->outputfile = outputfile;
+    }
     FILE* fpo;
-    if((fpo = fopen("output.as", "w")) == NULL)
+    char* compto;
+    if(!state->comp_asm){
+        compto = tempnam(NULL, "irecc");
+        if((fpo = fopen(compto, "w")) == NULL){
+            printf("error writing to temp");
+            return 0;
+        }
+        
+    }
+    else if((fpo = fopen(state->outputfile, "w")) == NULL)
     {
         printf("error writing output");
         return ENOENT;
     }
-    State *state = (State*) malloc(sizeof (State));
     state->fp = fpo;
+    compile(state, data, sz);
+    fclose(state->fp);
+    if(!state->comp_asm){
+        printf("Done compilation. Assembling...\n");
+        char* t = tempnam(NULL, "ireca");
+        int i = fork();
+        if(i == 0){
+            execl("/usr/bin/as", "/usr/bin/as", compto, "-o", t, (char*) NULL);
+            return 0;
+        }
+        int s0;
+        wait(&s0);
+        printf("Linking...\n");
+        i = fork();
+        if(i == 0){
+            execl("/usr/bin/ld", "/usr/bin/ld", t, "-o", state->outputfile, (char*) NULL);
+            return 0;
+        }
+        int s1;
+        wait(&s1);
+        printf("Done. %s\n", state->outputfile);
+    }
+    return 0;
+    /**
+    printf("\n%s\n", data);
+    printf("%02X%02X %02x%02x", 'x', 'd', 'f', 'p');
+    return compile(sz, data);
+    */
+}
+
+void compile(State* state, char* data, long sz){
     write_header(state);
+    int index0 = -1;
+    int index1 = -1;
+    int multiline = 0;
     for(int i = 0; i < sz; i++){
         if(data[i] == '`'){
             if(index1 == -1){
@@ -108,14 +210,8 @@ int main(int argc, char **argv)
                 process_token(token, state);
                 index0 = i+1;
             }    
-       }
-   }
-   return 0;
-   /**
-   printf("\n%s\n", data);
-   printf("%02X%02X %02x%02x", 'x', 'd', 'f', 'p');
-   return compile(sz, data);
-   */
+        }
+    }
 }
 
 // example input "((()))"
@@ -207,6 +303,7 @@ void write_funcall(char* token, State* state){
     func[i] = 0;
     fprintf(state->fp, "call %s\n", func);
 }
+
 
 int get_token_type(char* token){// TODO ADD TYPE=CONDITIONAL
     int i = 0;
