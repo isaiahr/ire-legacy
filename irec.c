@@ -6,53 +6,7 @@
 #include<getopt.h>
 #include<sys/types.h>
 #include<sys/wait.h>
-
-#define BADUSAGE 1
-#define NOFILE -1
-#define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
-#define ISNUMERIC(x) (x > 47 && x < 58) 
-
-//token types
-#define ASSIGNMENT 2
-#define FUNCTION_CALL 3
-#define FUNCTION_DEFN 4
-#define FUNCTION_RETURN 8
-#define FUNCTION_END 7
-#define CONDITIONAL 5
-#define ASM 6
-#define INVALID -1
-// Data structures
-
-//linked list
-typedef struct List{
-    void* data;
-    struct List* next;
-} List;
-//compiler state
-typedef struct State{
-    List* variables;
-    List* functions;
-    int comp_asm;
-    char* outputfile;
-    int verbose;
-    int annotate;
-    FILE* fp;
-} State;
-
-extern void compile(State* state, char* data, long sz);
-extern int matches(char* big, char* small);
-extern char* proc_str(char* data, long max, int* index);
-extern char* integer(int i);
-extern void process_token(char* token, State* state);
-extern void write_funcall(char* func, State* state);
-extern void write_funcdef(char* func, State* state);
-extern void write_funcreturn(State* state);
-extern void write_asm(char* str, State* state);
-extern void write_varref(char* var, State* state);
-extern void write_header(State* state);
-extern void write_footer(State* state);
-extern int get_token_type(char* token);
-
+#include"irec.h"
 
 int main(int argc, char **argv)
 {
@@ -254,22 +208,32 @@ void process_token(char* token, State* state){
     }
     if(type == FUNCTION_DEFN){
         // example: def func { } 
-        int i = 0;
-        while(token[i] != ' ') i++;
+        int i = nextnonwhite(token);
         int j = i+1;
         while(token[j] != ' ' && token[j] != '{') j++;
-        char* function = (char*) malloc(j-i);
-        memcpy(function, &token[i+1], j-i-1);
-        function[j-i-1] = 0;
+        char* function = (char*) malloc(j-i+1);
+        memcpy(function, &token[i], j-i);
+        function[j-i] = 0;
         write_funcdef(function, state);
     }
     if(type == FUNCTION_RETURN){
-        int i = 0;
-        while(token[i] != ' ') i++;
-        write_varref(&token[i+1], state); 
+        int i = nextnonwhite(token);
+        write_varref(&token[i], state); 
         write_funcreturn(state);
     }
     if(type == FUNCTION_END){} // TODO 
+}
+// returns index of first whitespace.
+int nextwhite(char* str){
+    int i = 0;
+    while(str[i] != ' ')i++;
+    return i;
+}
+//returns index following next whitespace gap.
+int nextnonwhite(char* str){
+    int i = nextwhite(str);
+    while(str[i] == ' ')i++;
+    return i;
 }
 
 void write_header(State* state){
