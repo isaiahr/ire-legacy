@@ -2,11 +2,15 @@
 #define __WRITER_H__
 #define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
 #define ISNUMERIC(x) (x > 47 && x < 58) 
-extern void write_funcall(char* func, State* state);
-extern void write_funcdef(char* func, State* state);
+extern void write_funcall(Function* func, State* state);
+extern void write_funcdef(Function* func, State* state);
 extern void write_funcreturn(State* state);
 extern void write_asm(char* str, State* state);
-extern void write_varref(char* var, State* state);
+extern void write_varref(Variable* var, State* state);
+extern void write_iref(char* str, State* state);
 extern void write_header(State* state);
 extern void write_footer(State* state);
+extern void write_vassign(Variable* a, Variable* b, State* state);
+extern void write_fassign(Variable* a, State* state);
+extern void write_iassign(Variable* a, char* b, State* state);
 #endif

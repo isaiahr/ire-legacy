@@ -1,5 +1,5 @@
 all: irec.c
-	gcc -Wall -o irec irec.c compiler.c writer.c
+	gcc -Wall -g -o irec irec.c compiler.c writer.c datastructs.c
 
 clean:
 	rm irec

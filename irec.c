@@ -7,6 +7,7 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include"irec.h"
+#include"datastructs.h"
 #include"compiler.h"
 #include"writer.h"
 
@@ -21,8 +22,12 @@ int main(int argc, char **argv)
     State *state = (State*) malloc(sizeof (State));
     state->comp_asm = 0;
     state->outputfile = NULL;
+    state->functions = NULL;
+    state->variables = NULL;
     state->verbose = 0;
     state->annotate = 0;
+    state->currentfunc = NULL;
+    state->writ_return = 0;
     char c = 0;
     int ind = 0;
     while((c = getopt_long(argc, argv, "ao:vn", options, &ind)) != -1){

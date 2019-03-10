@@ -1,0 +1,25 @@
+
+def get33 {
+    return 33
+}
+
+def exit {
+`
+mov     %rbx, %rdi
+mov     $60, %rax
+syscall
+`
+}
+
+def main {
+    // test function return
+    int j
+    j = get33()
+    // test function transfer assignment
+    int o
+    o = j
+    // test transfer assignment not having side effect
+    int p
+    p = o
+    exit(o)
+}
