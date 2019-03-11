@@ -6,6 +6,7 @@
 #include<getopt.h>
 #include<sys/types.h>
 #include<sys/wait.h>
+#include<stdarg.h>
 #include"datastructs.h"
 #include"writer.h"
 
@@ -23,6 +24,16 @@ mov rax, rbx.
 
 
 */
+
+void annotate(State* state, char* format, ...){
+    if(!state->annotate)
+        return;
+    va_list args;
+    va_start(args, format);
+    vfprintf(state->fp, format, args);
+    va_end(args);
+}
+
 
 void write_header(State* state){
     fprintf(state->fp, ".global _start\n.text\n"); 

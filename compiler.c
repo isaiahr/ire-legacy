@@ -6,6 +6,7 @@
 #include"datastructs.h"
 #include"compiler.h"
 #include"writer.h"
+#include"common.h"
 
 void compile(State* state, char* data, long sz){
     int index0 = 0;
@@ -60,7 +61,7 @@ void process_token(char* token, State* state){
         return process_token(token + sizeof(char), state);
     }
     int type = get_token_type(token);
-    printf("token %i, %s \n", type, token);
+    debug(state, "token %i, %s \n", type, token);
     if(type == COMMENT || type == IMPORT){
         return;
     }
@@ -86,7 +87,8 @@ void process_token(char* token, State* state){
         }
         int j = endofvarname(&token[i]);
         char* b = copy(token, i, i+j);
-        printf("assign %s = %s, %i %i\n", a, b, i, j);
+        debug(state, "assign %s = %s\n", a, b);
+        annotate(state, "# %s = %s\n", a, b);
         if(ISNUMERIC(b[0])){
             Variable* vara = ref_var(state->currentfunc->name, a, state);
             write_iassign(vara, b, state);
@@ -116,6 +118,7 @@ void process_token(char* token, State* state){
         char* new_token = (char*) malloc(j-1);
         memcpy(new_token, &token[i+1], j-2);
         new_token[j-1] = 0;
+        annotate(state, "# call function %s \n", funct);
         if(get_token_type(new_token) != INVALID){// TODO bugfix space = bug here
             process_token(new_token, state);
         }
@@ -133,7 +136,9 @@ void process_token(char* token, State* state){
         write_funcall(fun, state);
     }
     if(type == ASM){
+        annotate(state, "# asm block\n");
         write_asm(token + sizeof(char), state);
+        annotate(state, "# end of asm block\n");
     }
     if(type == FUNCTION_DEFN){
         // example: def func { } 
@@ -151,11 +156,13 @@ void process_token(char* token, State* state){
         else{
             f = add_func(function, 1,  state);
         }
+        annotate(state, "# declaration of function %s\n", function);
         write_funcdef(f, state);
         state->currentfunc = f;
         state->writ_return = 0;
     }
     if(type == FUNCTION_RETURN){
+        annotate(state, "# return %s\n", token);
         if(strlen(token) == strlen("return")){
             return;
         }
