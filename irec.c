@@ -10,6 +10,7 @@
 #include"datastructs.h"
 #include"compiler.h"
 #include"writer.h"
+#include"precompiler.h"
 
 int main(int argc, char **argv)
 {
@@ -50,22 +51,6 @@ int main(int argc, char **argv)
         }
     }
     char* filename = argv[optind];
-    printf("compiling %s, ", filename);
-    FILE* fp;
-    if((fp = fopen(filename, "r")) == NULL){
-       return -ENOENT;
-    }
-    fseek(fp, 0L, SEEK_END);
-    long sz = ftell(fp);
-    rewind(fp);
-    printf("%ld bytes\n", sz);
-    char* data;
-    if((data = (char*) malloc(sz)) == NULL){
-        printf("cannot allocate memory to read file");
-        return -ENOMEM;
-    }
-    fread(data, 1, sz, fp);
-    data[sz] = '\0';
     if(state->outputfile == NULL){
         char* indx = strchr(filename, '.');
         if(indx == NULL) indx = strchr(filename, 0);
@@ -109,7 +94,16 @@ int main(int argc, char **argv)
         return ENOENT;
     }
     state->fp = fpo;
-    compile(state, data, sz);
+    Compilationfile* cur = precompile(filename);
+    write_header(state);
+    while(cur != NULL){
+        loadfile(cur);
+        printf("Compiling %s, %ld bytes\n", cur->path, cur->sz);
+        compile(state, cur->data, cur->sz);
+        unloadfile(cur);
+        cur = cur->next;
+    }
+    write_footer(state);
     fclose(state->fp);
     if(!state->comp_asm){
         printf("Done compilation. Assembling...\n");

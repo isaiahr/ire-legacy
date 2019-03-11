@@ -1,15 +1,9 @@
+import essential.ire
 
 def get33 {
     return 33
 }
 
-def exit {
-`
-mov     %rbx, %rdi
-mov     $60, %rax
-syscall
-`
-}
 
 def main {
     // test function return

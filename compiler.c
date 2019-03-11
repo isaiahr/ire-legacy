@@ -8,8 +8,7 @@
 #include"writer.h"
 
 void compile(State* state, char* data, long sz){
-    write_header(state);
-    int index0 = -1;
+    int index0 = 0;
     int index1 = -1;
     int multiline = 0;
     for(int i = 0; i < sz; i++){
@@ -41,7 +40,6 @@ void compile(State* state, char* data, long sz){
             }    
         }
     }
-    write_footer(state);
 }
 
 // example input "((()))"
@@ -63,7 +61,7 @@ void process_token(char* token, State* state){
     }
     int type = get_token_type(token);
     printf("token %i, %s \n", type, token);
-    if(type == COMMENT){
+    if(type == COMMENT || type == IMPORT){
         return;
     }
     if(type == VARIABLE_DEFN){

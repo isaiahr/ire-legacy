@@ -11,6 +11,7 @@
 #define FUNCTION_END 7
 #define COMMENT 9
 #define VARIABLE_DEFN 10
+#define IMPORT 11
 #define CONDITIONAL 5
 #define ASM 6
 #define INVALID -1
