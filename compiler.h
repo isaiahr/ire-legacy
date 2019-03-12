@@ -25,7 +25,7 @@ extern int endofvarname(char* str);
 extern int nextwhite(char* str);
 extern int nextnonwhite(char* str);
 extern char* proc_str(char* data, long max, int* index);
-extern void process_token(char* token, State* state);
+extern void process_token(char* token, int line, State* state);
 extern int get_token_type(char* token);
 extern int nextwhite(char* str);
 extern int nextnonwhite(char* str);

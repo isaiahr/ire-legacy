@@ -7,11 +7,14 @@
 #include"compiler.h"
 #include"writer.h"
 #include"common.h"
+#include"error.h"
+
 
 void compile(State* state, char* data, long sz){
     int index0 = 0;
     int index1 = -1;
     int multiline = 0;
+    int line = 1;
     for(int i = 0; i < sz; i++){
         if(data[i] == '`'){
             if(index1 == -1){
@@ -22,7 +25,7 @@ void compile(State* state, char* data, long sz){
                 char* token = malloc(i-index1);
                 memcpy(token, &data[index1], i-index1-1);
                 token[i-index1-1] = 0;
-                process_token(token, state);
+                process_token(token, line, state);
                 multiline = 0;
                 index1 = -1;
             }
@@ -36,9 +39,12 @@ void compile(State* state, char* data, long sz){
                 char* token = malloc(i-index0+1);
                 memcpy(token, &data[index0], i-index0);
                 token[i-index0] = 0;
-                process_token(token, state);
+                process_token(token, line, state);
                 index0 = i+1;
-            }    
+            }
+        }
+        if(data[i] == '\n'){
+            line = line+1;
         }
     }
 }
@@ -56,9 +62,9 @@ int match_paren(char* input){
 }
 
 
-void process_token(char* token, State* state){
+void process_token(char* token, int line, State* state){
     if(token[0] == ' '){
-        return process_token(token + sizeof(char), state);
+        return process_token(token + sizeof(char), line, state);
     }
     int type = get_token_type(token);
     debug(state, "token %i, %s \n", type, token);
@@ -70,6 +76,9 @@ void process_token(char* token, State* state){
         int i = nextnonwhite(token);
         int j = endofvarname(&token[i]);
         char* varn = copy(token, i, i+j);
+        if(ref_var(state->currentfunc->name, varn, state) != NULL){
+            error(DUPDEFVAR, line, token);
+        }
         add_var(state->currentfunc->name, varn, VARTYPE_INTEGER, state);
     }
     if(type == ASSIGNMENT){
@@ -89,18 +98,22 @@ void process_token(char* token, State* state){
         char* b = copy(token, i, i+j);
         debug(state, "assign %s = %s\n", a, b);
         annotate(state, "# %s = %s\n", a, b);
+        Variable* vara = ref_var(state->currentfunc->name, a, state);
+        if(vara == NULL){
+            error(UNDEFVAR, line, token);
+        }
         if(ISNUMERIC(b[0])){
-            Variable* vara = ref_var(state->currentfunc->name, a, state);
             write_iassign(vara, b, state);
         }
         else if(get_token_type(b) == FUNCTION_CALL){
-            process_token(b, state);
-            Variable* vara = ref_var(state->currentfunc->name, a, state);
+            process_token(b, line, state);
             write_fassign(vara, state);
         }
         else{
-            Variable* vara = ref_var(state->currentfunc->name, a, state);
             Variable* varb = ref_var(state->currentfunc->name, b, state);
+            if(varb == NULL){
+                error(UNDEFVAR, line, token);
+            }
             write_vassign(vara, varb, state);
         }
     }
@@ -120,7 +133,7 @@ void process_token(char* token, State* state){
         new_token[j-1] = 0;
         annotate(state, "# call function %s \n", funct);
         if(get_token_type(new_token) != INVALID){// TODO bugfix space = bug here
-            process_token(new_token, state);
+            process_token(new_token, line, state);
         }
         else{
             Variable *var = ref_var(state->currentfunc->name, new_token, state);
@@ -150,7 +163,9 @@ void process_token(char* token, State* state){
         function[j-i] = 0;
         Function* f = ref_func(function, state);
         if(f != NULL){
-            //TODO error on duplicate defn.
+            if(f->defined == 1){
+                error(DUPDEFFUNC, line, token);
+            }
             f->defined = 1;
         }
         else{

@@ -11,6 +11,7 @@
 #include"compiler.h"
 #include"writer.h"
 #include"precompiler.h"
+#include"error.h"
 
 int main(int argc, char **argv)
 {
@@ -116,6 +117,16 @@ int main(int argc, char **argv)
         compile(state, cur->data, cur->sz);
         unloadfile(cur);
         cur = cur->next;
+    }
+    // check if state is ok.
+    // make sure all functions are defined
+    List* head = state->functions;
+    while(head != NULL){
+        Function* f = (Function*) head->data;
+        if(f->defined == 0){
+            errornl(UNDEFFUNC, f->name);
+        }
+        head = head->next;
     }
     write_footer(state);
     fclose(state->fp);
