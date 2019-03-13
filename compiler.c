@@ -202,7 +202,6 @@ void process_token(char* token, int line, State* state){
 }
 
 char* copy(char* token, char* pass, char* end){
-    printf("copy '%s' '%s' '%s'\n", token, pass, end);
     int i = 0;
     int ind = -1;
     while(token[i] != 0){

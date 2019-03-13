@@ -32,7 +32,7 @@ void errornl(int type, char* msg){
 void error(int type, int line, char* token){
     char* error = geterrorstr(type);
     printf("Compilation Failed.\n");
-    printf("%s on line %i, token \"%s\n\"", error, line, token);
+    printf("%s on line %i, token \"%s\"\n", error, line, token);
     printf("Exiting\n");
     exit(1);
 }
