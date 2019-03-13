@@ -54,13 +54,13 @@ int match_paren(char* input){
     int numpar = 1;
     int i = 1;
     while(numpar != 0){
+        if(input[i] == 0) return -1;
         if(input[i] == '(') numpar++;
         if(input[i] == ')') numpar--;
         i++;
     }
     return i;
 }
-
 
 void process_token(char* token, int line, State* state){
     if(token[0] == ' '){
@@ -73,9 +73,10 @@ void process_token(char* token, int line, State* state){
     }
     if(type == VARIABLE_DEFN){
         //ie: int a
-        int i = nextnonwhite(token);
-        int j = endofvarname(&token[i]);
-        char* varn = copy(token, i, i+j);
+        char* varn = copy(token+3, " ", " ");
+        if(varn == NULL){
+            error(SYNTAXERROR, line, token);
+        }
         if(ref_var(state->currentfunc->name, varn, state) != NULL){
             error(DUPDEFVAR, line, token);
         }
@@ -86,16 +87,12 @@ void process_token(char* token, int line, State* state){
         // a = 2 (var <- immediate)
         // a = b (var <- var)
         // a = func
-        int i = 0;
-        while(token[i] != ' ' && token[i] != '=') i++;
-        char* a = copy(token, 0, i);
-        while(token[i] != '=') i++;
-        i = i+1;
-        if(token[i] == ' '){
-            i = nextnonwhite(&token[i]) + i;
+        char* a = copy(token, "", " =");
+        char* b = copy(token + strlen(a), " =", " ");
+        char* ba = copy(token + strlen(a), " =", ""); // full end for func. 
+        if(ba == NULL){// implies b = null (equivalent)
+            error(SYNTAXERROR, line, token);
         }
-        int j = endofvarname(&token[i]);
-        char* b = copy(token, i, i+j);
         debug(state, "assign %s = %s\n", a, b);
         annotate(state, "# %s = %s\n", a, b);
         Variable* vara = ref_var(state->currentfunc->name, a, state);
@@ -105,8 +102,8 @@ void process_token(char* token, int line, State* state){
         if(ISNUMERIC(b[0])){
             write_iassign(vara, b, state);
         }
-        else if(get_token_type(b) == FUNCTION_CALL){
-            process_token(b, line, state);
+        else if(get_token_type(ba) == FUNCTION_CALL){
+            process_token(ba, line, state);
             write_fassign(vara, state);
         }
         else{
@@ -118,16 +115,24 @@ void process_token(char* token, int line, State* state){
         }
     }
     if(type == FUNCTION_CALL){
-        int i = 0;
-        while(token[i] != ' ' && token[i] != '(') i++;
-        char* funct = copy(token, 0, i);
+        char* funct = copy(token, "", " (");
+        if(funct == NULL){
+            error(SYNTAXERROR, line, token);
+        }
         Function* fun = ref_func(funct, state);
         if(fun == NULL){
             //assume function will be declared later
             fun = add_func(funct, 0, state);
         }
-        while(token[i] != '(') i++;
+        int i = 0;
+        while(token[i] != '(' && token[i] != 0) i++;
+        if(token[i] == 0){
+            error(SYNTAXERROR, line, token);
+        }
         int j = match_paren(&token[i]);
+        if(j == -1){
+            error(SYNTAXERROR, line, token);
+        }
         char* new_token = (char*) malloc(j-1);
         memcpy(new_token, &token[i+1], j-2);
         new_token[j-1] = 0;
@@ -155,12 +160,10 @@ void process_token(char* token, int line, State* state){
     }
     if(type == FUNCTION_DEFN){
         // example: def func { } 
-        int i = nextnonwhite(token);
-        int j = i+1;
-        while(token[j] != ' ' && token[j] != '{') j++;
-        char* function = (char*) malloc(j-i+1);
-        memcpy(function, &token[i], j-i);
-        function[j-i] = 0;
+        char* function = copy(token+3, " ", " ");
+        if(function == NULL){
+            error(SYNTAXERROR, line, token);
+        }
         Function* f = ref_func(function, state);
         if(f != NULL){
             if(f->defined == 1){
@@ -178,20 +181,13 @@ void process_token(char* token, int line, State* state){
     }
     if(type == FUNCTION_RETURN){
         annotate(state, "# return %s\n", token);
-        if(strlen(token) == strlen("return")){
-            return;
-        }
-        int i = nextnonwhite(token);
-        if(token[i] == 0){
-            //just "return"
-            return; //process this token in func end.
-        }
-        int j = endofvarname(&token[i]);
-        char* var = copy(token, i, i+j);
-        Variable* var0 = ref_var(state->currentfunc->name, var, state);
-        if(var0 == NULL){
+        char* var = copy(token+6, " ", " ");
+        if(var == NULL){
+            write_iref("0", state);
+        } else if(ISNUMERIC(var[0])){
             write_iref(var, state);
         } else {
+            Variable* var0 = ref_var(state->currentfunc->name, var, state);
             write_varref(var0, state);
         }
         write_funcreturn(state);
@@ -205,9 +201,31 @@ void process_token(char* token, int line, State* state){
     }  
 }
 
+char* copy(char* token, char* pass, char* end){
+    printf("copy '%s' '%s' '%s'\n", token, pass, end);
+    int i = 0;
+    int ind = -1;
+    while(token[i] != 0){
+        if(ind == -1 && strchr(pass, token[i]) == NULL){
+            // first char we dont pass on. set start to here.
+            if(ind == -1){
+                ind = i;
+            }
+        }
+        else if(strchr(end, token[i]) != NULL && ind != -1){
+            // start index is set, and matches end.
+            return oldcopy(token, ind, i);
+        }
+        i++;
+    }
+    if(ind == -1){
+        return NULL;
+    }
+    return oldcopy(token, ind, i);
+}
 
 //returns copy including ind0, but not including ind1
-char* copy(char* token, int ind0, int ind1){
+char* oldcopy(char* token, int ind0, int ind1){
     char* result = malloc(ind1-ind0+1);
     memcpy(result, &token[ind0], ind1-ind0);
     result[ind1-ind0] = 0;
@@ -238,6 +256,19 @@ int nextnonwhite(char* str){
     return i;
 }
 
+int beginswith(char* begin, char* token){
+
+    int matches = 1;
+    int j = 0;
+    while(matches && token[j] != 0){
+        matches = matches && (begin[j] == token[j]);
+        j += 1;
+        if(begin[j] == 0)
+            return matches;
+    }
+    return 0;
+}
+
 int get_token_type(char* token){// TODO ADD TYPE=CONDITIONAL
     int i = 0;
     if(token[0] == '`'){
@@ -252,14 +283,12 @@ int get_token_type(char* token){// TODO ADD TYPE=CONDITIONAL
     if(!ISALPHA(token[0])){
         return INVALID; // invalid char
     }
-    if(token[0] == 'r' && token[1] == 'e' && token[2] == 't' && token[3] == 'u'
-    && token[4] == 'r' && token[5] == 'n') return FUNCTION_RETURN;
-    if(token[0] == 'd' && token[1] == 'e' && token[2] == 'f' && token[3] == ' '){
+    if(beginswith("return ", token))
+        return FUNCTION_RETURN;
+    if(beginswith("def ", token))
         return FUNCTION_DEFN;
-    }
-    if(token[0] == 'i' && token[1] == 'n' && token[2] == 't' && token[3] == ' '){
+    if(beginswith("int ", token))
         return VARIABLE_DEFN;
-    }
     while(token[i] != '\0'){
         if(token[i] == '='){
             return ASSIGNMENT;

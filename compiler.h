@@ -20,7 +20,8 @@
 
 extern void compile(State* state, char* data, long sz);
 extern int match_paren(char* input);
-extern char* copy(char* token, int ind0, int ind1);
+extern char* copy(char* token, char* b, char* e);
+extern char* oldcopy(char* token, int ind0, int ind1);
 extern int endofvarname(char* str);
 extern int nextwhite(char* str);
 extern int nextnonwhite(char* str);
