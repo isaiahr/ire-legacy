@@ -8,11 +8,13 @@
 typedef struct Function{
     char* name;
     char* write_name;
+    int max_offset;
     int defined;
 }Function;
 
 typedef struct Variable{
     char* name;
+    int offset;
     Function* func;
     int type;
     char* write_name;

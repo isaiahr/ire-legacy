@@ -17,6 +17,7 @@ Function* add_func(char* func, int defined, State* state){
     Function* fun;
     fun = (Function*) malloc(sizeof(Function));
     fun->name = func;
+    fun->max_offset = 0;
     fun->defined = defined;
     if(strcmp(fun->name, ENTRYFUNC) == 0){
         fun->write_name = "_start";
@@ -65,6 +66,7 @@ Variable* add_var(char* func, char* varn, int type, State* state){
     var->name = varn;
     var->func = fun;
     var->type = type;
+    var->offset = 0;
     var->write_name = malloc(strlen(varn)+strlen(func)+2);
     snprintf(var->write_name, strlen(varn)+strlen(func)+2, "v%s%s", varn, func);
     List* newv;
@@ -77,7 +79,21 @@ Variable* add_var(char* func, char* varn, int type, State* state){
         return var;
     }
     while(l->next != NULL){
+        Variable* I = (Variable*) l->data;
+        if(I->func == fun){
+            I->offset = I->offset + 8;
+            if(I->func->max_offset < I->offset){
+                I->func->max_offset = I->offset;
+            }
+        }
         l = l->next;
+    }
+    Variable* I = (Variable*) l->data;
+    if(I->func == fun){
+        I->offset = I->offset + 8;
+        if(I->func->max_offset < I->offset){
+            I->func->max_offset = I->offset;
+        }
     }
     l->next = newv;
     return var;

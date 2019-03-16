@@ -80,7 +80,8 @@ void process_token(char* token, int line, State* state){
         if(ref_var(state->currentfunc->name, varn, state) != NULL){
             error(DUPDEFVAR, line, token);
         }
-        add_var(state->currentfunc->name, varn, VARTYPE_INTEGER, state);
+        Variable* var = add_var(state->currentfunc->name, varn, VARTYPE_INTEGER, state);
+        write_varinit(var, state);
     }
     if(type == ASSIGNMENT){
         // types of assignments

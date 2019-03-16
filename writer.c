@@ -40,26 +40,21 @@ void write_header(State* state){
 }
 
 void write_footer(State* state){
-    fprintf(state->fp, "\n\n\n.data\n");
-    List* l = state->variables;
-    while(l != NULL){
-        Variable* v = (Variable*) l->data;
-        char* initial = "0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00";
-        fprintf(state->fp, "%s: .byte %s\n", v->write_name, initial);
-        l = l->next;
-    }
     fprintf(state->fp, "\n\n\n.ident \"irec dev version\"\n");
 }
 
+void write_varinit(Variable* var, State* state){
+    fprintf(state->fp, "pushq $0\n");
+}
 //write refs are for passing params / or ret values.
 void write_iref(char* ref, State* state){
     fprintf(state->fp, "movq $%s, %%rax\n", ref);
 }
 void write_varref(Variable* ref, State* state){
-    fprintf(state->fp, "movq %s, %%rax\n", ref->write_name);
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ref->offset);
 }
 void write_funcreturn(State* state){
-    fprintf(state->fp, "%s\n", "ret");
+    fprintf(state->fp, "add $%i, %%rsp\n%s\n", state->currentfunc->max_offset, "ret");
 }
 
 void write_funcdef(Function* func, State* state){
@@ -75,17 +70,15 @@ void write_funcall(Function* func, State* state){
 
 void write_vassign(Variable* a, Variable* b, State* state){
     //integer a = b
-    char* awn = a->write_name;
-    char* bwn = b->write_name;
-    fprintf(state->fp, "movq %s, %%rcx\nmovq %%rcx, %s(,1)\n", bwn, awn);
+    fprintf(state->fp, "movq %i(%%rsp), %%rcx\nmovq %%rcx, %i(%%rsp)\n", b->offset, a->offset);
 }
 
 void write_fassign(Variable* a, State* state){
-    char* awn = a->write_name;
-    fprintf(state->fp, "movq %%rax, %s(,1)\n", awn);
+    // a = func
+    fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", a->offset);
 }
 
 void write_iassign(Variable* a, char* b, State* state){
     //integer a = 5
-    fprintf(state->fp, "movq $%s, %s(,1)\n", b, a->write_name);
+    fprintf(state->fp, "movq $%s, %i(%%rsp)\n", b, a->offset);
 }

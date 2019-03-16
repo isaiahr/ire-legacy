@@ -7,6 +7,7 @@ extern void write_funcall(Function* func, State* state);
 extern void write_funcdef(Function* func, State* state);
 extern void write_funcreturn(State* state);
 extern void write_asm(char* str, State* state);
+extern void write_varinit(Variable* var, State* state);
 extern void write_varref(Variable* var, State* state);
 extern void write_iref(char* str, State* state);
 extern void write_header(State* state);
