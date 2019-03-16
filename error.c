@@ -15,25 +15,25 @@ char* geterrorstr(int type){
         return "Duplicate definition of function";
     if(type == DUPDEFVAR)
         return "Duplicate definition of variable";
-    printf("Unknown error occurred.\n");
-    printf("Exiting\n");
+    fprintf(stderr, "Unknown error occurred.\n");
+    fprintf(stderr, "Exiting\n");
     exit(-50);
 }
 
 void errornl(int type, char* msg){
     char* error = geterrorstr(type);
-    printf("Compilation Failed.\n");
-    printf("%s %s\n", error, msg);
-    printf("Exiting\n");
+    fprintf(stderr, "Compilation Failed.\n");
+    fprintf(stderr, "%s %s\n", error, msg);
+    fprintf(stderr, "Exiting\n");
     exit(1);
 }
 
 
 void error(int type, int line, char* token){
     char* error = geterrorstr(type);
-    printf("Compilation Failed.\n");
-    printf("%s on line %i, token \"%s\"\n", error, line, token);
-    printf("Exiting\n");
+    fprintf(stderr, "Compilation Failed.\n");
+    fprintf(stderr, "%s on line %i, token \"%s\"\n", error, line, token);
+    fprintf(stderr, "Exiting\n");
     exit(1);
 }
 

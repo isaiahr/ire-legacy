@@ -1,7 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include<errno.h>
 #include<unistd.h>
 #include<getopt.h>
 #include<sys/types.h>
@@ -62,7 +61,7 @@ int main(int argc, char **argv)
                 return 0;
             case '?':
                 printf("Try %s --help for usage.\n", argv[0]);
-                return 1;
+                return 0;
         }
     }
     char* filename = argv[optind];
@@ -98,15 +97,15 @@ int main(int argc, char **argv)
     if(!state->comp_asm){
         compto = tempnam(NULL, "irecc");
         if((fpo = fopen(compto, "w")) == NULL){
-            printf("error writing to temp");
-            return 0;
+            fprintf(stderr, "error writing to temp");
+            return -1;
         }
         
     }
     else if((fpo = fopen(state->outputfile, "w")) == NULL)
     {
-        printf("error writing output");
-        return ENOENT;
+        fprintf(stderr, "error writing output");
+        return -1;
     }
     state->fp = fpo;
     Compilationfile* cur = precompile(filename);

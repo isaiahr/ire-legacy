@@ -67,14 +67,15 @@ populates fields of this file, and loads it into memory.
 void loadfile(Compilationfile* f){
     f->fp = fopen(f->path, "r");
     if(f->fp == NULL){
-        printf("Error: could not open file \"%s\"", f->path);
+        fprintf(stderr, "Error: could not open file \"%s\"\n", f->path);
+        exit(1);
     }
     fseek(f->fp, 0L, SEEK_END);
     f->sz = ftell(f->fp);
     rewind(f->fp);
     f->data = (char*) malloc(f->sz);
     if(f->data == NULL){
-        printf("Error: could not allocate %ld bytes of memory\n", f->sz);
+        fprintf(stderr, "Error: could not allocate %ld bytes of memory\n", f->sz);
         exit(1);
     }
     fread(f->data, 1, f->sz, f->fp);
