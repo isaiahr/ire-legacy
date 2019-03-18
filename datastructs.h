@@ -2,9 +2,24 @@
 #define __DATASTRUCTS_H__
 #define ENTRYFUNC "main"
 #define VARTYPE_INTEGER 301
-#define VARTYPE_STRING 302
+#define VARTYPE_BYTE 302
 
 //Data structures
+
+//linked list
+typedef struct List{
+    void* data;
+    struct List* next;
+} List;
+
+typedef struct Type{
+    char* name;
+    List* composite; // list of ? 
+    List* functions; // list of functions
+    List* operators; // list of functions
+    int id;
+}Type;
+
 typedef struct Function{
     char* name;
     char* write_name;
@@ -16,20 +31,18 @@ typedef struct Variable{
     char* name;
     int offset;
     Function* func;
-    int type;
+    Type* type;
     char* write_name;
 }Variable;
 
-//linked list
-typedef struct List{
-    void* data;
-    struct List* next;
-} List;
+
+
 
 //compiler state
 typedef struct State{
     List* variables;
     List* functions;
+    List* types;
     int comp_asm;
     char* outputfile;
     int verbose;
@@ -40,8 +53,10 @@ typedef struct State{
 } State;
 
 extern Function* add_func(char* func, int defined, State* state);
-extern Variable* add_var(char* func, char* var, int type, State* state);
+extern Variable* add_var(Function* func, char* var, Type* type, State* state);
+extern Type*     add_type(char* name, State* state);
 extern Function* ref_func(char* func, State* state);
 extern Variable* ref_var(char* func, char* varn, State* state);
+extern Type*     ref_type(char* type, State* state);
 
 #endif

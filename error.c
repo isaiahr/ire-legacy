@@ -7,6 +7,8 @@ char* geterrorstr(int type){
 
     if(type == SYNTAXERROR)
         return "Syntax error";
+    if(type == UNDEFTYPE)
+        return "Undefined type";
     if(type == UNDEFVAR)
         return "Undefined variable";
     if(type == UNDEFFUNC)
@@ -15,6 +17,8 @@ char* geterrorstr(int type){
         return "Duplicate definition of function";
     if(type == DUPDEFVAR)
         return "Duplicate definition of variable";
+    if(type == DUPDEFTYPE)
+        return "Duplicate definition of type";
     fprintf(stderr, "Unknown error occurred.\n");
     fprintf(stderr, "Exiting\n");
     exit(-50);

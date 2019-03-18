@@ -66,21 +66,26 @@ void process_token(char* token, int line, State* state){
     if(token[0] == ' '){
         return process_token(token + sizeof(char), line, state);
     }
-    int type = get_token_type(token);
+    int type = get_token_type(token, state);
     debug(state, "token %i, %s \n", type, token);
     if(type == COMMENT || type == IMPORT){
         return;
     }
     if(type == VARIABLE_DEFN){
         //ie: int a
-        char* varn = copy(token+3, " ", " ");
+        char* typen = copy(token, "", " ");
+        char* varn = copy(&token[strlen(typen)], " ", " ");
         if(varn == NULL){
             error(SYNTAXERROR, line, token);
         }
         if(ref_var(state->currentfunc->name, varn, state) != NULL){
             error(DUPDEFVAR, line, token);
         }
-        Variable* var = add_var(state->currentfunc->name, varn, VARTYPE_INTEGER, state);
+        Type* type = ref_type(typen, state);
+        if(type == NULL){
+            error(UNDEFTYPE, line, token);
+        }
+        Variable* var = add_var(state->currentfunc, varn, type, state);
         write_varinit(var, state);
     }
     if(type == ASSIGNMENT){
@@ -103,7 +108,7 @@ void process_token(char* token, int line, State* state){
         if(ISNUMERIC(b[0])){
             write_iassign(vara, b, state);
         }
-        else if(get_token_type(ba) == FUNCTION_CALL){
+        else if(get_token_type(ba, state) == FUNCTION_CALL){
             process_token(ba, line, state);
             write_fassign(vara, state);
         }
@@ -138,7 +143,7 @@ void process_token(char* token, int line, State* state){
         memcpy(new_token, &token[i+1], j-2);
         new_token[j-1] = 0;
         annotate(state, "# call function %s \n", funct);
-        if(get_token_type(new_token) != INVALID){// TODO bugfix space = bug here
+        if(get_token_type(new_token, state) != INVALID){// TODO bugfix space = bug here
             process_token(new_token, line, state);
         }
         else{
@@ -269,7 +274,7 @@ int beginswith(char* begin, char* token){
     return 0;
 }
 
-int get_token_type(char* token){// TODO ADD TYPE=CONDITIONAL
+int get_token_type(char* token, State* state){// TODO ADD TYPE=CONDITIONAL
     int i = 0;
     if(token[0] == '`'){
         return ASM;
@@ -287,8 +292,21 @@ int get_token_type(char* token){// TODO ADD TYPE=CONDITIONAL
         return FUNCTION_RETURN;
     if(beginswith("def ", token))
         return FUNCTION_DEFN;
-    if(beginswith("int ", token))
-        return VARIABLE_DEFN;
+    List* l = state->types;
+    while(l != NULL){
+        Type* t = (Type*) l->data;
+        char* namesp = malloc(strlen(t->name)+2);
+        namesp[0] = 0;
+        strcat(namesp, t->name);
+        namesp[strlen(t->name)+1] = 0;
+        namesp[strlen(t->name)] = ' ';
+        if(beginswith(namesp, token)){
+            free(namesp);
+            return VARIABLE_DEFN;
+        }
+        free(namesp);
+        l = l->next;
+    }
     while(token[i] != '\0'){
         if(token[i] == '='){
             return ASSIGNMENT;

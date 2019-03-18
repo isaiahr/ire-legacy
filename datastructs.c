@@ -53,12 +53,11 @@ Function* ref_func(char* func, State* state){
     return NULL; // function not found.
 }
 
-Variable* add_var(char* func, char* varn, int type, State* state){
-    Function* fun = ref_func(func, state);
-    if(fun == NULL){
+Variable* add_var(Function* fun, char* varn, Type* type, State* state){
+    if(fun == NULL || type == NULL){
         return NULL;
     }
-    if(ref_var(func, varn, state) != NULL){
+    if(ref_var(fun->name, varn, state) != NULL){
         return NULL;
     }
     Variable* var;
@@ -67,8 +66,8 @@ Variable* add_var(char* func, char* varn, int type, State* state){
     var->func = fun;
     var->type = type;
     var->offset = 0;
-    var->write_name = malloc(strlen(varn)+strlen(func)+2);
-    snprintf(var->write_name, strlen(varn)+strlen(func)+2, "v%s%s", varn, func);
+    var->write_name = malloc(strlen(varn)+strlen(fun->name)+2);
+    snprintf(var->write_name, strlen(varn)+strlen(fun->name)+2, "v%s%s", varn, fun->name);
     List* newv;
     newv = (List*) malloc(sizeof(List));
     newv->next = NULL;
@@ -105,6 +104,42 @@ Variable* ref_var(char* func, char* varn, State* state){
         Variable* v = (Variable*) l->data;
         if(strcmp(v->func->name, func) == 0 && strcmp(v->name, varn) == 0){
             return v;
+        }
+        l = l->next;
+    }
+    return NULL;
+}
+
+Type* add_type(char* type, State* state){
+    if(ref_type(type, state) != NULL){
+        return NULL; // type already exists
+    }
+    Type* t = (Type*) malloc(sizeof(Type));
+    t->name = type;
+    t->composite = NULL;
+    t->functions = NULL;
+    t->operators = NULL;
+    List* newl = (List*) malloc(sizeof(List));
+    newl->next = NULL;
+    newl->data = t;
+    if(state->types == NULL){
+        state->types = newl;
+        return t;
+    }
+    List* l = state->types;
+    while(l->next != NULL){
+        l = l->next;
+    }
+    l->next = newl;
+    return t;
+}
+
+Type* ref_type(char* type, State* state){
+    List* l = state->types;
+    while(l != NULL){
+        Type* t = (Type*) l->data;
+        if(strcmp(t->name, type) == 0){
+            return t;
         }
         l = l->next;
     }
