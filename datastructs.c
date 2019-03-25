@@ -57,7 +57,7 @@ Variable* add_var(Function* fun, char* varn, Type* type, State* state){
     if(fun == NULL || type == NULL){
         return NULL;
     }
-    if(ref_var(fun->name, varn, state) != NULL){
+    if(ref_var(fun, varn, state) != NULL){
         return NULL;
     }
     Variable* var;
@@ -98,11 +98,11 @@ Variable* add_var(Function* fun, char* varn, Type* type, State* state){
     return var;
 }
 
-Variable* ref_var(char* func, char* varn, State* state){
+Variable* ref_var(Function* func, char* varn, State* state){
     List* l = state->variables;
     while(l != NULL){
         Variable* v = (Variable*) l->data;
-        if(strcmp(v->func->name, func) == 0 && strcmp(v->name, varn) == 0){
+        if(strcmp(v->func->name, func->name) == 0 && strcmp(v->name, varn) == 0){
             return v;
         }
         l = l->next;

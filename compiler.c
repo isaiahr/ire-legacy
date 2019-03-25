@@ -4,6 +4,7 @@
 #include<unistd.h>
 #include<sys/types.h>
 #include"datastructs.h"
+#include"parser.h"
 #include"compiler.h"
 #include"writer.h"
 #include"common.h"
@@ -22,9 +23,11 @@ void compile(State* state, char* data, long sz){
                 multiline = 1;
             }
             else{
-                char* token = malloc(i-index1);
-                memcpy(token, &data[index1], i-index1-1);
-                token[i-index1-1] = 0;
+                char* candidate = malloc(i-index1);
+                memcpy(candidate, &data[index1], i-index1-1);
+                candidate[i-index1-1] = 0;
+                debug(state, "processing %s", candidate);
+                Token* token = tokenize(candidate, line, state);
                 process_token(token, line, state);
                 multiline = 0;
                 index1 = -1;
@@ -36,9 +39,11 @@ void compile(State* state, char* data, long sz){
                 index0 = i+1;
             }
             else{
-                char* token = malloc(i-index0+1);
-                memcpy(token, &data[index0], i-index0);
-                token[i-index0] = 0;
+                char* candidate = malloc(i-index0+1);
+                memcpy(candidate, &data[index0], i-index0);
+                candidate[i-index0] = 0;
+                debug(state, "processing %s", candidate);
+                Token* token = tokenize(candidate, line, state);
                 process_token(token, line, state);
                 index0 = i+1;
             }
@@ -49,318 +54,69 @@ void compile(State* state, char* data, long sz){
     }
 }
 
-// example input "((()))"
-int match_paren(char* input){
-    int numpar = 1;
-    int i = 1;
-    while(numpar != 0){
-        if(input[i] == 0) return -1;
-        if(input[i] == '(') numpar++;
-        if(input[i] == ')') numpar--;
-        i++;
-    }
-    return i;
-}
 
-void process_token(char* token, int line, State* state){
-    if(token[0] == ' '){
-        return process_token(token + sizeof(char), line, state);
-    }
-    int type = get_token_type(token, state);
-    debug(state, "token %i, %s \n", type, token);
+void process_token(Token* token, int line, State* state){
+    int type = token->type;
+    debug(state, ", type %i\n", type);
+    // yes i am aware switch exists, but i think this is more readable.
     if(type == COMMENT || type == IMPORT){
         return;
     }
-    if(type == VARIABLE_DEFN){
-        //ie: int a
-        char* typen = copy(token, "", " ");
-        char* varn = copy(&token[strlen(typen)], " ", " ");
-        if(varn == NULL){
-            error(SYNTAXERROR, line, token);
-        }
-        if(ref_var(state->currentfunc->name, varn, state) != NULL){
-            error(DUPDEFVAR, line, token);
-        }
-        Type* type = ref_type(typen, state);
-        if(type == NULL){
-            error(UNDEFTYPE, line, token);
-        }
-        Variable* var = add_var(state->currentfunc, varn, type, state);
-        write_varinit(var, state);
-    }
-    if(type == ASSIGNMENT){
-        // types of assignments
-        // a = 2 (var <- immediate)
-        // a = b (var <- var)
-        // a = func
-        char* a = copy(token, "", " =");
-        char* b = copy(token + strlen(a), " =", " ");
-        char* ba = copy(token + strlen(a), " =", ""); // full end for func. 
-        if(ba == NULL){// implies b = null (equivalent)
-            error(SYNTAXERROR, line, token);
-        }
-        debug(state, "assign %s = %s\n", a, b);
-        annotate(state, "# %s = %s\n", a, b);
-        Variable* vara = ref_var(state->currentfunc->name, a, state);
-        if(vara == NULL){
-            error(UNDEFVAR, line, token);
-        }
-        if(ISNUMERIC(b[0])){
-            write_iassign(vara, b, state);
-        }
-        else if(get_token_type(ba, state) == FUNCTION_CALL){
-            process_token(ba, line, state);
-            write_fassign(vara, state);
-        }
-        else{
-            Variable* varb = ref_var(state->currentfunc->name, b, state);
-            if(varb == NULL){
-                error(UNDEFVAR, line, token);
-            }
-            write_vassign(vara, varb, state);
-        }
-    }
-    if(type == FUNCTION_CALL){
-        char* funct = copy(token, "", " (");
-        if(funct == NULL){
-            error(SYNTAXERROR, line, token);
-        }
-        Function* fun = ref_func(funct, state);
-        if(fun == NULL){
-            //assume function will be declared later
-            fun = add_func(funct, 0, state);
-        }
-        int i = 0;
-        while(token[i] != '(' && token[i] != 0) i++;
-        if(token[i] == 0){
-            error(SYNTAXERROR, line, token);
-        }
-        int j = match_paren(&token[i]);
-        if(j == -1){
-            error(SYNTAXERROR, line, token);
-        }
-        char* new_token = (char*) malloc(j-1);
-        memcpy(new_token, &token[i+1], j-2);
-        new_token[j-1] = 0;
-        annotate(state, "# call function %s \n", funct);
-        if(get_token_type(new_token, state) != INVALID){// TODO bugfix space = bug here
-            process_token(new_token, line, state);
-        }
-        else{
-            Variable *var = ref_var(state->currentfunc->name, new_token, state);
-            if(var == NULL){
-                if(new_token[0] == 0){
-                    new_token = "0";
-                }
-                write_iref(new_token, state);
-            }else{
-                write_varref(var, state);
-            }
-        }
-        write_funcall(fun, state);
-    }
     if(type == ASM){
-        annotate(state, "# asm block\n");
-        write_asm(token + sizeof(char), state);
-        annotate(state, "# end of asm block\n");
+        write_asm(token->str, state);
     }
     if(type == FUNCTION_DEFN){
-        // example: def func { } 
-        char* function = copy(token+3, " ", " ");
-        if(function == NULL){
-            error(SYNTAXERROR, line, token);
+        Function *f = ref_func(token->str, state);
+        if(f != NULL && f->defined == 1){   
+            error(DUPDEFFUNC, line, token->str);
         }
-        Function* f = ref_func(function, state);
-        if(f != NULL){
-            if(f->defined == 1){
-                error(DUPDEFFUNC, line, token);
-            }
-            f->defined = 1;
+        if(f == NULL){
+            f = add_func(token->str, 1, state);
         }
         else{
-            f = add_func(function, 1,  state);
+            f->defined = 1;
         }
-        annotate(state, "# declaration of function %s\n", function);
-        write_funcdef(f, state);
-        state->currentfunc = f;
         state->writ_return = 0;
+        state->currentfunc = f;
+        write_funcdef(f, state);
     }
     if(type == FUNCTION_RETURN){
-        annotate(state, "# return %s\n", token);
-        char* var = copy(token+6, " ", " ");
-        if(var == NULL){
-            write_iref("0", state);
-        } else if(ISNUMERIC(var[0])){
-            write_iref(var, state);
-        } else {
-            Variable* var0 = ref_var(state->currentfunc->name, var, state);
-            write_varref(var0, state);
+        if(token->t1 != NULL){
+            process_token(token->t1, line, state);
         }
-        write_funcreturn(state);
         state->writ_return = 1;
+        write_funcreturn(state);
+    }
+    if(type == IMMEDIATE){
+        write_immediate(token->nt, state);
     }
     if(type == FUNCTION_END){
         if(!state->writ_return){
+            write_immediate(0, state);
             write_funcreturn(state);
+            state->writ_return = 1;
         }
-        state->currentfunc = NULL;
-    }  
-}
-
-char* copy(char* token, char* pass, char* end){
-    int i = 0;
-    int ind = -1;
-    while(token[i] != 0){
-        if(ind == -1 && strchr(pass, token[i]) == NULL){
-            // first char we dont pass on. set start to here.
-            if(ind == -1){
-                ind = i;
-            }
+    }
+    if(type == VARIABLE_REF){
+        write_varref(token->var1, state);
+    }
+    if(type == VARIABLE_DEFN){
+        if(ref_var(state->currentfunc, token->str, state) != NULL){
+            error(DUPDEFTYPE, line, token->str);
         }
-        else if(strchr(end, token[i]) != NULL && ind != -1){
-            // start index is set, and matches end.
-            return oldcopy(token, ind, i);
+        Variable* var = add_var(state->currentfunc, token->str, token->t, state);
+        write_varinit(var, state);
+    }
+    if(type == FUNCTION_CALL){
+        if(token->func == NULL){
+            token->func = add_func(token->str, 0,  state);
         }
-        i++;
+        process_token(token->t1, line, state);
+        write_funcall(token->func, state);
     }
-    if(ind == -1){
-        return NULL;
+    if(type == ASSIGNMENT){
+        process_token(token->t1, line, state);
+        write_varassign(token->var1, state);
     }
-    return oldcopy(token, ind, i);
-}
-
-//returns copy including ind0, but not including ind1
-char* oldcopy(char* token, int ind0, int ind1){
-    char* result = malloc(ind1-ind0+1);
-    memcpy(result, &token[ind0], ind1-ind0);
-    result[ind1-ind0] = 0;
-    return result;
-}
-
-//returns next whitespace/bracket/
-int endofvarname(char* str){
-    int i = 0;
-    char v = str[i];
-    while(v != ' ' && v != 0){
-        i++;
-        v = str[i];
-    }
-    return i;
-}
-// returns index of first whitespace.
-int nextwhite(char* str){
-    int i = 0;
-    while(str[i] != ' ')i++;
-    return i;
-}
-//returns index following next whitespace gap.
-int nextnonwhite(char* str){
-    
-    int i = nextwhite(str);
-    while(str[i] == ' ')i++;
-    return i;
-}
-
-int beginswith(char* begin, char* token){
-
-    int matches = 1;
-    int j = 0;
-    while(matches && token[j] != 0){
-        matches = matches && (begin[j] == token[j]);
-        j += 1;
-        if(begin[j] == 0)
-            return matches;
-    }
-    return 0;
-}
-
-int get_token_type(char* token, State* state){// TODO ADD TYPE=CONDITIONAL
-    int i = 0;
-    if(token[0] == '`'){
-        return ASM;
-    }
-    if(token[0] == '}'){
-        return FUNCTION_END;
-    }
-    if(token[0] == '/' && token[1] == '/'){
-        return COMMENT;
-    }
-    if(!ISALPHA(token[0])){
-        return INVALID; // invalid char
-    }
-    if(beginswith("return ", token))
-        return FUNCTION_RETURN;
-    if(beginswith("def ", token))
-        return FUNCTION_DEFN;
-    List* l = state->types;
-    while(l != NULL){
-        Type* t = (Type*) l->data;
-        char* namesp = malloc(strlen(t->name)+2);
-        namesp[0] = 0;
-        strcat(namesp, t->name);
-        namesp[strlen(t->name)+1] = 0;
-        namesp[strlen(t->name)] = ' ';
-        if(beginswith(namesp, token)){
-            free(namesp);
-            return VARIABLE_DEFN;
-        }
-        free(namesp);
-        l = l->next;
-    }
-    while(token[i] != '\0'){
-        if(token[i] == '='){
-            return ASSIGNMENT;
-        }
-        if(token[i] == '('){
-            return FUNCTION_CALL;
-        }
-        i += 1;
-    }
-    return INVALID;
-}
-
-
-
-char* proc_str(char* data, long max, int* indexed){
-
-   int esc_next = 0;
-   int stringalloc = 32;
-   int stringind = 0;
-   char* string = (char*) malloc(stringalloc);
-   for(long i=0; i < max; i++){
-      
-      char c = data[i];
-      if(c == '"' && (esc_next == 0)){
-        string[stringind] = '\0';
-        esc_next = 0;
-        (*indexed) = i;
-        return string;
-      }
-      else if(c == '"' && (esc_next == 1)){
-        string[stringind] = c;
-        stringind = stringind + 1;
-        if(stringind == stringalloc){//allocate more space
-             stringalloc = stringalloc * 2;
-             string = (char*) realloc(string, stringalloc);
-        }
-        esc_next = 0;
-      }
-      else{
-         if(c == '\\' && esc_next == 0){
-             esc_next = 1;
-         }
-         else {
-            string[stringind] = c;
-            stringind=stringind+1;
-            if(stringind == stringalloc){
-                stringalloc = stringalloc * 2;
-                string = (char*) realloc(string, stringalloc);
-            }
-            esc_next = 0;
-         }
-      }
-      
-   }
-   return NULL;
 
 }

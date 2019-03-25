@@ -7,6 +7,7 @@
 #include<sys/wait.h>
 #include"irec.h"
 #include"datastructs.h"
+#include"parser.h"
 #include"compiler.h"
 #include"writer.h"
 #include"precompiler.h"

@@ -46,24 +46,15 @@ void write_footer(State* state){
 void write_varinit(Variable* var, State* state){
     fprintf(state->fp, "pushq $0\n");
 }
-//write refs are for passing params / or ret values.
-void write_iref(char* ref, State* state){
-    fprintf(state->fp, "movq $%s, %%rax\n", ref);
-}
-void write_varref(Variable* ref, State* state){
-    if(ref->type->id == VARTYPE_INTEGER){
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ref->offset);
-    } else if(ref->type->id == VARTYPE_BYTE){
-        fprintf(state->fp, "movb %i(%%rsp), %%al\n", ref->offset);
-    }
-}
+
 void write_funcreturn(State* state){
-    fprintf(state->fp, "add $%i, %%rsp\n%s\n", state->currentfunc->max_offset, "ret");
+    fprintf(state->fp, "add $%i, %%rsp\nret\n", state->currentfunc->max_offset);
 }
 
 void write_funcdef(Function* func, State* state){
     fprintf(state->fp, "%s:\nmovq %%rax, %%rbx\n", func->write_name);
 }
+
 void write_asm(char* str, State* state){
     fprintf(state->fp, "%s\n", str);
 }
@@ -72,32 +63,8 @@ void write_funcall(Function* func, State* state){
     fprintf(state->fp, "push %%rbx\ncall %s\npop %%rbx\n", func->write_name);
 }
 
-void write_vassign(Variable* a, Variable* b, State* state){
-    //a = b
-    if(a->type->id == VARTYPE_INTEGER){
-        fprintf(state->fp, "movq %i(%%rsp), %%rcx\n", b->offset);
-    }
-    else if(a->type->id == VARTYPE_BYTE){
-        fprintf(state->fp, "movb %i(%%rsp), %%cl\n", b->offset);
-    }
-    else{
-        fprintf(stderr, "Error computing types while compiling.\nExiting.\n");
-        exit(-1);
-    }
-    if(b->type->id == VARTYPE_INTEGER){
-        fprintf(state->fp, "movq %%rcx, %i(%%rsp)\n", a->offset);
-    }
-    else if(b->type->id == VARTYPE_BYTE){
-        fprintf(state->fp, "movb %%cl, %i(%%rsp)\n", a->offset);
-    }
-    else{
-        fprintf(stderr, "Error computing types while compiling.\nExiting.\n");
-        exit(-1);
-    }
-}
-
-void write_fassign(Variable* a, State* state){
-    // a = func
+void write_varassign(Variable* a, State* state){
+    // a = b
     if(a->type->id == VARTYPE_INTEGER){
         fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", a->offset);
     }
@@ -110,16 +77,19 @@ void write_fassign(Variable* a, State* state){
     }
 }
 
-void write_iassign(Variable* a, char* b, State* state){
-    //integer a = 5
-    if(a->type->id == VARTYPE_INTEGER){
-        fprintf(state->fp, "movq $%s, %i(%%rsp)\n", b,  a->offset);
-    }
-    else if (a->type->id == VARTYPE_BYTE){
-        fprintf(state->fp, "movb $%s, %i(%%rsp)\n", b, a->offset);
+void write_varref(Variable* ref, State* state){
+    if(ref->type->id == VARTYPE_INTEGER){
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ref->offset);
+    } else if(ref->type->id == VARTYPE_BYTE){
+        fprintf(state->fp, "movb %i(%%rsp), %%al\n", ref->offset);
     }
     else{
         fprintf(stderr, "Error computing types while compiling.\nExiting.\n");
         exit(-1);
     }
 }
+
+void write_immediate(int immediate, State* state){
+    fprintf(state->fp, "movq $%i, %%rax\n", immediate);
+}
+

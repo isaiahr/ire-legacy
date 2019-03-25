@@ -9,10 +9,8 @@ extern void write_funcreturn(State* state);
 extern void write_asm(char* str, State* state);
 extern void write_varinit(Variable* var, State* state);
 extern void write_varref(Variable* var, State* state);
-extern void write_iref(char* str, State* state);
 extern void write_header(State* state);
 extern void write_footer(State* state);
-extern void write_vassign(Variable* a, Variable* b, State* state);
-extern void write_fassign(Variable* a, State* state);
-extern void write_iassign(Variable* a, char* b, State* state);
+extern void write_immediate(int immediate, State* state);
+extern void write_varassign(Variable* a, State* state);
 #endif
