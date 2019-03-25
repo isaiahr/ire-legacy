@@ -63,6 +63,7 @@ void process_token(Token* token, int line, State* state){
         return;
     }
     if(type == ASM){
+        annotate(state, "# asm block\n");
         write_asm(token->str, state);
     }
     if(type == FUNCTION_DEFN){
@@ -76,11 +77,13 @@ void process_token(Token* token, int line, State* state){
         else{
             f->defined = 1;
         }
+        annotate(state, "# definition of function %s\n", f->name);
         state->writ_return = 0;
         state->currentfunc = f;
         write_funcdef(f, state);
     }
     if(type == FUNCTION_RETURN){
+        annotate(state, "# function %s return\n", state->currentfunc->name);
         if(token->t1 != NULL){
             process_token(token->t1, line, state);
         }
@@ -92,6 +95,7 @@ void process_token(Token* token, int line, State* state){
     }
     if(type == FUNCTION_END){
         if(!state->writ_return){
+            annotate(state, "# function %s return\n", state->currentfunc->name);
             write_immediate(0, state);
             write_funcreturn(state);
             state->writ_return = 1;
@@ -105,6 +109,7 @@ void process_token(Token* token, int line, State* state){
             error(DUPDEFTYPE, line, token->str);
         }
         Variable* var = add_var(state->currentfunc, token->str, token->t, state);
+        annotate(state, "# initialize var %s\n", var->name);
         write_varinit(var, state);
     }
     if(type == FUNCTION_CALL){
@@ -115,6 +120,7 @@ void process_token(Token* token, int line, State* state){
         write_funcall(token->func, state);
     }
     if(type == ASSIGNMENT){
+        annotate(state, "# assign to var %s\n", token->var1->name);
         process_token(token->t1, line, state);
         write_varassign(token->var1, state);
     }
