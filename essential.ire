@@ -1,0 +1,7 @@
+def exit {
+`
+mov     %rbx, %rdi
+mov     $60, %rax
+syscall
+`
+}

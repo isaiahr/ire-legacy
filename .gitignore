@@ -1,4 +1,4 @@
 irec
+exit
 *.o
-*.as
 *.out

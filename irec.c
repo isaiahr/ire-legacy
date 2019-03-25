@@ -95,9 +95,8 @@ int main(int argc, char **argv)
                 ind01 = strchr(outputfile, 0);
                 ind01[0] = '.';
             }
-            ind01[1] = 'a';
-            ind01[2] = 's';
-            ind01[3] = 0;
+            ind01[1] = 's';
+            ind01[2] = 0;
         }
         else{
             if(ind01 == NULL){
