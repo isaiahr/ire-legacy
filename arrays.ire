@@ -1,0 +1,16 @@
+import essential.ire
+
+def main {
+    int j
+    int[] thearray
+    thearray += 3
+    thearray += 2
+    thearray += 1
+    thearray[0] = 41
+    
+    j = 1
+    int[] another
+    another = thearray
+    another[1] = 10
+    exit(thearray[j])
+}
