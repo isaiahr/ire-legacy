@@ -1,4 +1,5 @@
 irec
 exit
+commitid.h
 *.o
 *.out

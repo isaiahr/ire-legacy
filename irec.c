@@ -12,6 +12,7 @@
 #include"writer.h"
 #include"precompiler.h"
 #include"error.h"
+#include"commitid.h"
 
 int main(int argc, char **argv)
 {
@@ -67,6 +68,7 @@ int main(int argc, char **argv)
                 break;
             case 'h':
                 printf("irec, the ire compiler\n");
+                printf("Version %s, build %s\n", VERSION_STRING, COMMIT_ID);
                 printf("Usage: %s [options] file\n", argv[0]);
                 printf("Options:\n");
                 printf("-a, --asm,                Compile, but do not assemble & link\n");
@@ -84,6 +86,11 @@ int main(int argc, char **argv)
         }
     }
     char* filename = argv[optind];
+    if(filename == NULL){
+        printf("No file given.\n");
+        printf("Try %s --help for usage.\n", argv[0]);
+        return 0;
+    }
     if(state->outputfile == NULL){
         char* indx = strchr(filename, '.');
         if(indx == NULL) indx = strchr(filename, 0);
