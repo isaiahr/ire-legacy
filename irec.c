@@ -23,33 +23,20 @@ int main(int argc, char **argv)
     {"annotate", 0, NULL, 'n'},
     {"help", 0, NULL , 'h'},
     };
-    List* types = (List*) malloc(sizeof (List));
-    Type* type_int = (Type*) malloc(sizeof (Type));
-    type_int->name = "int";
-    type_int->composite = NULL;
-    type_int->functions = NULL;
-    type_int->operators = NULL;
-    type_int->id = VARTYPE_INTEGER;
-    Type* type_byte = (Type*) malloc(sizeof (Type));
-    type_byte->name = "byte";
-    type_byte->composite = NULL;
-    type_byte->functions = NULL;
-    type_byte->operators = NULL;
-    type_byte->id = VARTYPE_BYTE;
-    types->data = type_int;
-    types->next = (List*) malloc(sizeof (List));
-    types->next->data = type_byte;
-    types->next->next = NULL;
     State *state = (State*) malloc(sizeof (State));
     state->comp_asm = 0;
     state->outputfile = NULL;
     state->functions = NULL;
     state->variables = NULL;
-    state->types = types;
+    state->types = NULL;
+    state->treg = "rax";
+    state->tregm = "al";
     state->verbose = 0;
     state->annotate = 0;
     state->currentfunc = NULL;
     state->writ_return = 0;
+    add_type("int", VARTYPE_INTEGER, state);
+    add_type("byte", VARTYPE_BYTE, state);
     char c = 0;
     int ind = 0;
     while((c = getopt_long(argc, argv, "ao:vn", options, &ind)) != -1){

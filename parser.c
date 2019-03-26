@@ -54,6 +54,38 @@ Token* tokenize(char* str, int line, State* state){
         t->nt = strtol(b, NULL, 10);
         return t;
     }
+    char* arr = copy(str, "", "[");
+    Variable* v0 = NULL;
+    if(arr != NULL && str[strlen(arr)] == '['){
+        v0 = ref_var(state->currentfunc, arr, state);
+    }
+    if(v0 != NULL){
+        //array operation
+        int indxe = indexchr(str, '=');
+        int indxb = indexchr(str, ']');
+        if((indxb != -1 && indxe != -1) && (indxe > indxb)){
+            t->type = ARRAY_SET;
+            char* inner = match_sqparen(str);
+            if(inner == NULL){
+                error(SYNTAXERROR, line, str);
+            }
+            t->t1 = tokenize(inner, line, state);
+            t->t2 = tokenize(copy(&str[indxe+1], " ", " "), line, state);
+            t->var1 = v0;
+            return t;
+        }
+        if(indxb == -1){
+            error(SYNTAXERROR, line, str);
+        }
+        t->type = ARRAY_INDEX;
+        t->var1 = v0;
+        char* inner = match_sqparen(str);
+        if(inner == NULL){
+            error(SYNTAXERROR, line, str);
+        }
+        t->t1 = tokenize(inner, line, state);
+        return t;
+    }
     char* begin = copy(str, "", " ");
     if(begin != NULL){
         Type* ty = ref_type(begin, state);
@@ -76,12 +108,21 @@ Token* tokenize(char* str, int line, State* state){
             t->func = fun;// might be null, that is OK.
             char* inner = match_paren(str);
             if(inner == NULL){
-                error(SYNTAXERROR, line, inner);
+                error(SYNTAXERROR, line, str);
             }
             t->t1 = tokenize(inner, line, state);
             return t;
         }
         if(indxe != -1){
+            if(indexstr(str, "+=") == indxe-1){
+                t->type = ARRAY_ADD;
+                char* v = copy(str, "", " +");
+                Variable* var = ref_var(state->currentfunc, v, state);
+                char* end = copy(str+strlen(v), " +=", "");
+                t->var1 = var;
+                t->t1 = tokenize(end, line, state);
+                return t;
+            }
             t->type = ASSIGNMENT;
             Variable* var = ref_var(state->currentfunc, begin, state);
             if(var == NULL){
@@ -152,6 +193,51 @@ char* match_paren(char* input){
     return NULL;
 }
 
+char* match_sqparen(char* input){
+    int numpar = 1;
+    int first = -1;
+    int i = 0;
+    while(input[i] != 0){
+        if(input[i] == '[' && first == -1){
+            first = i;
+        }
+        else if (input[i] == '['){
+            numpar += 1;
+        }
+        else if (input[i] == ']'){
+            numpar -= 1;
+        }
+        if(numpar == 0){
+            char* x = oldcopy(input, first+1, i);
+            return x;
+        }
+        i++;
+    }
+    return NULL;
+}
+
+// returns index of first occurance of st2 in st1.
+// so indexstr (a += b) (+=) -> 2
+int indexstr(char* str1, char* str2){
+    // index
+    int i = 0;
+    // match index
+    int mi = 0;
+    while(str1[i+mi] != 0){
+        if(str2[mi] == 0){
+            return i;
+        }
+        if(str1[i+mi] == str2[mi]){
+            mi += 1;
+        }
+        else{
+            mi = 0;
+            i++;
+        }
+    }
+    return -1;
+
+}
 
 char* copy(char* token, char* pass, char* end){
     int i = 0;

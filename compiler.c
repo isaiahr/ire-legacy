@@ -124,5 +124,23 @@ void process_token(Token* token, int line, State* state){
         process_token(token->t1, line, state);
         write_varassign(token->var1, state);
     }
+    if(type == ARRAY_ADD){
+        annotate(state, "# %s += something\n", token->var1->name);
+        process_token(token->t1, line, state);
+        write_arradd(token->var1, state);
+    }
+    if(type == ARRAY_SET){
+        annotate(state, "# %s[i] = n\n", token->var1->name);
+        process_token(token->t1, line, state); // t1 = i
+        Variable* v = add_fakevar(state->currentfunc, state);
+        write_varinit(v, state);
+        write_varassign(v, state);
+        process_token(token->t2, line, state);
+        write_arrset(token->var1, v, state);
+    }
+    if(type == ARRAY_INDEX){
+        process_token(token->t1, line, state);
+        write_arrind(token->var1, state);
+    }
 
 }

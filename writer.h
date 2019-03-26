@@ -13,4 +13,7 @@ extern void write_header(State* state);
 extern void write_footer(State* state);
 extern void write_immediate(int immediate, State* state);
 extern void write_varassign(Variable* a, State* state);
+extern void write_arradd(Variable* a, State* state);
+extern void write_arrset(Variable* a, Variable* ind, State* state);
+extern void write_arrind(Variable* a, State* state);
 #endif

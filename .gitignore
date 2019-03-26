@@ -1,5 +1,7 @@
 irec
 exit
+arrays
+pre_s.h
 commitid.h
 *.o
 *.out

@@ -52,6 +52,28 @@ Function* ref_func(char* func, State* state){
     } 
     return NULL; // function not found.
 }
+Variable* add_fakevar(Function* fun, State* state){
+    // creates a fake variable for internal use.
+    // this is not linked into the list of vars.
+    List* l = state->variables;
+    while(l != NULL){
+        Variable* I = (Variable*) l->data;
+        if(I->func == fun){
+            I->offset = I->offset + 8;
+            if(I->func->max_offset < I->offset){
+                I->func->max_offset = I->offset;
+            }
+        }
+        l = l->next;
+    }
+    Variable* var;
+    var = (Variable*) malloc(sizeof(Variable));
+    var->offset = 0;
+    Type* t = (Type*) malloc(sizeof(Type));
+    t->id = VARTYPE_INTEGER;
+    var->type = t;
+    return var;
+}
 
 Variable* add_var(Function* fun, char* varn, Type* type, State* state){
     if(fun == NULL || type == NULL){
@@ -109,13 +131,23 @@ Variable* ref_var(Function* func, char* varn, State* state){
     }
     return NULL;
 }
-
-Type* add_type(char* type, State* state){
+Type* add_type(char* type, int id, State* state){
+    char* typea = (char*) malloc(strlen(type)+3);
+    memcpy(typea, type, strlen(type));
+    typea[strlen(type)] = '[';
+    typea[strlen(type)+1] = ']';
+    typea[strlen(type)+2] = 0;
+    add_type_(typea, -id, state);
+    Type* t = add_type_(type, id, state);
+    return t;
+}
+Type* add_type_(char* type, int id, State* state){
     if(ref_type(type, state) != NULL){
         return NULL; // type already exists
     }
     Type* t = (Type*) malloc(sizeof(Type));
     t->name = type;
+    t->id = id;
     t->composite = NULL;
     t->functions = NULL;
     t->operators = NULL;

@@ -17,6 +17,9 @@
 #define IMMEDIATE 10
 #define CONDITIONAL 11
 #define ASM 12
+#define ARRAY_ADD 13
+#define ARRAY_INDEX 14
+#define ARRAY_SET 15
 #define INVALID -1
 // Data structures
 
@@ -35,8 +38,10 @@ typedef struct Token{
 
 extern Token* tokenize(char* str, int line, State* state);
 extern int indexchr(char* str, char chr);
+extern int indexstr(char* str, char* str1);
 extern void validname(char* name, int line);
 extern char* match_paren(char* input);
+extern char* match_sqparen(char* input);
 extern char* copy(char* token, char* pass, char* end);
 extern char* oldcopy(char* token, int ind0, int ind1);
 extern int beginswith(char* begin, char* token);
