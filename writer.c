@@ -76,7 +76,7 @@ void write_funcall(Function* func, State* state){
 
 void write_varassign(Variable* a, State* state){
     // a = b
-    if(a->type->id == VARTYPE_INTEGER || a->type->id == -VARTYPE_INTEGER){
+    if(a->type->id != VARTYPE_BYTE){
         fprintf(state->fp, "movq %%%s, %i(%%rsp)\n", state->treg, a->offset);
     }
     else if (a->type->id == VARTYPE_BYTE){
@@ -89,7 +89,7 @@ void write_varassign(Variable* a, State* state){
 }
 
 void write_varref(Variable* ref, State* state){
-    if(ref->type->id == VARTYPE_INTEGER || ref->type->id == -VARTYPE_INTEGER){
+    if(ref->type->id != VARTYPE_BYTE){
         fprintf(state->fp, "movq %i(%%rsp), %%%s\n", ref->offset, state->treg);
     } else if(ref->type->id == VARTYPE_BYTE){
         fprintf(state->fp, "movb %i(%%rsp), %%%s\n", ref->offset, state->tregm);
@@ -100,31 +100,57 @@ void write_varref(Variable* ref, State* state){
     }
 }
 
-void write_immediate(int immediate, State* state){
+void write_byte(char byte, State* state){
+    unsigned char b = byte;
+    fprintf(state->fp, "movb $0x%x, %%%s\n", b, state->tregm);
+}
+
+void write_int(int immediate, State* state){
     fprintf(state->fp, "movq $%i, %%%s\n", immediate, state->treg);
 }
 
 void write_arrset(Variable* arr, Variable* ind, State* state){
-    fprintf(state->fp, "movq %%rax, %%r14\n"); // val
-    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
-    fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-    fprintf(state->fp, "addq $8, %%rax\n");
-    fprintf(state->fp, "imul $8, %%r15, %%r15\n");
-    fprintf(state->fp, "addq %%rax, %%r15\n");
-    fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    if(arr->type->id == -VARTYPE_BYTE){
+        fprintf(state->fp, "movq %%rax, %%r14\n"); // val
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
+        fprintf(state->fp, "addq $8, %%rax\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    }else{
+        fprintf(state->fp, "movq %%rax, %%r14\n"); // val
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
+        fprintf(state->fp, "addq $8, %%rax\n");
+        fprintf(state->fp, "imul $8, %%r15, %%r15\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    }
 }
 
 void write_arradd(Variable* arr, State* state){
     fprintf(state->fp, "movq %%rax, %%r15\n");
     fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset);
-    fprintf(state->fp, "call array_add\n");
+    if(arr->type->id == -VARTYPE_BYTE){
+        fprintf(state->fp, "call array_addb\n");
+    }else{
+        fprintf(state->fp, "call array_add\n");
+    }
 }
 
 void write_arrind(Variable* arr, State* state){
-    fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
-    fprintf(state->fp, "addq $8, %%r15\n");
-    fprintf(state->fp, "imul $8, %%rax, %%rax\n");
-    fprintf(state->fp, "addq %%rax, %%r15\n");
-    fprintf(state->fp, "movq (%%r15), %%rax\n");
+    if(arr->type->id == -VARTYPE_BYTE){
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
+        fprintf(state->fp, "addq $8, %%r15\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq (%%r15), %%rax\n");
+    }
+    else{
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
+        fprintf(state->fp, "addq $8, %%r15\n");
+        fprintf(state->fp, "imul $8, %%rax, %%rax\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq (%%r15), %%rax\n");
+    }
 }
 

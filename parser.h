@@ -14,12 +14,13 @@
 #define VARIABLE_DEFN 7
 #define VARIABLE_REF 8
 #define IMPORT 9
-#define IMMEDIATE 10
-#define CONDITIONAL 11
-#define ASM 12
-#define ARRAY_ADD 13
-#define ARRAY_INDEX 14
-#define ARRAY_SET 15
+#define INT 10
+#define CHAR 11
+#define CONDITIONAL 12
+#define ASM 13
+#define ARRAY_ADD 14
+#define ARRAY_INDEX 15
+#define ARRAY_SET 16
 #define INVALID -1
 // Data structures
 
@@ -31,6 +32,7 @@ typedef struct Token{
     Variable* var2;
     Function* func;
     char* str;
+    char chr;
     long nt;
     struct Token* t1;
     struct Token* t2;

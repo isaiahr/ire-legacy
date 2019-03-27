@@ -68,3 +68,61 @@ array_add:
         jmp done
     done:
         ret
+
+
+
+# same as array_add except with byte array
+
+# array += newitem.
+# array = rax, newitem=r15
+# returns: array
+array_addb:
+    mov (%rax), %r14 # r14 = current array length (IN BYTES)
+    mov -8(%rax), %r13 # r13 = allocated space
+    addq $1, %r14 # length increase by a byte
+    subq $8, %r13 # subtract allocated length by one int, for size
+    cmp %r14, %r13 # r13-r14 < 0 = problem (jmp to bad)
+    js badb
+    # good
+    jmp goodb
+    goodb:
+        push %rax
+        addq $1, (%rax) # write new length
+        movq (%rax), %r14
+        addq %r14, %rax
+        addq $7, %rax # 8 - 1
+        movq %r15, (%rax)
+        pop %rax
+        jmp doneb
+    badb: # need to allocate more space for this array
+        # DELETe this lines
+        push %rax
+        movq -8(%rax), %r13
+        addq $128, %r13 # add 128 more bytes
+        movq %r13, %rax
+        call alloc
+        popq %rbx # ptr to old mem
+        movq (%rbx), %rcx # length to copy
+        addq $8, %rbx # points to first slot of mem
+        pushq %rax # store base loc of array, to return it
+        addq $8, %rax
+        movq -8(%rbx), %r14
+        addq $1, %r14 # new length = length + 1
+        movq %r14, -8(%rax) # write length to new mema
+        subq $1, %rcx
+        jmp loopb
+    loopb:
+        movb (%rbx), %r14b
+        movb %r14b, (%rax)
+        addq $1, %rbx
+        addq $1, %rax
+        subq $1, %rcx
+        cmp $0, %rcx # rcx -0
+        js almostb #
+        jmp loopb
+    almostb:
+        movb %r15b, (%rax)
+        pop %rax
+        jmp doneb
+    doneb:
+        ret

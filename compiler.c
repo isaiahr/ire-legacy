@@ -90,13 +90,16 @@ void process_token(Token* token, int line, State* state){
         state->writ_return = 1;
         write_funcreturn(state);
     }
-    if(type == IMMEDIATE){
-        write_immediate(token->nt, state);
+    if(type == INT){
+        write_int(token->nt, state);
+    }
+    if(type == CHAR){
+        write_byte(token->chr, state);
     }
     if(type == FUNCTION_END){
         if(!state->writ_return){
             annotate(state, "# function %s return\n", state->currentfunc->name);
-            write_immediate(0, state);
+            write_int(0, state);
             write_funcreturn(state);
             state->writ_return = 1;
         }

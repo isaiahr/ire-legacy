@@ -1,0 +1,12 @@
+import essential.ire
+def main {
+    byte[] a
+    a += 'H'
+    a += 'e'
+    a += 'l'
+    a += 'l'
+    a += 'o'
+    a += '\n'
+    print(a)
+    exit(0)
+}

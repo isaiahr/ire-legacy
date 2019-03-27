@@ -48,8 +48,27 @@ Token* tokenize(char* str, int line, State* state){
         t->str = oldcopy(str, 1, strlen(str));
         return t;
     }
+    if(str[0] == '\''){
+        t->type = CHAR;
+        if(str[1] == '\\'){
+            // escape
+            if(str[2] == 'n'){
+                t->chr = '\n';
+            }
+            if(str[2] == '\\'){
+                t->chr = '\\';
+            }
+        }
+        else if(str[2] == '\''){
+            t->chr = str[1];
+        }
+        else{
+            error(SYNTAXERROR, line, str);
+        }
+        return t;
+    }
     if(ISNUMERIC(str[0])){
-        t->type = IMMEDIATE;
+        t->type = INT;
         char* b = copy(str, "", " ");
         t->nt = strtol(b, NULL, 10);
         return t;
