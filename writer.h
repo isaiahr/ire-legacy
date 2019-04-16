@@ -17,4 +17,5 @@ extern void write_varassign(Variable* a, State* state);
 extern void write_arradd(Variable* a, State* state);
 extern void write_arrset(Variable* a, Variable* ind, State* state);
 extern void write_arrind(Variable* a, State* state);
+extern void write_string(char* str, int len, State* state);
 #endif

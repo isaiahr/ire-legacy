@@ -104,6 +104,10 @@ void process_token(Token* token, int line, State* state){
             state->writ_return = 1;
         }
     }
+    if(type == STRING){
+        annotate(state, "# immediate string %s\n", token->str);
+        write_string(token->str, token->nt, state);
+    }
     if(type == VARIABLE_REF){
         write_varref(token->var1, state);
     }

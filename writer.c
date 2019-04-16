@@ -154,3 +154,14 @@ void write_arrind(Variable* arr, State* state){
     }
 }
 
+void write_string(char* str, int len, State* state){
+    int sz = ((len / 128) * 128) + 128;
+    // allocated space is len < n * 128 where n is minimized
+    fprintf(state->fp, "movq $%i, %%rax\n", sz);
+    fprintf(state->fp, "call alloc\n");
+    fprintf(state->fp, "movq $%i, (%%rax)\n", len); // write length
+    for(int i = 0; i < len; i += 1){
+        fprintf(state->fp, "movq $0x%02X, %i(%%rax)\n", str[i], i+8);
+    }
+    
+}

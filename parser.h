@@ -21,6 +21,7 @@
 #define ARRAY_ADD 14
 #define ARRAY_INDEX 15
 #define ARRAY_SET 16
+#define STRING 17
 #define INVALID -1
 // Data structures
 
@@ -47,5 +48,6 @@ extern char* match_sqparen(char* input);
 extern char* copy(char* token, char* pass, char* end);
 extern char* oldcopy(char* token, int ind0, int ind1);
 extern int beginswith(char* begin, char* token);
+extern char* proc_str(char* input, int* len);
 
 #endif

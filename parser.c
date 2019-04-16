@@ -67,6 +67,13 @@ Token* tokenize(char* str, int line, State* state){
         }
         return t;
     }
+    if(str[0] == '"'){
+        t->type = STRING;
+	int len; 
+    	t->str = proc_str(str+1, &len);
+    	t->nt = len;
+    	return t;
+    }
     if(ISNUMERIC(str[0])){
         t->type = INT;
         char* b = copy(str, "", " ");
@@ -148,7 +155,7 @@ Token* tokenize(char* str, int line, State* state){
                 error(UNDEFVAR, line, str);
             }
             t->var1 = var;
-            char* assigner = copy(&str[indxe+1], " ", " ");
+            char* assigner = copy(&str[indxe+1], " ", "");
             t->t1 = tokenize(assigner, line, state);
             return t;
         }
@@ -300,4 +307,50 @@ int beginswith(char* begin, char* token){
             return matches;
     }
     return 0;
+}
+
+char* proc_str(char* data, int* len){
+    int esc_next = 0;
+    int stringalloc = 32;
+    int stringind = 0;
+    char* string = (char*) malloc(stringalloc);
+    for(long i=0; data[i] != 0; i++){ 
+        char c = data[i];
+        if(c == '"' && (esc_next == 0)){
+            string[stringind] = '\0';
+            esc_next = 0;
+            (*len) = i-1;
+            return string;
+        }
+        else if(c == '"' && (esc_next == 1)){
+            string[stringind] = c;
+            stringind = stringind + 1;
+            if(stringind == stringalloc){//allocate more space
+                stringalloc = stringalloc * 2;
+                string = (char*) realloc(string, stringalloc);
+            }
+            esc_next = 0;
+        }
+        else {
+            if(c == '\\' && esc_next == 0){
+                esc_next = 1;
+            }
+            else {
+                if(esc_next == 1){
+                    if(c == 'n')
+                        string[stringind] = '\n';
+                }
+                else{
+                    string[stringind] = c;
+                }
+                stringind=stringind+1;
+                if(stringind == stringalloc){
+                    stringalloc = stringalloc * 2;
+                    string = (char*) realloc(string, stringalloc);
+                }
+                esc_next = 0;
+            }
+        }
+    }
+    return NULL;
 }
