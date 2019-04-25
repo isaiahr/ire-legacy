@@ -13,11 +13,12 @@ def main {
     int o
     o = j
     // test byte transfer
-    byte i
-    i = o
+    //byte i
+    // i = o
     // test transfer assignment not having side effect
-    int p
-    p = i
-
-    exit(i)
+   // int p
+    //p = i
+    int  k
+    k = o
+    exit(k)
 }

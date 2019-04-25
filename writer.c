@@ -1,31 +1,18 @@
+#include<stdarg.h>
 #include<stdio.h>
 #include<stdlib.h>
-#include<string.h>
-#include<errno.h>
-#include<unistd.h>
-#include<getopt.h>
-#include<sys/types.h>
-#include<sys/wait.h>
-#include<stdarg.h>
 #include"datastructs.h"
-#include"writer.h"
-#include"pre_s.h"
+#include"codegenasm.h"
+#include"codegenllvm.h"
 
 /**
-CALLING CONVENTIONS.
-param is passed as rax
-ie
-mov (param), rax
-call func
-
-in a func, param is rbx.
-(aka)
-func:
-mov rax, rbx. 
-
-
-*/
-
+*
+*  Wrapper for codegenasm / codegenllvm
+* 
+* 
+* 
+* 
+ */
 void annotate(State* state, char* format, ...){
     if(!state->annotate)
         return;
@@ -37,131 +24,137 @@ void annotate(State* state, char* format, ...){
 
 
 void write_header(State* state){
-    fprintf(state->fp, ".global _start\n.text\n");
-    fprintf(state->fp, "%s\n", pre_s);
+    if(state->llvm){
+        lwrite_header(state);
+    }
+    else{
+        awrite_header(state);
+    }
 }
 
 void write_footer(State* state){
-    fprintf(state->fp, "\n\n\n.ident \"irec dev version\"\n");
+    if(state->llvm){
+        lwrite_footer(state);
+    }
+    else{
+        awrite_footer(state);
+    }
 }
 
 void write_varinit(Variable* var, State* state){
-    if(var->type->id < 0){
-        // array
-        fprintf(state->fp, "movq $1024, %%rax\n");
-        fprintf(state->fp, "call alloc\n");
-        fprintf(state->fp, "movq $0, (%%rax)\n");
-        fprintf(state->fp, "pushq %%rax\n");
+    if(state->llvm){
+        lwrite_varinit(var, state);
     }
     else{
-        fprintf(state->fp, "pushq $0\n");
+        awrite_varinit(var, state);
     }
 }
 
 void write_funcreturn(State* state){
-    fprintf(state->fp, "add $%i, %%rsp\nret\n", state->currentfunc->max_offset);
+    if(state->llvm){
+        lwrite_funcreturn(state);
+    }
+    else{
+        awrite_funcreturn(state);
+    }
 }
 
 void write_funcdef(Function* func, State* state){
-    fprintf(state->fp, "%s:\nmovq %%rax, %%rbx\n", func->write_name);
+    if(state->llvm){
+        lwrite_funcdef(func, state);
+    }
+    else{
+        awrite_funcdef(func, state);
+    }
 }
 
 void write_asm(char* str, State* state){
-    fprintf(state->fp, "%s\n", str);
+    if(state->llvm){
+        lwrite_asm(str, state);
+    }
+    else{
+        awrite_asm(str, state);
+    }
 }
 
 void write_funcall(Function* func, State* state){
-    fprintf(state->fp, "push %%rbx\ncall %s\npop %%rbx\n", func->write_name);
+    if(state->llvm){
+        lwrite_funcall(func, state);
+    }
+    else{
+        awrite_funcall(func, state);
+    }
+    
 }
 
 void write_varassign(Variable* a, State* state){
-    // a = b
-    if(a->type->id != VARTYPE_BYTE){
-        fprintf(state->fp, "movq %%%s, %i(%%rsp)\n", state->treg, a->offset);
-    }
-    else if (a->type->id == VARTYPE_BYTE){
-        fprintf(state->fp, "movb %%%s, %i(%%rsp)\n", state->tregm, a->offset);
+    if(state->llvm){
+        lwrite_varassign(a, state);
     }
     else{
-        fprintf(stderr, "Error computing types while compiling.\nExiting.\n");
-        exit(-1);
+        awrite_varassign(a, state);
     }
 }
 
 void write_varref(Variable* ref, State* state){
-    if(ref->type->id != VARTYPE_BYTE){
-        fprintf(state->fp, "movq %i(%%rsp), %%%s\n", ref->offset, state->treg);
-    } else if(ref->type->id == VARTYPE_BYTE){
-        fprintf(state->fp, "movb %i(%%rsp), %%%s\n", ref->offset, state->tregm);
+    if(state->llvm){
+        lwrite_varref(ref, state);
     }
     else{
-        fprintf(stderr, "Error computing types while compiling.\nExiting.\n");
-        exit(-1);
+        awrite_varref(ref, state);
     }
 }
 
 void write_byte(char byte, State* state){
-    unsigned char b = byte;
-    fprintf(state->fp, "movb $0x%x, %%%s\n", b, state->tregm);
+    if(state->llvm){
+        lwrite_byte(byte, state);
+    }
+    else{
+        awrite_byte(byte, state);
+    }
 }
 
 void write_int(int immediate, State* state){
-    fprintf(state->fp, "movq $%i, %%%s\n", immediate, state->treg);
+    if(state->llvm){
+        lwrite_int(immediate, state);
+    }
+    else{
+        awrite_int(immediate, state);
+    }
 }
 
 void write_arrset(Variable* arr, Variable* ind, State* state){
-    if(arr->type->id == -VARTYPE_BYTE){
-        fprintf(state->fp, "movq %%rax, %%r14\n"); // val
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-        fprintf(state->fp, "addq $8, %%rax\n");
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq %%r14, (%%r15)\n");
-    }else{
-        fprintf(state->fp, "movq %%rax, %%r14\n"); // val
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-        fprintf(state->fp, "addq $8, %%rax\n");
-        fprintf(state->fp, "imul $8, %%r15, %%r15\n");
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    if(state->llvm){
+        lwrite_arrset(arr, ind, state);
+    } 
+    else{
+        awrite_arrset(arr, ind, state);
     }
 }
 
 void write_arradd(Variable* arr, State* state){
-    fprintf(state->fp, "movq %%rax, %%r15\n");
-    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset);
-    if(arr->type->id == -VARTYPE_BYTE){
-        fprintf(state->fp, "call array_addb\n");
-    }else{
-        fprintf(state->fp, "call array_add\n");
+    if(state->llvm){
+        lwrite_arradd(arr, state);
+    }
+    else{
+        awrite_arradd(arr, state);
     }
 }
 
 void write_arrind(Variable* arr, State* state){
-    if(arr->type->id == -VARTYPE_BYTE){
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
-        fprintf(state->fp, "addq $8, %%r15\n");
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq (%%r15), %%rax\n");
+    if(state->llvm){
+        lwrite_arrind(arr, state);
     }
     else{
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
-        fprintf(state->fp, "addq $8, %%r15\n");
-        fprintf(state->fp, "imul $8, %%rax, %%rax\n");
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq (%%r15), %%rax\n");
+        awrite_arrind(arr, state);
     }
 }
 
 void write_string(char* str, int len, State* state){
-    int sz = ((len / 128) * 128) + 128;
-    // allocated space is len < n * 128 where n is minimized
-    fprintf(state->fp, "movq $%i, %%rax\n", sz);
-    fprintf(state->fp, "call alloc\n");
-    fprintf(state->fp, "movq $%i, (%%rax)\n", len); // write length
-    for(int i = 0; i < len; i += 1){
-        fprintf(state->fp, "movq $0x%02X, %i(%%rax)\n", str[i], i+8);
+    if(state->llvm){
+        lwrite_string(str, len, state);
     }
-    
+    else{
+        awrite_string(str, len, state);
+    }
 }

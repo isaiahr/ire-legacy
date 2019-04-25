@@ -1,7 +1,8 @@
 def exit {
 `
+mov     %rax, %rbx
 mov     %rbx, %rdi
-mov     $60, %rax
+mov     $$60, %rax
 syscall
 `
 }
@@ -10,9 +11,9 @@ def print {
 `
 movq    (%rax), %rdx
 movq    %rax, %rsi
-addq    $8, %rsi
-movq    $1, %rax
-movq    $1, %rdi
+addq    $$8, %rsi
+movq    $$1, %rax
+movq    $$1, %rdi
 syscall
 `
 }

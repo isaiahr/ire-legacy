@@ -33,6 +33,7 @@ typedef struct Variable{
     Function* func;
     Type* type;
     char* write_name;
+    int num;
 }Variable;
 
 
@@ -44,6 +45,9 @@ typedef struct State{
     List* functions;
     List* types;
     int comp_asm;
+    int comp_llvm;
+    int tempnum;
+    int llvm;
     char* outputfile;
     int verbose;
     int annotate;

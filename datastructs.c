@@ -69,9 +69,12 @@ Variable* add_fakevar(Function* fun, State* state){
     Variable* var;
     var = (Variable*) malloc(sizeof(Variable));
     var->offset = 0;
+    var->num = -1;
     Type* t = (Type*) malloc(sizeof(Type));
     t->id = VARTYPE_INTEGER;
     var->type = t;
+    //state->tempnum += 1;
+    //var->num = state->tempnum;
     return var;
 }
 
@@ -87,9 +90,12 @@ Variable* add_var(Function* fun, char* varn, Type* type, State* state){
     var->name = varn;
     var->func = fun;
     var->type = type;
+    var->num = -1;
     var->offset = 0;
     var->write_name = malloc(strlen(varn)+strlen(fun->name)+2);
     snprintf(var->write_name, strlen(varn)+strlen(fun->name)+2, "v%s%s", varn, fun->name);
+    //state->tempnum += 1;
+    //var->num = state->tempnum;
     List* newv;
     newv = (List*) malloc(sizeof(List));
     newv->next = NULL;

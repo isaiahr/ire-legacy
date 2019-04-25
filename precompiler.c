@@ -73,7 +73,7 @@ void loadfile(Compilationfile* f){
     fseek(f->fp, 0L, SEEK_END);
     f->sz = ftell(f->fp);
     rewind(f->fp);
-    f->data = (char*) malloc(f->sz);
+    f->data = (char*) malloc((f->sz)+1);
     if(f->data == NULL){
         fprintf(stderr, "Error: could not allocate %ld bytes of memory\n", f->sz);
         exit(1);
