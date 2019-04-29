@@ -5,6 +5,8 @@
 #define ISNUMERIC(x) (x > 47 && x < 58) 
 
 //token types
+
+
 #define ASSIGNMENT 1
 #define FUNCTION_CALL 2
 #define FUNCTION_DEFN 3
@@ -37,7 +39,15 @@ typedef struct Token{
     long nt;
     struct Token* t1;
     struct Token* t2;
+    struct Token* list;
 } Token;
+
+typedef struct ParseResult{
+    int success;
+    Token* token;
+    char* str;
+    long read;
+} ParseResult;
 
 extern Token* tokenize(char* str, int line, State* state);
 extern int indexchr(char* str, char chr);
