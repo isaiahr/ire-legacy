@@ -4,54 +4,18 @@
 #include<unistd.h>
 #include<sys/types.h>
 #include"datastructs.h"
+#include"lexer.h"
 #include"parser.h"
 #include"compiler.h"
 #include"writer.h"
 #include"common.h"
 #include"error.h"
+#include"lexer.h"
+#include"parser.h"
 
 
 void compile(State* state, char* data, long sz){
-    int index0 = 0;
-    int index1 = -1;
-    int multiline = 0;
-    int line = 1;
-    for(int i = 0; i < sz; i++){
-        if(data[i] == '`'){
-            if(index1 == -1){
-                index1 = i;
-                multiline = 1;
-            }
-            else{
-                char* candidate = malloc(i-index1);
-                memcpy(candidate, &data[index1], i-index1-1);
-                candidate[i-index1-1] = 0;
-                debug(state, "processing %s", candidate);
-                Token* token = tokenize(candidate, line, state);
-                process_token(token, line, state);
-                multiline = 0;
-                index1 = -1;
-            }
-            index0 = -1;
-        }
-        if(data[i] == '\n' && !multiline){
-            if(index0 == -1){
-                index0 = i+1;
-            }
-            else{
-                char* candidate = malloc(i-index0+1);
-                memcpy(candidate, &data[index0], i-index0);
-                candidate[i-index0] = 0;
-                debug(state, "processing %s", candidate);
-                Token* token = tokenize(candidate, line, state);
-                process_token(token, line, state);
-                index0 = i+1;
-            }
-        }
-        if(data[i] == '\n'){
-            line = line+1;
-        }
-    }
+    parse_program(lex(data));
 }
 
 

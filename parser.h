@@ -1,9 +1,6 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
-#define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
-#define ISNUMERIC(x) (x > 47 && x < 58) 
-
 //token types
 
 
@@ -17,13 +14,13 @@
 #define VARIABLE_REF 8
 #define IMPORT 9
 #define INT 10
-#define CHAR 11
+#define CHAR 202
 #define CONDITIONAL 12
 #define ASM 13
 #define ARRAY_ADD 14
 #define ARRAY_INDEX 15
 #define ARRAY_SET 16
-#define STRING 17
+#define STRING 203
 #define INVALID -1
 // Data structures
 
@@ -42,22 +39,18 @@ typedef struct Token{
     struct Token* list;
 } Token;
 
-typedef struct ParseResult{
-    int success;
-    Token* token;
-    char* str;
-    long read;
-} ParseResult;
-
-extern Token* tokenize(char* str, int line, State* state);
-extern int indexchr(char* str, char chr);
-extern int indexstr(char* str, char* str1);
-extern void validname(char* name, int line);
-extern char* match_paren(char* input);
-extern char* match_sqparen(char* input);
-extern char* copy(char* token, char* pass, char* end);
-extern char* oldcopy(char* token, int ind0, int ind1);
-extern int beginswith(char* begin, char* token);
-extern char* proc_str(char* input, int* len);
-
+int match(Lextoken* p, int m);
+Lextoken* next(Lextoken* p);
+Lextoken* parse_constant(Lextoken* p);
+Lextoken* parse_variable(Lextoken* p);
+Lextoken* parse_type(Lextoken* p);
+Lextoken* parse_expression(Lextoken* p);
+Lextoken* parse_varinit(Lextoken* p);
+Lextoken* parse_funcall(Lextoken* p);
+Lextoken* parse_assignment(Lextoken* p);
+Lextoken* parse_statement(Lextoken* p);
+Lextoken* parse_body(Lextoken* p);
+Lextoken* parse_funcdef(Lextoken* p);
+Lextoken* parse_function(Lextoken* p);
+Lextoken* parse_program(Lextoken* p);
 #endif
