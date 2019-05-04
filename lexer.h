@@ -13,14 +13,15 @@
 #define LEFT_CRPAREN 5
 #define RIGHT_CRPAREN 6
 #define INTEGER 7
-#define CHAR 202
-#define STRING 203
+#define LCHAR 8
+#define LSTRING 9
 #define IDENTIFIER 10
 #define TERM 11
 #define MINUS_SYM 12
 #define COMMA 13
 #define EQUALS 14
-#define EOF (-1)
+#define LEOF 15
+#define RETURN 16
 
 typedef struct Lextoken{
     int line;

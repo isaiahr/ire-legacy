@@ -2,9 +2,6 @@
 #include<stdlib.h>
 #include<string.h>
 #include<unistd.h>
-#include<sys/types.h>
-#include"datastructs.h"
-#include"writer.h"
 #include"common.h"
 #include"error.h"
 #include"lexer.h"
@@ -16,8 +13,20 @@
 /**
  * EBNF OF SYNTAX
  * 
- * 
- * 
+ *  constant = (["-"], int) | char
+ * variable = identifier, ["[",expression,"]" ]
+ * type = indentifier, [ "[", "]"]
+ * expression = (constant | string | variable | funccall)
+ * varinit = type, identifier
+ * funccall = identifier, "(", [expression {",", expression } ] ")"
+ * assignment = identifier, "=", expression
+ * return = return, expression
+ * statement = varinit | expression | assignment | return
+ * body = {[statement], term}
+ * funcdef = type, identifier, "(", [type, identifier], {"," type,  identifier}, ")", "{"
+ * function = funcdef, body, "}"
+ * program = {[function] term }
+
  *
  * 
  */
@@ -45,98 +54,154 @@ Lextoken* next(Lextoken* p){
 }
 
 // constant = (["-"], int) | char
-Lextoken* parse_constant(Lextoken* p){
+Lextoken* parse_constant(Lextoken* p, Token* e){
     int i = match(p, MINUS_SYM);
     i = i && match(next(p), INTEGER);
     if(!i){
-        int i = match(p, CHAR);
+        int i = match(p, LCHAR);
         if(i){
+            e->type = T_CHAR;
+            e->chr = p->chr;
             return next(p);
+        }
+        else{
+            if (match(p, INTEGER)){
+                e->type = T_INT;
+                e->lnt = p->lnt;
+                return next(p);
+            }
         }
     }
     else{
+        e->type = T_INT;
+        e->lnt = p->lnt;
         return next(next(p));
     }
     return NULL;
 }
 
 // variable = identifier, ["[",expression,"]" ]
-Lextoken* parse_variable(Lextoken* p){
+Lextoken* parse_variable(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     if(!i){
         return NULL;
     }
     int j = match(next(p), LEFT_SQPAREN);
-    Lextoken* l = parse_expression(next(next(p)));
+    e->subtokens = init_token();
+    e->subtoken_count = 1;
+    Lextoken* l = parse_expression(next(next(p)), e->subtokens);
     j = j && (l != NULL);
     j = j && match(l, RIGHT_SQPAREN);
     if(j){
+        e->type = T_ARRIND;
+        e->str = malloc(strlen(p->str)+1);
+        memcpy(e->str, p->str, strlen(p->str)+1);
         return next(l);
     }
     else if(i){
+        free(e->subtokens);
+        e->subtoken_count = 0;
+        e->type = T_VARIABLE;
+        e->str = malloc(strlen(p->str)+1);
+        memcpy(e->str, p->str, strlen(p->str)+1);
         return next(p);
     }
+    e->subtoken_count = 0;
+    destroy_token(e->subtokens);
+    e->subtokens = NULL;
     return NULL;
 }
 
 // type = indentifier, [ "[", "]"]
-Lextoken* parse_type(Lextoken* p){
+Lextoken* parse_type(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     if(!i){
         return NULL;
     }
+    e->type = T_TYPE;
+    e->str = malloc(strlen(p->str)+1);
+    memcpy(e->str, p->str, strlen(p->str)+1);
     int j = match(next(p), LEFT_SQPAREN);
     j = j && match(next(next(p)), RIGHT_SQPAREN);
     if(j){
+        e->lnt = 1;
         return next(next(next(p)));
     }
+    e->lnt = 0;
     return next(p);
 }
 
 // expression = (constant | string | variable | funccall)
-Lextoken* parse_expression(Lextoken* p){
+Lextoken* parse_expression(Lextoken* p, Token* e){
     Lextoken* l = NULL;
-    if((l = parse_variable(p))){
+    if((l = parse_funcall(p, e))){
         return l;
     }
-    if((l = parse_constant(p))){
+    if((l = parse_constant(p, e))){
         return l;
     }
-    if(match(p, STRING)){
+    if(match(p, LSTRING)){
+        e->type = T_STRING;
+        e->str = malloc(strlen(p->str)+1);
+        memcpy(e->str, p->str, strlen(p->str)+1);
         return next(p);
     }
-    return parse_funcall(p);
+    return parse_variable(p, e);
 }
 
 // varinit = type, identifier
-Lextoken* parse_varinit(Lextoken* p){
-    Lextoken* l = parse_type(p);
+Lextoken* parse_varinit(Lextoken* p, Token* e){
+    e->subtokens = init_token();
+    e->subtoken_count = 1;
+    Lextoken* l = parse_type(p, e->subtokens);
     if(match(l, IDENTIFIER)){
+        e->str = malloc(strlen(l->str)+1);
+        memcpy(e->str, l->str, strlen(l->str)+1);
+        e->type = T_VARINIT;
         return next(l);
     }
+    e->subtoken_count = 0;
+    destroy_token(e->subtokens);
+    e->subtokens = NULL;
     return NULL;
 }
 
 // funccall = identifier, "(", [expression {",", expression } ] ")"
-Lextoken* parse_funcall(Lextoken* p){
+Lextoken* parse_funcall(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     i = i && match(next(p), LEFT_PAREN);
     if(!i){
         return NULL;
     }
-    Lextoken* l = parse_expression(next(next(p)));
+    e->type = T_FUNCALL;
+    e->str = malloc(strlen(p->str) + 1);
+    memcpy(e->str, p->str, strlen(p->str)+1);
+    e->subtokens = init_token();
+    Lextoken* l = parse_expression(next(next(p)), e->subtokens);
     if(l == NULL){
         i = i && match(next(next(p)), RIGHT_PAREN);
         if(i){
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
             return next(next(next(p)));
         }
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        free(e->str);
         return NULL;
     }
     
+    e->subtoken_count = 1;
+    i = 1;
     while(l != NULL){
         if(match(l, COMMA)){
-            l = parse_expression(next(l));
+            e->subtokens = realloc_token(e->subtokens, (i+1));
+            e->subtoken_count = i+1;
+            l = parse_expression(next(l), &e->subtokens[i]);
             if(l == NULL){
+                free(e->str);
+                destroy_token(e->subtokens);
+                e->subtokens = NULL;
                 return NULL;
             }
         }
@@ -144,50 +209,92 @@ Lextoken* parse_funcall(Lextoken* p){
             if(match(l, RIGHT_PAREN)){
                 return next(l);
             }
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            free(e->str);
             return NULL;
         }
     }
+    destroy_token(e->subtokens);
+    e->subtokens = NULL;
+    free(e->str);
     return NULL; // not possible (?)
 }
 
 
 // assignment = identifier, "=", expression
-Lextoken* parse_assignment(Lextoken* p){
+Lextoken* parse_assignment(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     i = i && match(next(p), EQUALS);
-    Lextoken* l = parse_expression(next(next(p)));
+    e->subtokens = init_token();
+    e->subtoken_count = 1;
+    Lextoken* l = parse_expression(next(next(p)), e->subtokens);
     if(i && l != NULL){
+        e->type = T_ASSIGNMENT;
+        e->str = malloc(strlen(p->str)+1);
+        memcpy(e->str, p->str, strlen(p->str)+1);
         return l;
     }
+    destroy_token(e->subtokens);
+    e->subtokens = NULL;
     return NULL;
 }
 
-// statement = varinit | expression | assignment
-Lextoken* parse_statement(Lextoken* p){
-    Lextoken* l = parse_varinit(p);
+// return = return, expression
+Lextoken* parse_return(Lextoken* p, Token* e){
+    if(!match(p, RETURN)){
+        return NULL;
+    }
+    e->subtokens = init_token();
+    e->subtoken_count = 1;
+    Lextoken* k = next(p);
+    Lextoken* a = parse_expression(k, e->subtokens);
+    if(a == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->type = T_RETURN;
+    return a;
+}
+
+// statement = varinit | expression | assignment | return
+Lextoken* parse_statement(Lextoken* p, Token* e){
+    Lextoken* l = parse_varinit(p, e);
     if(l != NULL){
         return l;
     }
-    l = parse_expression(p);
+    l = parse_assignment(p, e);
     if(l != NULL){
         return l;
     }
-    return parse_assignment(p);
+    l = parse_return(p, e);
+    if(l != NULL){
+        return l;
+    }
+    return parse_expression(p, e);
 }
 
 // body = {[statement], term}
-Lextoken* parse_body(Lextoken* p){
+Lextoken* parse_body(Lextoken* p, Token* body){
+    int ind = 0;
+    body->subtokens = init_token();
+    body->type = T_BODY;
     while(1){
         Lextoken* o = p;
-        p = parse_statement(p);
+        p = parse_statement(p, &body->subtokens[ind]);
         if(p != NULL){
             if(match(p, TERM)){
                 // good
+                ind += 1;
+                body->subtokens = realloc_token(body->subtokens, (ind+1));
+                body->subtoken_count = ind;
                 p = next(p);
             }
             else{
                 return NULL; // statement with no term
             }
+            
         }
         else if(match(o, TERM)){
             p = next(o); // empty stmt
@@ -199,56 +306,193 @@ Lextoken* parse_body(Lextoken* p){
 }
 
  // funcdef = type, identifier, "(", [type, identifier], {"," type,  identifier}, ")", "{"
-Lextoken* parse_funcdef(Lextoken* p){
-    Lextoken* l = parse_type(p);
-    l = match(p, IDENTIFIER) ? next(p) : NULL;
+Lextoken* parse_funcdef(Lextoken* p, Token* def){
+    def->type = T_FUNCDEF;
+    def->subtokens = init_token();
+    def->subtokens = realloc_token(def->subtokens, 2);
+    def->subtoken_count = 1;
+    Lextoken* l = parse_type(p, def->subtokens);
+    if(l == NULL){
+        free(def->subtokens);
+        def->subtoken_count = 0;
+        return NULL;
+    }
+    def->str = malloc(strlen(l->str)+1);
+    memcpy(def->str, l->str, strlen(l->str)+1);
+    l = match(l, IDENTIFIER) ? next(l) : NULL;
     if((!match(l, LEFT_PAREN)) || (l == NULL)){
         return NULL;
     }
-    Lextoken* ty1 = parse_type(l);
+    l = next(l);
+    int j = 1;
+    def->subtokens[j].type = T_VARPARAM;
+    def->subtokens[j].subtokens = malloc(sizeof(struct Token));
+    def->subtokens[j].subtoken_count = 1;
+    def->subtoken_count = 2;
+    Lextoken* ty1 = parse_type(l, (def->subtokens[j].subtokens));
     Lextoken* ident1 = match(ty1, IDENTIFIER) ? next(ty1) : NULL;
+    
     if(ident1 != NULL){
+        
+        // identifier is ty1 
+        def->subtokens[j].str = malloc(strlen(ty1->str)+1);
+        memcpy(def->subtokens[j].str, ty1->str, strlen(ty1->str)+1);
+        
         l = ident1;
         while(1){
             if(!match(l, COMMA)){
                 break;
             }
-            Lextoken* ty = parse_type(next(l));
+            j += 1;
+            def->subtokens = realloc(def->subtokens, (j+1)*sizeof(struct Token));
+            def->subtoken_count = j+1;
+            def->subtokens[j].type = T_VARPARAM;
+            def->subtokens[j].subtokens = malloc(sizeof(struct Token));
+            def->subtokens[j].subtoken_count = 1;
+            Lextoken* ty = parse_type(next(l), def->subtokens[j].subtokens);
             Lextoken* ident = match(ty, IDENTIFIER) ? next(ty) : NULL;
-            if(ident == NULL){
+            if(ident == NULL || ty == NULL){
                 return NULL;
-            }
+            }    
+            def->subtokens[j].str = malloc(strlen(ty->str)+1);
+            memcpy(def->subtokens[j].str, ty->str, strlen(ty->str)+1);
             l = ident;
         }
+    } else {
+        def->subtokens[j].subtoken_count = 0;
     }
-    int j = match(l, RIGHT_PAREN);
-    j = j && match(next(l), LEFT_CRPAREN);
-    if(j){
+    int jo = match(l, RIGHT_PAREN);
+    jo = jo && match(next(l), LEFT_CRPAREN);
+    if(jo){
         return next(next(l));
     }
     return NULL;
 }
 
 // function = funcdef, body, "}"
-Lextoken* parse_function(Lextoken* p){
-    Lextoken* l = parse_funcdef(p);
-    l = parse_body(l);
+Lextoken* parse_function(Lextoken* p, Token* func){
+    func->subtokens = init_token();
+    func->subtokens = realloc_token(func->subtokens, 2);
+    func->subtoken_count = 2;
+    Lextoken* l = parse_funcdef(p, &func->subtokens[0]);
+    if(l == NULL){
+        destroy_token(func->subtokens);
+        func->subtokens = NULL;
+        return NULL;
+    }
+    l = parse_body(l, &func->subtokens[1]);
     if(l != NULL && match(l, RIGHT_CRPAREN)){
+        func->type = T_FUNCTION;
         return next(l);
     }
+    destroy_token(func->subtokens);
+    func->subtokens = NULL;
     return NULL;
 }
 
 // program = {[function] term }
-Lextoken* parse_program(Lextoken* p){
+Token* parse_program(Lextoken* p){
+    Token* prog = init_token();
+    prog->type = T_PROGRAM;
+    prog->subtokens = init_token();
+    int i = 0;
     while(1){
-        Lextoken* l = parse_function(p);
+        Lextoken* l = parse_function(p, &prog->subtokens[i]);
         if(l != NULL){
             p = l;
         }
         if(!match(p, TERM)){
-            return p;
+            break;
         }
+        else if (l == NULL){
+            p = next(p);
+            continue;
+        }
+        i += 1;
+        prog->subtoken_count = i;
+        prog->subtokens = realloc_token(prog->subtokens, (i+1));
         p = next(p);
     }
+    print_tree(prog, 0);
+    return prog;
+}
+
+Token* init_token(){
+    Token* t = malloc(sizeof(struct Token));
+    t->str = NULL;
+    t->subtoken_count = 0;
+    t->lnt = 0;
+    t->subtokens = NULL;
+    t->chr = 0;
+    return t;
+}
+
+Token* realloc_token(Token* ptr, int len){
+    Token* pt = realloc(ptr, len*sizeof(struct Token));
+    pt[len-1].str = NULL;
+    pt[len-1].subtoken_count = 0;
+    pt[len-1].lnt = 0;
+    pt[len-1].subtokens = NULL;
+    pt[len-1].chr = 0;
+    return pt;
+}
+
+void destroy_token(Token* ptr){
+    return;
+    if(ptr == NULL){
+        return;
+    }
+    for(int i = 0; (i*sizeof(struct Token)) < sizeof(ptr); i++){
+        if(ptr[i].str != NULL){
+            free(ptr[i].str);
+            ptr[i].str = NULL;
+        }
+        if(ptr[i].subtokens != NULL){
+            destroy_token(ptr[i].subtokens);
+            ptr[i].subtokens = NULL;
+        }
+    }
+    free(ptr);
+}
+
+void print_tree(Token* p, int lvl){
+    char* lvlstr = malloc(lvl+1);
+    for(int i = 0; i < lvl; i++){
+        lvlstr[i] = ' ';
+    }
+    lvlstr[lvl] = 0;
+    if(p->str == NULL){
+        printf("%s%s\n", lvlstr, type(p));
+    } else {
+        printf("%s%s [%s]\n", lvlstr, type(p), p->str);
+    }
+    free(lvlstr);
+    if(p->subtokens != NULL){
+        for(int i = 0; i < p->subtoken_count; i++){
+            print_tree(&p->subtokens[i], lvl+4);
+        }
+    }
+}
+
+
+char* type(Token* p){
+    switch(p->type){
+        case T_PROGRAM: return "PROGRAM";
+        case T_FUNCTION: return "FUNCTION";
+        case T_ASSIGNMENT: return "ASSIGNMENT";
+        case T_TYPE: return "TYPE";
+        case T_VARIABLE: return "VARIABLE";
+        case T_ARRIND: return "ARRIND";
+        case T_CHAR: return "CHAR";
+        case T_INT: return "INT";
+        case T_STRING: return "STRING";
+        case T_VARINIT: return "VARINIT";
+        case T_FUNCDEF: return "FUNCDEF";
+        case T_VARPARAM: return "VARPARAM";
+        case T_BODY: return "BODY";
+        case T_RETURN: return "RETURN";
+        case T_FUNCALL: return "FUNCALL";
+        default: return "UNKNOWN";
+    }
+    
 }

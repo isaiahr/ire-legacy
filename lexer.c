@@ -10,7 +10,22 @@
  * 
  * 
  */
-
+#define LEXERROR -1
+#define LEFT_PAREN 1
+#define RIGHT_PAREN 2
+#define LEFT_SQPAREN 3
+#define RIGHT_SQPAREN 4
+#define LEFT_CRPAREN 5
+#define RIGHT_CRPAREN 6
+#define INTEGER 7
+#define LCHAR 8
+#define LSTRING 9
+#define IDENTIFIER 10
+#define TERM 11
+#define MINUS_SYM 12
+#define COMMA 13
+#define EQUALS 14
+#define LEOF 15
 Lextoken* lex(char* input){
     char** i = &input;
     int line = 1;
@@ -25,9 +40,42 @@ Lextoken* lex(char* input){
     Lextoken* final = malloc(sizeof(struct Lextoken));
     final->line = line;
     final->next = NULL;
-    final->type = EOF;
+    final->type = LEOF;
     final->str = NULL;
     cur->next = final;
+    cur = first;
+    printf("Lexer symbol stream\n");
+    while(cur->next != NULL){
+        char* str;
+        switch(cur->type){
+            case LEXERROR: str = "ERROR"; break;
+            case LEFT_PAREN: str = "LEFT_PAREN"; break;
+            case RIGHT_PAREN: str = "RIGHT_PAREN"; break;
+            case LEFT_SQPAREN: str = "LEFT_SQPAREN"; break;
+            case RIGHT_SQPAREN: str = "RIGHT_SQPAREN"; break;
+            case LEFT_CRPAREN: str = "LEFT_CRPAREN"; break;
+            case RIGHT_CRPAREN: str = "RIGHT_CRPAREN"; break;
+            case INTEGER: str = "INTEGER"; break;
+            case LCHAR: str = "CHAR"; break;
+            case LSTRING: str = "STRING"; break;
+            case IDENTIFIER: str = "IDENTIFIER"; break;
+            case RETURN: str = "RETURN"; break;
+            case TERM: str = "TERM"; break;
+            case MINUS_SYM: str = "MINUS_SYM"; break;
+            case COMMA: str = "COMMA"; break;
+            case EQUALS: str = "EQUALS"; break;
+            case LEOF: str = "EOF"; break;
+            default: str = "???"; break;
+        }
+        if(cur->str){
+            printf("%s [%s], ", str, cur->str);
+        }
+        else{
+            printf("%s, ", str);
+        }
+        cur = cur->next;
+    }
+    printf("\n");
     return first;
 }
 
@@ -74,7 +122,7 @@ Lextoken* lexone(char** i, int* line){
         return l;
     }
     if(input[0] == '\''){
-        l->type = CHAR;
+        l->type = LCHAR;
         if(input[1] == '\\'){
             if(input[2] == 'n'){
                 l->chr = '\n';
@@ -102,6 +150,12 @@ Lextoken* lexone(char** i, int* line){
             z += 1;
         }
         (*i) += z;
+        return lexone(i, line);
+    }
+    if(beginswith("return ", input)){
+        (*i) += strlen("return ");
+        l->type = RETURN;
+        return l;
     }
     if(beginswith("//", input)){
         int z = 0;
@@ -109,6 +163,7 @@ Lextoken* lexone(char** i, int* line){
             z += 1;
         }
         (*i) += z;
+        return lexone(i, line);
     }
     if(ISALPHA(input[0]) || input[0] == '_'){
         l->type = IDENTIFIER;
@@ -126,7 +181,7 @@ Lextoken* lexone(char** i, int* line){
         return l;
     }
     if(input[0] == '\"'){
-        l->type = STRING;
+        l->type = LSTRING;
         l->str = proc_str(&input[1]);
         if(l->str == NULL){
             l->type = LEXERROR;

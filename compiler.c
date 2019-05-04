@@ -10,7 +10,6 @@
 #include"writer.h"
 #include"common.h"
 #include"error.h"
-#include"lexer.h"
 #include"parser.h"
 
 
@@ -18,7 +17,7 @@ void compile(State* state, char* data, long sz){
     parse_program(lex(data));
 }
 
-
+/**
 void process_token(Token* token, int line, State* state){
     int type = token->type;
     debug(state, ", type %i\n", type);
@@ -115,3 +114,4 @@ void process_token(Token* token, int line, State* state){
     }
 
 }
+*/
