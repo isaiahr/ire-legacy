@@ -2,6 +2,9 @@
 #define __WRITER_H__
 #define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
 #define ISNUMERIC(x) (x > 47 && x < 58) 
+
+#include"datastructs.h"
+
 extern void annotate(State* state, char* format, ...);
 extern void write_funcall(Function* func, State* state);
 extern void write_funcdef(Function* func, State* state);

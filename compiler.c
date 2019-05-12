@@ -11,10 +11,13 @@
 #include"common.h"
 #include"error.h"
 #include"parser.h"
+#include"semantic.h"
 
 
 void compile(State* state, char* data, long sz){
-    parse_program(lex(data));
+    Lextoken* l = lex(data);
+    Token* t = parse_program(l);
+    process_program(t);
 }
 
 /**

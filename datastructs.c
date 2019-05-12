@@ -10,6 +10,9 @@
 * Adds function with name func as a function
 * returns a pointer to the function if successful.
 */
+
+
+/***
 Function* add_func(char* func, int defined, State* state){
     if(ref_func(func, state) != NULL){
         return NULL;
@@ -183,3 +186,5 @@ Type* ref_type(char* type, State* state){
     }
     return NULL;
 }
+
+*/

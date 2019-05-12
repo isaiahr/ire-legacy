@@ -39,8 +39,6 @@ int main(int argc, char **argv)
     state->comp_llvm = 0;
     state->currentfunc = NULL;
     state->writ_return = 0;
-    add_type("int", VARTYPE_INTEGER, state);
-    add_type("byte", VARTYPE_BYTE, state);
     char c = 0;
     int ind = 0;
     while((c = getopt_long(argc, argv, "ao:vnb:l", options, &ind)) != -1){
@@ -161,7 +159,7 @@ int main(int argc, char **argv)
     }
     state->fp = fpo;
     Compilationfile* cur = precompile(filename);
-    write_header(state);
+    // write_header(state);
     while(cur != NULL){
         loadfile(cur);
         printf("Compiling %s, %ld bytes\n", cur->path, cur->sz);
@@ -171,6 +169,7 @@ int main(int argc, char **argv)
     }
     // check if state is ok.
     // make sure all functions are defined
+    /**
     List* head = state->functions;
     while(head != NULL){
         Function* f = (Function*) head->data;
@@ -179,7 +178,8 @@ int main(int argc, char **argv)
         }
         head = head->next;
     }
-    write_footer(state);
+    */
+    // write_footer(state);
     fclose(state->fp);
     if(state->comp_llvm){
         printf("Done compilation.\n");

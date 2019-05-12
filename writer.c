@@ -4,6 +4,16 @@
 #include"datastructs.h"
 #include"codegenasm.h"
 #include"codegenllvm.h"
+#include<string.h>
+#include<errno.h>
+#include<unistd.h>
+#include<getopt.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+#include<stdarg.h>
+#include"semantic.h"
+#include"writer.h"
+#include"pre_s.h"
 
 /**
 *

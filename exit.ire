@@ -1,24 +1,13 @@
-import essential.ire
+// import essential.ire
 
-def get33 {
+Int get33(Int y, Byte c) {
+    Byte a
+    a = 2
+    Byte b
+    b = a
     return 33
 }
 
-
-def main {
-    // test function return
-    int j
-    j = get33()
-    // test function transfer assignment
-    int o
-    o = j
-    // test byte transfer
-    //byte i
-    // i = o
-    // test transfer assignment not having side effect
-   // int p
-    //p = i
-    int  k
-    k = o
-    exit(k)
+Int main(){
+    Int x = get33(2, '3');
 }
