@@ -9,5 +9,9 @@ Int get33(Int y, Byte c) {
 }
 
 Int main(){
-    Int x = get33(2, '3');
+    Int x
+    Byte b
+    b = '2'
+    x = get33(2, b)
 }
+

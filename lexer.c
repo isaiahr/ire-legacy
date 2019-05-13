@@ -133,14 +133,14 @@ Lextoken* lexone(char** i, int* line){
             if(input[3] != '\''){
                 l->type = LEXERROR;
             }
-            (*i) += 3;
+            (*i) += 4;
         }
         else {
             l->chr = input[1];
             if(input[2] != '\''){
                 l->type = LEXERROR;
             }
-            (*i) += 2;
+            (*i) += 3;
         }
         return l;
     }
