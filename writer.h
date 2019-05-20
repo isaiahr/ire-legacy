@@ -5,20 +5,29 @@
 
 #include"datastructs.h"
 
-extern void annotate(State* state, char* format, ...);
-extern void write_funcall(Function* func, State* state);
-extern void write_funcdef(Function* func, State* state);
-extern void write_funcreturn(State* state);
-extern void write_asm(char* str, State* state);
-extern void write_varinit(Variable* var, State* state);
-extern void write_varref(Variable* var, State* state);
-extern void write_header(State* state);
-extern void write_footer(State* state);
-extern void write_int(int immediate, State* state);
-extern void write_byte(char byte, State* state);
-extern void write_varassign(Variable* a, State* state);
-extern void write_arradd(Variable* a, State* state);
-extern void write_arrset(Variable* a, Variable* ind, State* state);
-extern void write_arrind(Variable* a, State* state);
-extern void write_string(char* str, int len, State* state);
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<errno.h>
+#include<unistd.h>
+#include<getopt.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+#include<stdarg.h>
+#include"semantic.h"
+#include"writer.h"
+
+void annotate(State* state, char* format, ...);
+void write_header(State* state);
+void write_footer(State* state);
+void write_varinit(Variable* var, State* state);
+void write_funcreturn(Function* func, Variable* var, State* state);
+void write_funcdef(Function* func, State* state);
+void write_funcend(Function* func, State* state);
+void write_funcall(FunctionCall* func, State* state);
+void write_varassign(Variable* to, Variable* from, State* state);
+void write_byte(Variable* to, char byte, State* state);
+void write_int(Variable* to, int immediate, State* state);
+void write_string(Variable* to, char* str, int len, State* state);
+
 #endif

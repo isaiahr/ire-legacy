@@ -1,4 +1,4 @@
-SRC = irec.c compiler.c writer.c datastructs.c precompiler.c common.c error.c parser.c lexer.c codegenasm.c codegenllvm.c 
+SRC = irec.c compiler.c writer.c datastructs.c precompiler.c common.c error.c parser.c lexer.c semantic.c codegenasm.c codegenllvm.c 
 
 
 compile:

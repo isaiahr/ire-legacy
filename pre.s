@@ -16,6 +16,9 @@ alloc:
     addq $8, %rax
     ret
 
+syscall:
+    syscall
+    ret
 
 # array += newitem.
 # array = rax, newitem=r15

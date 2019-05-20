@@ -23,11 +23,17 @@ typedef struct Program {
 typedef struct Function {
     char* name;
     struct Type* retval;
-    struct Variable* params;
+    struct VarList* params;
     int param_count;
-    struct Variable* vars;
+    struct VarList* vars;
     int var_count;
     struct Body* body;
+    int native;
+    
+    // compile time
+    int max_offset;
+    char* write_name;
+    int writ_return;
 } Function;
 
 typedef struct Body {
@@ -35,9 +41,17 @@ typedef struct Body {
     struct Body* next;
 } Body;
 
+typedef struct VarList {
+    struct Variable* var;
+    struct VarList* next;
+} VarList;
+
 typedef struct Variable {
     struct Type* type;
     char* identifier;
+    
+    // compile time
+    int offset;
 } Variable; 
 
 typedef struct Type {
@@ -67,7 +81,7 @@ typedef struct ConstantAssignment {
 } ConstantAssignment;
 
 typedef struct FunctionCall {
-    Variable* vars;
+    VarList* vars;
     int var_count;
     Function* func;
     Variable* to;
@@ -90,8 +104,9 @@ void print_func(Function* func);
 void print_type(Type* t);
 void print_prog(Program* prog);
 Type* proc_type(char* ident, Program* prog);
-Variable* mkvar(Type* t);
+Variable* mkvar(Function* func, Type* t);
 Variable* mknvar(Function* func, char* str, Type* t);
+Statement* mkinit(Variable* v);
 Variable* proc_var(char* str, Function* func);
 Function* proc_func(char* funcname, Program* prog);
 char* clone(char* str);

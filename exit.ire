@@ -1,17 +1,12 @@
-// import essential.ire
+import essential.ire
 
-Int get33(Int y, Byte c) {
-    Byte a
-    a = 2
-    Byte b
-    b = a
+Int get33(Int y) {
     return 33
 }
 
 Int main(){
     Int x
-    Byte b
-    b = '2'
-    x = get33(2, b)
+    x = 2
+    exit(get33(x));
 }
 

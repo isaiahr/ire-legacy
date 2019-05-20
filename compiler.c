@@ -14,107 +14,131 @@
 #include"semantic.h"
 
 
-void compile(State* state, char* data, long sz){
+void compile_func(Function* f, State* state);
+void compile_stmt(Statement* stmt, Function* f, State* state);
+
+Token* parsefile(State* state, char* data){
     Lextoken* l = lex(data);
     Token* t = parse_program(l);
-    process_program(t);
+    return t;
 }
 
-/**
-void process_token(Token* token, int line, State* state){
-    int type = token->type;
-    debug(state, ", type %i\n", type);
-    // yes i am aware switch exists, but i think this is more readable.
-    if(type == COMMENT || type == IMPORT){
-        return;
+Token* join(Token* first, Token* second){
+    if(second == NULL){
+        return first;
     }
-    if(type == ASM){
-        annotate(state, "# asm block\n");
-        write_asm(token->str, state);
+    int orig = first->subtoken_count;
+    first->subtoken_count = first->subtoken_count + second->subtoken_count;
+    first->subtokens = realloc(first->subtokens, first->subtoken_count*sizeof(struct Token));
+    for(int i = 0; i < second->subtoken_count; i++){
+        memcpy(&first->subtokens[orig+i], &second->subtokens[i], sizeof(struct Token));
     }
-    if(type == FUNCTION_DEFN){
-        Function *f = ref_func(token->str, state);
-        if(f != NULL && f->defined == 1){   
-            error(DUPDEFFUNC, line, token->str);
+    return first;
+}
+
+void compile(State* state, Token* t){
+    Program* p = process_program(t);
+    int log_c = 1;
+    for(int i = 0; i < p->func_count; i++){
+        // compute 10^n
+        int tmp = 10;
+        for(int j = 1; j < log_c; j++){
+            tmp = tmp * tmp;
         }
-        if(f == NULL){
-            f = add_func(token->str, 1, state);
+        if(i > tmp){
+            log_c += 1;
+        }
+        Function* f = &p->funcs[i];
+        if(f->native){
+            continue;
+        }
+        if(strcmp(f->name, ENTRYFUNC) == 0){
+            f->write_name = "_start";
         }
         else{
-            f->defined = 1;
+            f->write_name = malloc(6+(int)((1+(log_c))));
+            f->max_offset = 0;
+            sprintf(f->write_name, "func_%i", i);
         }
-        annotate(state, "# definition of function %s\n", f->name);
-        state->writ_return = 0;
-        state->currentfunc = f;
-        write_funcdef(f, state);
-    }
-    if(type == FUNCTION_RETURN){
-        annotate(state, "# function %s return\n", state->currentfunc->name);
-        if(token->t1 != NULL){
-            process_token(token->t1, line, state);
-        }
-        state->writ_return = 1;
-        write_funcreturn(state);
-    }
-    if(type == INT){
-        write_int(token->nt, state);
-    }
-    if(type == CHAR){
-        write_byte(token->chr, state);
-    }
-    if(type == FUNCTION_END){
-        if(!state->writ_return){
-            annotate(state, "# function %s return\n", state->currentfunc->name);
-            write_int(0, state);
-            write_funcreturn(state);
-            state->writ_return = 1;
+        if(!f->native){
+            compile_func(f, state);
         }
     }
-    if(type == STRING){
-        annotate(state, "# immediate string %s\n", token->str);
-        write_string(token->str, token->nt, state);
-    }
-    if(type == VARIABLE_REF){
-        write_varref(token->var1, state);
-    }
-    if(type == VARIABLE_DEFN){
-        if(ref_var(state->currentfunc, token->str, state) != NULL){
-            error(DUPDEFTYPE, line, token->str);
-        }
-        Variable* var = add_var(state->currentfunc, token->str, token->t, state);
-        annotate(state, "# initialize var %s\n", var->name);
-        write_varinit(var, state);
-    }
-    if(type == FUNCTION_CALL){
-        if(token->func == NULL){
-            token->func = add_func(token->str, 0,  state);
-        }
-        process_token(token->t1, line, state);
-        write_funcall(token->func, state);
-    }
-    if(type == ASSIGNMENT){
-        annotate(state, "# assign to var %s\n", token->var1->name);
-        process_token(token->t1, line, state);
-        write_varassign(token->var1, state);
-    }
-    if(type == ARRAY_ADD){
-        annotate(state, "# %s += something\n", token->var1->name);
-        process_token(token->t1, line, state);
-        write_arradd(token->var1, state);
-    }
-    if(type == ARRAY_SET){
-        annotate(state, "# %s[i] = n\n", token->var1->name);
-        process_token(token->t1, line, state); // t1 = i
-        Variable* v = add_fakevar(state->currentfunc, state);
-        write_varinit(v, state);
-        write_varassign(v, state);
-        process_token(token->t2, line, state);
-        write_arrset(token->var1, v, state);
-    }
-    if(type == ARRAY_INDEX){
-        process_token(token->t1, line, state);
-        write_arrind(token->var1, state);
-    }
-
 }
-*/
+
+void compile_func(Function* f, State* state){
+    // make varlist = paramlist + varlist
+    VarList* cur = f->params;
+    VarList* prev = NULL;
+    VarList* head = NULL;
+    f->writ_return = 0;
+    while(cur != NULL){
+        VarList* new = malloc(sizeof(struct VarList));
+        new->var = cur->var;
+        if(prev != NULL){
+            prev->next = new;
+        }
+        else{
+            head = new;
+        }
+        prev = new;
+        cur = cur->next;
+    }
+    if(head != NULL){
+        prev->next = f->vars;
+        f->vars = head;
+    }
+    write_funcdef(f, state);
+    Body* b = f->body;
+    while(b != NULL){
+        compile_stmt(b->stmt, f, state);
+        b = b->next;
+    }
+    write_funcend(f, state);
+}
+
+inline void compile_stmt(Statement* stmt, Function* f, State* state){
+    switch(stmt->type){
+        case S_ASSIGNMENT:
+            ;
+            Assignment* a = (Assignment*) stmt->stmt;
+            write_varassign(a->to, a->from, state);
+            break;
+        case S_CONSTANTASSIGNMENT:
+            ;
+            ConstantAssignment* ca = (ConstantAssignment*) stmt->stmt;
+            if(ca->type == S_CONST_BYTE){
+                write_byte(ca->to, ca->byte, state);
+            }
+            if(ca->type == S_CONST_INT){
+                write_int(ca->to, ca->lnt, state);
+            }
+            if(ca->type == S_CONST_STRING){
+                write_string(ca->to, ca->string, strlen(ca->string), state);
+            }
+            break;
+        case S_FUNCTIONCALL:
+            ;
+            FunctionCall* fc = (FunctionCall*) stmt->stmt;
+            write_funcall(fc, state);
+            break;
+        case S_VARINIT:
+            ;
+            VarInit* vi = (VarInit*) stmt->stmt;
+            VarList* vl = f->vars;
+            while(vl->var != vi->var){
+                vl->var->offset += 8;
+                vl = vl->next;
+            }
+            vl->var->offset = 0;
+            f->max_offset = f->vars->var->offset+8; // + 8 ??
+            write_varinit(vi->var, state);
+            break;
+        case S_RETURN:
+            ;
+            Return* r = (Return*) stmt->stmt;
+            write_funcreturn(f, r->var, state);
+            break;
+    }
+}
+

@@ -16,9 +16,28 @@
  * 
  */
 
+
+VarList* add_varlist(VarList* vl, Variable* var){
+    if(vl == NULL){
+        VarList* vl = malloc(sizeof(struct VarList));
+        vl->var = var;
+        vl->next = NULL;
+        return vl;
+    }
+    VarList* orig = vl;
+    while(vl->next != NULL){
+        vl = vl->next;
+    }
+    vl->next = malloc(sizeof(struct VarList));
+    vl->next->var = var;
+    vl->next->next = NULL;
+    return orig;
+}
+
 Program* process_program(Token* t){
     Program* po = malloc(sizeof(struct Program));
-    po->func_count = t->subtoken_count;
+    int num_nativefuncs = 1;
+    po->func_count = t->subtoken_count+num_nativefuncs;
     po->funcs = malloc(po->func_count*sizeof(struct Function));
     po->type_count = 4;
     po->types = malloc(4* sizeof(struct Type));
@@ -42,8 +61,18 @@ Program* process_program(Token* t){
     po->types[3].subtypes = NULL;
     po->types[3].subtype_count_per = NULL;
     po->types[3].subtype_count = 0;
-    for(int i = 0; i < t->subtoken_count; i++){
-        process_function(&t->subtokens[i], &po->funcs[i], po);
+    po->funcs[0].name = "syscall";
+    po->funcs[0].write_name = "syscall";
+    po->funcs[0].retval = NULL;
+    po->funcs[0].params = NULL;
+    po->funcs[0].vars = NULL;
+    po->funcs[0].body = NULL;
+    po->funcs[0].param_count = 0;
+    po->funcs[0].var_count = 0;
+    po->funcs[0].native = 1;
+    for(int i = num_nativefuncs; i < po->func_count; i++){
+        po->funcs[i].native = 0;
+        process_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po);
     }
     print_prog(po);
     return po;
@@ -55,8 +84,8 @@ void process_function(Token* xd, Function* func, Program* prog){
     Token body = xd->subtokens[1];
     func->name = clone(def.str);
     func->retval = proc_type(def.subtokens[0].str, prog);
-    func->params = malloc(sizeof(struct Variable) * (def.subtoken_count-1));
-    if(def.subtoken_count == 2){
+    func->params = NULL;
+    if(def.subtoken_count == 2 && def.subtokens[1].subtoken_count == 0){
         func->param_count = 0; // for empty varparam
     } else {
         func->param_count = (def.subtoken_count-1);
@@ -70,8 +99,10 @@ void process_function(Token* xd, Function* func, Program* prog){
         }
         char* ident = clone(def.subtokens[i].str);
         Type* t = proc_type(def.subtokens[i].subtokens[0].str, prog);
-        func->params[i-1].type = t;
-        func->params[i-1].identifier = ident;
+        Variable* var = malloc(sizeof(struct Variable));
+        var->type = t;
+        var->identifier = ident;
+        func->params = add_varlist(func->params, var);
     }
     for(int i = 0; i < body.subtoken_count; i ++){
         process_stmt(&body.subtokens[i], func, prog);
@@ -110,7 +141,9 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             ConstantAssignment* ca = (ConstantAssignment*) stmt->stmt;
             ca->type = S_CONST_BYTE;
             ca->byte = t->chr;
-            ca->to = mkvar(proc_type("Byte", prog));
+            ca->to = mkvar(func, proc_type("Byte", prog));
+            add_stmt_func(mkinit(ca->to), func);
+            add_stmt_func(stmt, func);
             return ca->to;
             break;
         case T_STRING:
@@ -119,7 +152,9 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             ConstantAssignment* ca1 = (ConstantAssignment*) stmt->stmt;
             ca1->type = S_CONST_STRING;
             ca1->string = clone(t->str);
-            ca1->to = mkvar(proc_type("Byte[]", prog));
+            ca1->to = mkvar(func, proc_type("Byte[]", prog));
+            add_stmt_func(mkinit(ca1->to), func);
+            add_stmt_func(stmt, func);
             return ca1->to;
             break;
         case T_INT:
@@ -128,7 +163,9 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             ConstantAssignment* ca2 = (ConstantAssignment*) stmt->stmt;
             ca2->type = S_CONST_INT;
             ca2->lnt = t->lnt;
-            ca2->to = mkvar(proc_type("Int", prog));
+            ca2->to = mkvar(func, proc_type("Int", prog));
+            add_stmt_func(mkinit(ca2->to), func);
+            add_stmt_func(stmt, func);
             return ca2->to;
             break;
         case T_FUNCALL:
@@ -137,13 +174,18 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             FunctionCall* fn = (FunctionCall*) stmt->stmt;
             fn->func = proc_func(t->str, prog);
             fn->var_count = t->subtoken_count;
-            fn->vars = malloc(sizeof(struct Variable)* fn->var_count);
+            fn->vars = NULL;
             for(int i = 0; i < t->subtoken_count; i++){
                 Variable* new = process_stmt(&t->subtokens[i], func, prog);
-                memcpy(&fn->vars[i], new, sizeof(struct Variable));
-                // free(new); ??? ?
+                fn->vars = add_varlist(fn->vars, new);
             }
-            fn->to = mkvar(fn->func->retval);
+            if(!fn->func->native){
+                fn->to = mkvar(func, fn->func->retval);
+                add_stmt_func(mkinit(fn->to), func);
+            }
+            else{
+                fn->to = NULL;
+            }
             add_stmt_func(stmt, func);
             return fn->to;
             break;
@@ -171,8 +213,10 @@ char* formatvar(Variable* var){
 
 void print_func(Function* func){
     printf("%s %s (", func->retval->identifier, func->name);
-    for(int i=0; i < func->param_count; i++){
-            printf("%s %s, ", func->params[i].type->identifier, func->params[i].identifier);
+    VarList* p = func->params;
+    while(p != NULL){
+            printf("%s %s, ", p->var->type->identifier, p->var->identifier);
+            p = p->next;
     }
     printf(")\n");
     Body* cur = func->body;
@@ -193,8 +237,10 @@ void print_func(Function* func){
                 ;
                 FunctionCall* fc = (FunctionCall*) cur->stmt->stmt;
                 printf("    %s = %s (", formatvar(fc->to), fc->func->name);
-                for(int i =0; i< fc->var_count; i++){
-                    printf("%s, ", formatvar(&fc->vars[i]));
+                VarList* vl = fc->vars;
+                while(vl != NULL){
+                    printf("%s, ", formatvar(vl->var));
+                    vl = vl->next;
                 }
                 printf(")\n");
                 break;
@@ -222,7 +268,9 @@ void print_prog(Program* prog){
     printf("PROGRAM\n");
     printf("FUNCTIONS\n");
     for(int i = 0; i < prog->func_count; i++){
-        print_func(&prog->funcs[i]);
+        if(!prog->funcs[i].native){
+            print_func(&prog->funcs[i]);
+        }
     }
     printf("TYPES\n");
     for(int i = 0; i < prog->type_count; i++){
@@ -242,11 +290,21 @@ Type* proc_type(char* ident, Program* prog){
 }
 
 // make temp var
-Variable* mkvar(Type* t){
+Variable* mkvar(Function* func, Type* t){
     Variable* var = malloc(sizeof(struct Variable));
     var->identifier = NULL;
     var->type = t;
+    func->vars = add_varlist(func->vars, var);
     return var;
+}
+
+Statement* mkinit(Variable* var){
+    Statement* stmt = malloc(sizeof(struct Statement));
+    VarInit* v = malloc(sizeof(struct VarInit));
+    stmt->stmt = v;
+    stmt->type = S_VARINIT;
+    v->var = var;
+    return stmt;
 }
 
 // make named var
@@ -256,30 +314,27 @@ Variable* mknvar(Function* func, char* str, Type* t){
         exit(27);
     }
     func->var_count += 1;
-    int fvc = func->var_count;
-    // Variable* data = realloc(pre, fvc * sizeof(struct Variable));
-    if(func->vars == NULL){
-        func->vars = malloc(fvc * sizeof(struct Variable));
-    }
-    else{
-        Variable* data = malloc(fvc * sizeof(struct Variable));
-        memcpy(data, func->vars, (fvc-1)*sizeof(struct Variable));
-        // free(func->vars);
-        // this line breaks the program, but it shouldnt. don't know why it does
-        // TODO debug this.
-        func->vars = data;
-    }
-    
-    func->vars[func->var_count-1].type = t;
-    func->vars[func->var_count-1].identifier = str;
-    return &func->vars[func->var_count-1];
+    Variable* data = malloc(sizeof (struct Variable));
+    func->vars = add_varlist(func->vars, data);
+    data->type = t;
+    data->identifier = str;
+    return data;
 }
 
 Variable* proc_var(char* str, Function* func){
-    for(int i = 0; i < func->var_count; i++){
-        if(strcmp(str, func->vars[i].identifier) == 0){
-            return &func->vars[i];
+    VarList* v = func->vars;
+    while(v != NULL){
+        if((v->var->identifier != NULL) && strcmp(str, v->var->identifier) == 0){
+            return v->var;
         }
+        v = v->next;
+    }
+    VarList* p = func->params;
+    while(p != NULL){
+        if(strcmp(str, p->var->identifier) == 0){
+            return p->var;
+        }
+        p = p->next;
     }
     return NULL;
 }

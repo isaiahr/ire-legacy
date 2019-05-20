@@ -159,14 +159,17 @@ int main(int argc, char **argv)
     }
     state->fp = fpo;
     Compilationfile* cur = precompile(filename);
-    // write_header(state);
+    write_header(state);
+    Token* all = NULL;
     while(cur != NULL){
         loadfile(cur);
         printf("Compiling %s, %ld bytes\n", cur->path, cur->sz);
-        compile(state, cur->data, cur->sz);
+        Token* t = parsefile(state, cur->data);
+        all = join(t, all);
         unloadfile(cur);
         cur = cur->next;
     }
+    compile(state, all);
     // check if state is ok.
     // make sure all functions are defined
     /**
@@ -179,7 +182,7 @@ int main(int argc, char **argv)
         head = head->next;
     }
     */
-    // write_footer(state);
+    write_footer(state);
     fclose(state->fp);
     if(state->comp_llvm){
         printf("Done compilation.\n");
