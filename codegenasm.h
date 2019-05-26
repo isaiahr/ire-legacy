@@ -1,18 +1,20 @@
 #ifndef __CODEGENASM_H__
 #define __CODEGENASM_H__
-extern void awrite_funcall(Function* func, State* state);
-extern void awrite_funcdef(Function* func, State* state);
-extern void awrite_funcreturn(State* state);
-extern void awrite_asm(char* str, State* state);
-extern void awrite_varinit(Variable* var, State* state);
-extern void awrite_varref(Variable* var, State* state);
-extern void awrite_header(State* state);
-extern void awrite_footer(State* state);
-extern void awrite_int(int immediate, State* state);
-extern void awrite_byte(char byte, State* state);
-extern void awrite_varassign(Variable* a, State* state);
-extern void awrite_arradd(Variable* a, State* state);
-extern void awrite_arrset(Variable* a, Variable* ind, State* state);
-extern void awrite_arrind(Variable* a, State* state);
-extern void awrite_string(char* str, int len, State* state);
+
+void awrite_header(State* state);
+void awrite_footer(State* state);
+void awrite_varinit(Variable* var, State* state);
+void awrite_funcreturn(Function* func, Variable* var, State* state);
+void awrite_funcend(Function* func, State* state);
+void awrite_funcdef(Function* func, State* state);
+void awrite_funcall(FunctionCall* func, State* state);
+void awrite_varassign(Variable* to, Variable* from, State* state);
+void awrite_byte(Variable* to, char byte, State* state);
+void awrite_int(Variable* to, int immediate, State* state);
+void awrite_indget(Variable* arr, Variable* ind, Variable* to, State* state);
+void awrite_indset(Variable* arr, Variable* ind, Variable* from, State* state);
+void awrite_addeq(Variable* arr, Variable* delta, State* state);
+void awrite_string(Variable* to, char* str, int len, State* state);
+void awrite_card(Variable* to, Variable* from, State* state);
+
 #endif

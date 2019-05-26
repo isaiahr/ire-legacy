@@ -2,6 +2,7 @@ irec
 exit
 arrays
 pre_s.h
+pre_ll.h
 commitid.h
 *.o
 *.out

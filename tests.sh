@@ -3,7 +3,7 @@ pass=0
 fail=0
 
 
-./irec exit.ire
+./irec -basm exit.ire
 
 if [ "$?" -ne 0 ]
 then
@@ -12,7 +12,7 @@ then
     exit
 fi
 
-./irec arrays.ire
+./irec -basm arrays.ire
 
 if [ "$?" -ne 0 ]
 then
@@ -21,7 +21,7 @@ then
     exit
 fi
 
-./irec hello.ire
+./irec -basm hello.ire
 
 if [ "$?" -ne 0 ]
 then

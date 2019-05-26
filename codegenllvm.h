@@ -1,18 +1,20 @@
 #ifndef __CODEGENLLVM_H__
 #define __CODEGENLLVM_H__
-extern void lwrite_funcall(Function* func, State* state);
-extern void lwrite_funcdef(Function* func, State* state);
-extern void lwrite_funcreturn(State* state);
-extern void lwrite_asm(char* str, State* state);
-extern void lwrite_varinit(Variable* var, State* state);
-extern void lwrite_varref(Variable* var, State* state);
-extern void lwrite_header(State* state);
-extern void lwrite_footer(State* state);
-extern void lwrite_int(int immediate, State* state);
-extern void lwrite_byte(char byte, State* state);
-extern void lwrite_varassign(Variable* a, State* state);
-extern void lwrite_arradd(Variable* a, State* state);
-extern void lwrite_arrset(Variable* a, Variable* ind, State* state);
-extern void lwrite_arrind(Variable* a, State* state);
-extern void lwrite_string(char* str, int len, State* state);
+
+void lwrite_header(State* state);
+void lwrite_footer(State* state);
+void lwrite_varinit(Variable* var, State* state);
+void lwrite_funcreturn(Function* func, Variable* var, State* state);
+void lwrite_funcend(Function* func, State* state);
+void lwrite_funcdef(Function* func, State* state);
+void lwrite_funcall(FunctionCall* func, State* state);
+void lwrite_varassign(Variable* to, Variable* from, State* state);
+void lwrite_byte(Variable* to, char byte, State* state);
+void lwrite_int(Variable* to, int immediate, State* state);
+void lwrite_indget(Variable* arr, Variable* ind, Variable* to, State* state);
+void lwrite_indset(Variable* arr, Variable* ind, Variable* from, State* state);
+void lwrite_addeq(Variable* arr, Variable* delta, State* state);
+void lwrite_string(Variable* to, char* str, int len, State* state);
+void lwrite_card(Variable* to, Variable* from, State* state);
+
 #endif
