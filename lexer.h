@@ -23,6 +23,7 @@
 #define LEOF 15
 #define RETURN 16
 #define ADDEQ 17
+#define PIPE 18
 
 typedef struct Lextoken{
     int line;
@@ -37,7 +38,7 @@ typedef struct Lextoken{
 extern Lextoken* lex(char* input);
 extern Lextoken* lexone(char** i, int* line);
 extern int digit(char input);
-extern char* proc_str(char* data);
+extern char* proc_str(char* data, char** adv);
 extern int beginswith(char* begin, char* str);
 
 #endif

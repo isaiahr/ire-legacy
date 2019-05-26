@@ -218,6 +218,16 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             ae->delta = process_stmt(&t->subtokens[1], func, prog);
             add_stmt_func(stmt, func);
             break;
+        case T_CARDINALITY:
+            stmt->type = S_CARDINALITY;
+            stmt->stmt = malloc(sizeof(struct Cardinality));
+            Cardinality* card = (Cardinality*) stmt->stmt;
+            card->from = process_stmt(t->subtokens, func, prog);
+            // TODO un hardcode type here
+            card->to = mkvar(func, &prog->types[0]);
+            add_stmt_func(mkinit(card->to), func);
+            add_stmt_func(stmt, func);
+            return card->to;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
             Variable* v32 = proc_var(t->str, func);
@@ -292,6 +302,11 @@ void print_func(Function* func){
                 ;
                 AddEquals* ae = (AddEquals*) cur->stmt->stmt;
                 printf("    %s += %s\n", formatvar(ae->var), formatvar(ae->delta));
+                break;
+            case S_CARDINALITY:
+                ;
+                Cardinality* card = (Cardinality*) cur->stmt->stmt;
+                printf("    %s = |%s|\n", formatvar(card->to), formatvar(card->from));
                 break;
             case S_RETURN:
                 ;

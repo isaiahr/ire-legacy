@@ -24,6 +24,7 @@ syscall:
 # array = rax, newitem=r15
 # returns: array
 array_add:
+    subq $8, %rax
     imul $8, (%rax), %r14 # r14 = current array length (IN BYTES)
     mov -8(%rax), %r13 # r13 = allocated space
     addq $8, %r14 # length increase by an int
@@ -80,6 +81,7 @@ array_add:
 # array = rax, newitem=r15
 # returns: array
 array_addb:
+    subq $8, %rax
     mov (%rax), %r14 # r14 = current array length (IN BYTES)
     mov -8(%rax), %r13 # r13 = allocated space
     addq $1, %r14 # length increase by a byte

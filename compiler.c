@@ -149,6 +149,11 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
             AddEquals* ae = (AddEquals*) stmt->stmt;
             write_addeq(ae->var, ae->delta, state);
             break;
+        case S_CARDINALITY:
+            ;
+            Cardinality* card = (Cardinality*) stmt->stmt;
+            write_card(card->to, card->from, state);
+            break;
         case S_RETURN:
             ;
             Return* r = (Return*) stmt->stmt;

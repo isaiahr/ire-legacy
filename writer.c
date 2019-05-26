@@ -176,6 +176,7 @@ void write_varinit(Variable* var, State* state){
         fprintf(state->fp, "movq $1024, %%rax\n");
         fprintf(state->fp, "call alloc\n");
         fprintf(state->fp, "movq $0, (%%rax)\n");
+        fprintf(state->fp, "addq $8, %%rax\n");
         fprintf(state->fp, "pushq %%rax\n");
     }
     else{
@@ -251,7 +252,6 @@ void write_indget(Variable* arr, Variable* ind, Variable* to, State* state){
     if(strcmp(arr->type->identifier, "Byte[]") == 0){
         fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
         fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
-        fprintf(state->fp, "addq $8, %%r15\n");
         fprintf(state->fp, "addq %%rax, %%r15\n");
         fprintf(state->fp, "movq (%%r15), %%rax\n");
         fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
@@ -259,7 +259,6 @@ void write_indget(Variable* arr, Variable* ind, Variable* to, State* state){
     else {
         fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
         fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
-        fprintf(state->fp, "addq $8, %%r15\n");
         fprintf(state->fp, "imul $8, %%rax, %%rax\n");
         fprintf(state->fp, "addq %%rax, %%r15\n");
         fprintf(state->fp, "movq (%%r15), %%rax\n");
@@ -272,7 +271,6 @@ void write_indset(Variable* arr, Variable* ind, Variable* from, State* state){
         fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
         fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
         fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-        fprintf(state->fp, "addq $8, %%rax\n");
         fprintf(state->fp, "addq %%rax, %%r15\n");
         fprintf(state->fp, "movq %%r14, (%%r15)\n");
     }
@@ -280,7 +278,6 @@ void write_indset(Variable* arr, Variable* ind, Variable* from, State* state){
         fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
         fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
         fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-        fprintf(state->fp, "addq $8, %%rax\n");
         fprintf(state->fp, "imul $8, %%r15, %%r15\n");
         fprintf(state->fp, "addq %%rax, %%r15\n");
         fprintf(state->fp, "movq %%r14, (%%r15)\n");
@@ -307,7 +304,14 @@ void write_string(Variable* to, char* str, int len, State* state){
     for(int i = 0; i < len; i += 1){
         fprintf(state->fp, "movq $0x%02X, %i(%%rax)\n", str[i], i+8);
     }
+    fprintf(state->fp, "addq $8, %%rax\n");
     fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
     
 >>>>>>> compilation rewrite
+}
+
+void write_card(Variable* to, Variable* from, State* state){
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", from->offset);
+    fprintf(state->fp, "movq -8(%%rax), %%rax\n");
+    fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
 }

@@ -51,6 +51,7 @@ Lextoken* lex(char* input){
             case EQUALS: str = "EQUALS"; break;
             case LEOF: str = "EOF"; break;
             case ADDEQ: str = "ADDEQ"; break;
+            case PIPE: str = "PIPE"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -88,6 +89,7 @@ Lextoken* lexone(char** i, int* line){
         case '-': l->type = MINUS_SYM; break;
         case ',': l->type = COMMA; break;
         case '=': l->type = EQUALS; break;
+        case '|': l->type = PIPE; break;
         case ';': l->type = TERM; break;
         case '\n': l->type = TERM; (*line)++; break;
         default: match = 0; break;
@@ -173,12 +175,12 @@ Lextoken* lexone(char** i, int* line){
     }
     if(input[0] == '\"'){
         l->type = LSTRING;
-        l->str = proc_str(&input[1]);
+        l->str = proc_str(&input[1], i);
         if(l->str == NULL){
             l->type = LEXERROR;
             return l;
         }
-        (*i) += strlen(l->str)+2;
+        (*i) += 2;
         return l;
     }
     l->type = LEXERROR;
@@ -208,7 +210,7 @@ int digit(char input){
     }
 }
 
-char* proc_str(char* data){
+char* proc_str(char* data, char** adv){
     int esc_next = 0;
     int stringalloc = 32;
     int stringind = 0;
@@ -216,6 +218,7 @@ char* proc_str(char* data){
     for(long i=0; data[i] != 0; i++){ 
         char c = data[i];
         if(c == '"' && (esc_next == 0)){
+            (*adv) += i;
             string[stringind] = 0;
             esc_next = 0;
             return string;

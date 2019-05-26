@@ -11,6 +11,7 @@
 #define S_INDEX 6
 #define S_INDEXEQUALS 7
 #define S_ADDEQUALS 8
+#define S_CARDINALITY 9
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -115,6 +116,10 @@ typedef struct Return {
     Variable* var;
 } Return;
 
+typedef struct Cardinality{
+    Variable* from;
+    Variable* to;
+} Cardinality;
 
 Program* process_program(Token* t);
 void process_function(Token* xd, Function* func, Program* prog);

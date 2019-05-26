@@ -23,6 +23,7 @@
 #define T_INDGET 16
 #define T_INDSET 17
 #define T_ADDEQ 18
+#define T_CARDINALITY 19
 
 /**
  *
@@ -54,6 +55,7 @@ Lextoken* parse_funcall(Lextoken* p, Token* t);
 Lextoken* parse_arrind(Lextoken* p, Token* e);
 Lextoken* parse_arrset(Lextoken* p, Token* e);
 Lextoken* parse_addeq(Lextoken* p, Token* e);
+Lextoken* parse_card(Lextoken* p, Token* e);
 Lextoken* parse_assignment(Lextoken* p, Token* t);
 Lextoken* parse_statement(Lextoken* p, Token* t);
 Lextoken* parse_body(Lextoken* p, Token* t);

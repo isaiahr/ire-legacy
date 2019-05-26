@@ -1,3 +1,8 @@
 Int exit(Int code){
     syscall(60, code)
 }
+
+Int print(Byte[] str){
+    syscall(1, 1, str, |str|)
+    return 0
+}

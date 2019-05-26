@@ -126,6 +126,9 @@ Lextoken* parse_expression(Lextoken* p, Token* e){
     if((l = parse_constant(p, e))){
         return l;
     }
+    if((l = parse_card(p, e))){
+        return l;
+    }
     if((l = parse_arrind(p, e))){
         return l;
     }
@@ -203,6 +206,7 @@ Lextoken* parse_funcall(Lextoken* p, Token* e){
             free(e->str);
             return NULL;
         }
+        i += 1;
     }
     destroy_token(e->subtokens);
     e->subtokens = NULL;
@@ -236,6 +240,9 @@ Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
         return l;
     }
     if((l = parse_constant(p, e))){
+        return l;
+    }
+    if((l = parse_card(p, e))){
         return l;
     }
     if(match(p, LSTRING)){
@@ -323,6 +330,22 @@ Lextoken* parse_addeq(Lextoken* p, Token* e){
     destroy_token(e->subtokens);
     e->subtoken_count = 0;
     return NULL;
+}
+
+// card = | expression | 
+Lextoken* parse_card(Lextoken* p, Token* e){
+    if(!match(p, PIPE)){
+        return NULL;
+    }
+    e->subtokens = init_token();
+    e->type = T_CARDINALITY;
+    e->subtoken_count = 1;
+    Lextoken* a = parse_expression(next(p), e->subtokens);
+    if(a == NULL || !match(a, PIPE)){
+        destroy_token(e);
+        return NULL;
+    }
+    return next(a);
 }
 
 // return = return, expression
@@ -587,6 +610,7 @@ char* type(Token* p){
         case T_INDGET: return "INDGET";
         case T_INDSET: return "INDSET";
         case T_ADDEQ: return "ADDEQ";
+        case T_CARDINALITY: return "CARD";
         default: return "UNKNOWN";
     }
     

@@ -32,4 +32,5 @@ void write_string(Variable* to, char* str, int len, State* state);
 void write_indget(Variable* arr, Variable* ind, Variable* to, State* state);
 void write_indset(Variable* arr, Variable* ind, Variable* from, State* state);
 void write_addeq(Variable* arr, Variable* delta, State* state);
+void write_card(Variable* to, Variable* from, State* state);
 #endif
