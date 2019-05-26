@@ -10,22 +10,7 @@
  * 
  * 
  */
-#define LEXERROR -1
-#define LEFT_PAREN 1
-#define RIGHT_PAREN 2
-#define LEFT_SQPAREN 3
-#define RIGHT_SQPAREN 4
-#define LEFT_CRPAREN 5
-#define RIGHT_CRPAREN 6
-#define INTEGER 7
-#define LCHAR 8
-#define LSTRING 9
-#define IDENTIFIER 10
-#define TERM 11
-#define MINUS_SYM 12
-#define COMMA 13
-#define EQUALS 14
-#define LEOF 15
+
 Lextoken* lex(char* input){
     char** i = &input;
     int line = 1;
@@ -65,6 +50,7 @@ Lextoken* lex(char* input){
             case COMMA: str = "COMMA"; break;
             case EQUALS: str = "EQUALS"; break;
             case LEOF: str = "EOF"; break;
+            case ADDEQ: str = "ADDEQ"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -108,6 +94,11 @@ Lextoken* lexone(char** i, int* line){
     }
     if(match){
         (*i) ++ ; // advance one char
+        return l;
+    }
+    if(input[0] == '+' && input[1] == '='){
+        (*i) += 2;
+        l->type = ADDEQ;
         return l;
     }
     if(ISNUMERIC(input[0])){

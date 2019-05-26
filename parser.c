@@ -14,12 +14,15 @@
  * EBNF OF SYNTAX
  * 
  *  constant = (["-"], int) | char
- * variable = identifier, ["[",expression,"]" ]
+ * variable = identifier
  * type = indentifier, [ "[", "]"]
  * expression = (constant | string | variable | funccall)
  * varinit = type, identifier
  * funccall = identifier, "(", [expression {",", expression } ] ")"
  * assignment = identifier, "=", expression
+ * arrind = expression [expression]
+ * arrset = expression [expression], "=", expression
+ * addeq = expression, "+=", expression
  * return = return, expression
  * statement = varinit | expression | assignment | return
  * body = {[statement], term}
@@ -86,30 +89,11 @@ Lextoken* parse_variable(Lextoken* p, Token* e){
     if(!i){
         return NULL;
     }
-    int j = match(next(p), LEFT_SQPAREN);
-    e->subtokens = init_token();
-    e->subtoken_count = 1;
-    Lextoken* l = parse_expression(next(next(p)), e->subtokens);
-    j = j && (l != NULL);
-    j = j && match(l, RIGHT_SQPAREN);
-    if(j){
-        e->type = T_ARRIND;
-        e->str = malloc(strlen(p->str)+1);
-        memcpy(e->str, p->str, strlen(p->str)+1);
-        return next(l);
-    }
-    else if(i){
-        free(e->subtokens);
-        e->subtoken_count = 0;
-        e->type = T_VARIABLE;
-        e->str = malloc(strlen(p->str)+1);
-        memcpy(e->str, p->str, strlen(p->str)+1);
-        return next(p);
-    }
     e->subtoken_count = 0;
-    destroy_token(e->subtokens);
-    e->subtokens = NULL;
-    return NULL;
+    e->type = T_VARIABLE;
+    e->str = malloc(strlen(p->str)+1);
+    memcpy(e->str, p->str, strlen(p->str)+1);
+    return next(p);
 }
 
 // type = indentifier, [ "[", "]"]
@@ -119,25 +103,30 @@ Lextoken* parse_type(Lextoken* p, Token* e){
         return NULL;
     }
     e->type = T_TYPE;
-    e->str = malloc(strlen(p->str)+1);
+    e->str = malloc(strlen(p->str)+3);
     memcpy(e->str, p->str, strlen(p->str)+1);
     int j = match(next(p), LEFT_SQPAREN);
     j = j && match(next(next(p)), RIGHT_SQPAREN);
     if(j){
-        e->lnt = 1;
+        e->str[strlen(p->str)] = '[';
+        e->str[strlen(p->str)+1] = ']';
+        e->str[strlen(p->str)+2] = 0;
         return next(next(next(p)));
     }
     e->lnt = 0;
     return next(p);
 }
 
-// expression = (constant | string | variable | funccall)
+// expression = (constant | string | variable | funccall | arrind)
 Lextoken* parse_expression(Lextoken* p, Token* e){
     Lextoken* l = NULL;
     if((l = parse_funcall(p, e))){
         return l;
     }
     if((l = parse_constant(p, e))){
+        return l;
+    }
+    if((l = parse_arrind(p, e))){
         return l;
     }
     if(match(p, LSTRING)){
@@ -240,6 +229,102 @@ Lextoken* parse_assignment(Lextoken* p, Token* e){
     return NULL;
 }
 
+// helper, see below
+Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
+    Lextoken* l = NULL;
+    if((l = parse_funcall(p, e))){
+        return l;
+    }
+    if((l = parse_constant(p, e))){
+        return l;
+    }
+    if(match(p, LSTRING)){
+        e->type = T_STRING;
+        e->str = malloc(strlen(p->str)+1);
+        memcpy(e->str, p->str, strlen(p->str)+1);
+        return next(p);
+    }
+    return parse_variable(p, e);
+}
+
+// arrind = expression "[", expression, "]"
+// to avoid infinite left recursion, parse as
+// arrind = exprnoarrind "[", expression, "]", {"[", expression, "]" }
+// this _should_ be equivalent. 
+Lextoken* parse_arrind(Lextoken* p, Token* e){
+    // despite the name its left and right.
+    Token* left = init_token();
+    left = realloc_token(left, 2);
+    Lextoken* expr = parse_expression_noarr(p, left);
+    int a = 0;
+    while(1){
+        int j = match(expr, LEFT_SQPAREN);
+        if((!a) && ((!j) || (expr == NULL))){
+            destroy_token(left);
+            return NULL;
+        }
+        Lextoken* l = parse_expression(next(expr), &left[1]);
+        if(j && (l != NULL) && match(l, RIGHT_SQPAREN)){
+            a = 1;
+            e->subtoken_count = 2;
+            e->subtokens = left;
+            e->type = T_INDGET;
+            left = init_token();
+            left = realloc_token(left, 2);
+            left->subtokens = e->subtokens;
+            left->subtoken_count = 2;
+            left->type = T_INDGET;
+            expr = next(l);
+        }
+        else{
+            if (a) {
+                // good.
+                return expr;
+            }
+            destroy_token(left);
+            e->subtoken_count = 0;
+            e->subtokens = NULL;
+            return NULL;
+        }
+    }
+}
+
+// arrset = arrind, "=", expression
+Lextoken* parse_arrset(Lextoken* p, Token* e){
+    e->subtokens = init_token();
+    e->subtokens = realloc_token(e->subtokens, 2);
+    e->subtoken_count = 2;
+    Lextoken* a = parse_arrind(p, e->subtokens);
+    if(match(a, EQUALS)){
+        Lextoken* p = parse_expression(next(a), &e->subtokens[1]);
+        if(p != NULL){
+            e->type = T_INDSET;
+            return p;
+        }
+    }
+    destroy_token(e->subtokens);
+    e->subtoken_count = 0;
+    return NULL;
+}
+
+// addeq = expression, "+=", expression
+Lextoken* parse_addeq(Lextoken* p, Token* e){
+    e->subtokens = init_token();
+    e->subtokens = realloc_token(e->subtokens, 2);
+    e->subtoken_count = 2;
+    Lextoken* a = parse_expression(p, e->subtokens);
+    if(match(a, ADDEQ)){
+        Lextoken* p = parse_expression(next(a), &e->subtokens[1]);
+        if(p != NULL){
+            e->type = T_ADDEQ;
+            return p;
+        }
+    }
+    destroy_token(e->subtokens);
+    e->subtoken_count = 0;
+    return NULL;
+}
+
 // return = return, expression
 Lextoken* parse_return(Lextoken* p, Token* e){
     if(!match(p, RETURN)){
@@ -258,7 +343,7 @@ Lextoken* parse_return(Lextoken* p, Token* e){
     return a;
 }
 
-// statement = varinit | expression | assignment | return
+// statement = varinit | expression | assignment | return | arrset
 Lextoken* parse_statement(Lextoken* p, Token* e){
     Lextoken* l = parse_varinit(p, e);
     if(l != NULL){
@@ -269,6 +354,14 @@ Lextoken* parse_statement(Lextoken* p, Token* e){
         return l;
     }
     l = parse_return(p, e);
+    if(l != NULL){
+        return l;
+    }
+    l = parse_addeq(p, e);
+    if(l != NULL){
+        return l;
+    }
+    l = parse_arrset(p, e);
     if(l != NULL){
         return l;
     }
@@ -438,7 +531,7 @@ Token* realloc_token(Token* ptr, int len){
 }
 
 void destroy_token(Token* ptr){
-    return;
+    return; // TODO make this work in the future.
     if(ptr == NULL){
         return;
     }
@@ -482,7 +575,6 @@ char* type(Token* p){
         case T_ASSIGNMENT: return "ASSIGNMENT";
         case T_TYPE: return "TYPE";
         case T_VARIABLE: return "VARIABLE";
-        case T_ARRIND: return "ARRIND";
         case T_CHAR: return "CHAR";
         case T_INT: return "INT";
         case T_STRING: return "STRING";
@@ -492,6 +584,9 @@ char* type(Token* p){
         case T_BODY: return "BODY";
         case T_RETURN: return "RETURN";
         case T_FUNCALL: return "FUNCALL";
+        case T_INDGET: return "INDGET";
+        case T_INDSET: return "INDSET";
+        case T_ADDEQ: return "ADDEQ";
         default: return "UNKNOWN";
     }
     

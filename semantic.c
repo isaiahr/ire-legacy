@@ -16,6 +16,7 @@
  * 
  */
 
+Type* arr_subtype(Type* arr, Program* p);
 
 VarList* add_varlist(VarList* vl, Variable* var){
     if(vl == NULL){
@@ -189,6 +190,34 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             add_stmt_func(stmt, func);
             return fn->to;
             break;
+        case T_INDGET:
+            stmt->type = S_INDEX;
+            stmt->stmt = malloc(sizeof(struct Index));
+            Index* in = (Index*) stmt->stmt;
+            in->arr = process_stmt(&t->subtokens[0], func, prog);
+            in->ind = process_stmt(&t->subtokens[1], func, prog);
+            in->to = mkvar(func, arr_subtype(in->arr->type, prog));
+            add_stmt_func(mkinit(in->to), func);
+            add_stmt_func(stmt, func);
+            return in->to;
+            break;
+        case T_INDSET:
+            stmt->type = S_INDEXEQUALS;
+            stmt->stmt = malloc(sizeof(struct IndexEquals));
+            IndexEquals* ie = (IndexEquals*) stmt->stmt;
+            ie->arr = process_stmt(&t->subtokens[0].subtokens[0], func, prog);
+            ie->ind = process_stmt(&t->subtokens[0].subtokens[1], func, prog);
+            ie->eq = process_stmt(&t->subtokens[1], func, prog);
+            add_stmt_func(stmt, func);
+            break;
+        case T_ADDEQ:
+            stmt->type = S_ADDEQUALS;
+            stmt->stmt = malloc(sizeof(struct AddEquals));
+            AddEquals* ae = (AddEquals*) stmt->stmt;
+            ae->var = process_stmt(&t->subtokens[0], func, prog);
+            ae->delta = process_stmt(&t->subtokens[1], func, prog);
+            add_stmt_func(stmt, func);
+            break;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
             Variable* v32 = proc_var(t->str, func);
@@ -248,6 +277,21 @@ void print_func(Function* func){
                 ;
                 VarInit* vi = (VarInit*) cur->stmt->stmt;
                 printf("    init %s\n", formatvar(vi->var));
+                break;
+            case S_INDEX:
+                ;
+                Index* i = (Index*) cur->stmt->stmt;
+                printf("    %s = %s[%s]\n", formatvar(i->to), formatvar(i->arr), formatvar(i->ind));
+                break;
+            case S_INDEXEQUALS:
+                ;
+                IndexEquals* ie = (IndexEquals*) cur->stmt->stmt;
+                printf("    %s[%s] = %s\n", formatvar(ie->arr), formatvar(ie->ind), formatvar(ie->eq));
+                break;
+            case S_ADDEQUALS:
+                ;
+                AddEquals* ae = (AddEquals*) cur->stmt->stmt;
+                printf("    %s += %s\n", formatvar(ae->var), formatvar(ae->delta));
                 break;
             case S_RETURN:
                 ;
@@ -343,6 +387,27 @@ Function* proc_func(char* funcname, Program* prog){
     for(int i = 0; i < prog->func_count; i++){
         if(strcmp(funcname, prog->funcs[i].name) == 0){
             return &prog->funcs[i];
+        }
+    }
+    return NULL;
+}
+
+// returns subtype of arr.
+Type* arr_subtype(Type* arr, Program* p){
+    // TODO change this when proper type system is implemented.
+    char* detect = NULL;
+    if(strcmp(arr->identifier, "Byte[]") == 0){
+       detect = "Byte"; 
+    }
+    if(strcmp(arr->identifier, "Int[]") == 0){
+        detect = "Int";
+    }
+    if(detect == NULL){
+       return NULL;
+    }
+    for(int i =0; i < p->type_count; i++){
+        if(strcmp(p->types[i].identifier, detect) == 0){
+            return &p->types[i];
         }
     }
     return NULL;

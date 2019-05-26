@@ -22,6 +22,7 @@
 #define EQUALS 14
 #define LEOF 15
 #define RETURN 16
+#define ADDEQ 17
 
 typedef struct Lextoken{
     int line;

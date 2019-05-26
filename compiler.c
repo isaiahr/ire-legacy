@@ -134,6 +134,21 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
             f->max_offset = f->vars->var->offset+8; // + 8 ??
             write_varinit(vi->var, state);
             break;
+        case S_INDEX:
+            ;
+            Index* i = (Index*) stmt->stmt;
+            write_indget(i->arr, i->ind, i->to, state);
+            break;
+        case S_INDEXEQUALS:
+            ;
+            IndexEquals* ie = (IndexEquals*) stmt->stmt;
+            write_indset(ie->arr, ie->ind, ie->eq, state);
+            break;
+        case S_ADDEQUALS:
+            ;
+            AddEquals* ae = (AddEquals*) stmt->stmt;
+            write_addeq(ae->var, ae->delta, state);
+            break;
         case S_RETURN:
             ;
             Return* r = (Return*) stmt->stmt;

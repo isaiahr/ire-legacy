@@ -29,5 +29,7 @@ void write_varassign(Variable* to, Variable* from, State* state);
 void write_byte(Variable* to, char byte, State* state);
 void write_int(Variable* to, int immediate, State* state);
 void write_string(Variable* to, char* str, int len, State* state);
-
+void write_indget(Variable* arr, Variable* ind, Variable* to, State* state);
+void write_indset(Variable* arr, Variable* ind, Variable* from, State* state);
+void write_addeq(Variable* arr, Variable* delta, State* state);
 #endif

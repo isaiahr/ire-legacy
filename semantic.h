@@ -8,6 +8,9 @@
 #define S_FUNCTIONCALL 3
 #define S_VARINIT 4
 #define S_RETURN 5
+#define S_INDEX 6
+#define S_INDEXEQUALS 7
+#define S_ADDEQUALS 8
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -90,6 +93,23 @@ typedef struct FunctionCall {
 typedef struct VarInit {
     Variable* var;
 } VarInit;
+
+typedef struct Index {
+    Variable* arr;
+    Variable* ind;
+    Variable* to;
+} Index;
+
+typedef struct IndexEquals {
+    Variable* arr;
+    Variable* ind;
+    Variable* eq;
+} IndexEquals;
+
+typedef struct AddEquals {
+    Variable* var;
+    Variable* delta;
+} AddEquals;
 
 typedef struct Return {
     Variable* var;

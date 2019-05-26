@@ -172,7 +172,15 @@ void write_string(char* str, int len, State* state){
 =======
 
 void write_varinit(Variable* var, State* state){
-    fprintf(state->fp, "pushq $0\n");
+    if((strcmp(var->type->identifier, "Byte[]") == 0) || strcmp(var->type->identifier, "Int[]") == 0){
+        fprintf(state->fp, "movq $1024, %%rax\n");
+        fprintf(state->fp, "call alloc\n");
+        fprintf(state->fp, "movq $0, (%%rax)\n");
+        fprintf(state->fp, "pushq %%rax\n");
+    }
+    else{
+        fprintf(state->fp, "pushq $0\n");
+    }
 }
 
 void write_funcreturn(Function* func, Variable* var, State* state){
@@ -239,7 +247,56 @@ void write_int(Variable* to, int immediate, State* state){
     fprintf(state->fp, "movq $%i, %i(%%rsp)\n", immediate, to->offset);
 }
 
+void write_indget(Variable* arr, Variable* ind, Variable* to, State* state){
+    if(strcmp(arr->type->identifier, "Byte[]") == 0){
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
+        fprintf(state->fp, "addq $8, %%r15\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq (%%r15), %%rax\n");
+        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+    }
+    else {
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
+        fprintf(state->fp, "addq $8, %%r15\n");
+        fprintf(state->fp, "imul $8, %%rax, %%rax\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq (%%r15), %%rax\n");
+        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+    }
+}
 
+void write_indset(Variable* arr, Variable* ind, Variable* from, State* state){
+    if(strcmp(arr->type->identifier, "Byte[]") == 0){
+        fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
+        fprintf(state->fp, "addq $8, %%rax\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    }
+    else {
+        fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
+        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
+        fprintf(state->fp, "addq $8, %%rax\n");
+        fprintf(state->fp, "imul $8, %%r15, %%r15\n");
+        fprintf(state->fp, "addq %%rax, %%r15\n");
+        fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    }
+}
+
+void write_addeq(Variable* arr, Variable* delta, State* state){
+    fprintf(state->fp, "movq %i(%%rsp), %%r15\n", delta->offset);
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset);
+    if(strcmp(arr->type->identifier, "Byte[]") == 0){
+        fprintf(state->fp, "call array_addb\n");
+    }
+    else {
+        fprintf(state->fp, "call array_add\n");
+    }
+}
 
 void write_string(Variable* to, char* str, int len, State* state){
     int sz = ((len / 128) * 128) + 128;

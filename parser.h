@@ -11,7 +11,6 @@
 #define T_ASSIGNMENT 3
 #define T_TYPE 4
 #define T_VARIABLE 5
-#define T_ARRIND 6
 #define T_CHAR 7
 #define T_INT 8
 #define T_STRING 9
@@ -21,6 +20,9 @@
 #define T_BODY 13
 #define T_RETURN 14
 #define T_FUNCALL 15
+#define T_INDGET 16
+#define T_INDSET 17
+#define T_ADDEQ 18
 
 /**
  *
@@ -49,6 +51,9 @@ Lextoken* parse_type(Lextoken* p, Token* t);
 Lextoken* parse_expression(Lextoken* p, Token* t);
 Lextoken* parse_varinit(Lextoken* p, Token* t);
 Lextoken* parse_funcall(Lextoken* p, Token* t);
+Lextoken* parse_arrind(Lextoken* p, Token* e);
+Lextoken* parse_arrset(Lextoken* p, Token* e);
+Lextoken* parse_addeq(Lextoken* p, Token* e);
 Lextoken* parse_assignment(Lextoken* p, Token* t);
 Lextoken* parse_statement(Lextoken* p, Token* t);
 Lextoken* parse_body(Lextoken* p, Token* t);
