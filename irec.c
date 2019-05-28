@@ -28,16 +28,10 @@ int main(int argc, char **argv)
     State *state = (State*) malloc(sizeof (State));
     state->comp_asm = 0;
     state->outputfile = NULL;
-    state->functions = NULL;
-    state->variables = NULL;
-    state->types = NULL;
-    state->treg = "rax";
-    state->tregm = "al";
     state->verbose = 0;
     state->annotate = 0;
     state->llvm = 1;
     state->comp_llvm = 0;
-    state->currentfunc = NULL;
     state->writ_return = 0;
     char c = 0;
     int ind = 0;

@@ -16,8 +16,23 @@ define i8* @alloc(i64) {
     movq %rsi, (%rax)
     addq $$8, %rax
     movq %rax, $0
-", "=r,r,~{memory}" (i64 %0)
+", "=r,r,~{memory},~{rsi},~{rax},~{rdi},~{rdx},~{r10},~{r8},~{r9}" (i64 %0)
 ret i8* %2
+}
+
+define i64 @syscall(i64, i64, i64, i64, i64, i64, i64){
+%8 = call i64 asm sideeffect "
+    movq $1, %rax
+    movq $2, %rdi
+    movq $3, %rsi
+    movq $4, %rdx
+    movq $5, %r10
+    movq $6, %r8
+    movq $7, %r9
+    syscall
+    movq %rax, $0
+", "=r,r,r,r,r,r,r,r,~{memory},~{rax},~{rdi},~{rsi},~{rdx},~{r10},~{r8},~{r9}" (i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6)
+ret i64 %8
 }
 
 ; array += newitem.
@@ -27,6 +42,7 @@ define i64* @array_add(i64*, i64) {
 %3  = call i64* asm sideeffect "
     movq $2, %rax
     movq $1, %r15
+    subq $$8, %rax
     imul $$8, (%rax), %r14 # r14 = current array length (IN BYTES)
     mov -8(%rax), %r13 # r13 = allocated space
     addq $$8, %r14 # length increase by an int
@@ -74,7 +90,7 @@ define i64* @array_add(i64*, i64) {
         jmp done
     done:
         movq %rax, $0
-    ", "=r,r,r,~{memory}" (i64 %1, i64* %0)
+    ", "=r,r,r,~{memory},~{rax},~{rbx},~{rcx},~{r13},~{r14},~{r15}" (i64 %1, i64* %0)
 ret i64* %3
 }
 
@@ -89,6 +105,7 @@ define i8* @array_addb(i8*, i8) {
 %3 = call i8* asm sideeffect "
     movq $2, %rax
     movb $1, %r15b
+    subq $$8, %rax
     mov (%rax), %r14 # r14 = current array length (IN BYTES)
     mov -8(%rax), %r13 # r13 = allocated space
     addq $$1, %r14 # length increase by a byte
@@ -137,7 +154,7 @@ define i8* @array_addb(i8*, i8) {
         pop %rax
         jmp doneb
     doneb:
-        movq %rax, $0", "=r,r,r,~{memory}" (i8 %1, i8* %0)
+        movq %rax, $0", "=r,r,r,~{memory},~{rax},~{rbx},~{rcx},~{r13},~{r14},~{r15}" (i8 %1, i8* %0)
 ret i8* %3
 }
 

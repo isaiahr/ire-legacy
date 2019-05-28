@@ -55,12 +55,16 @@ typedef struct Variable {
     char* identifier;
     
     // compile time
+    // asm loc
     int offset;
+    // llvm loc
+    int num;
 } Variable; 
 
 typedef struct Type {
     int width;
     char* identifier;
+    char* llvm;
     struct Type** subtypes;
     int subtype_count;
     int* subtype_count_per;

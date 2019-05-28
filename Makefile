@@ -15,7 +15,7 @@ clean:
 	rm irec
 
 test: compile
-	./tests.sh
+	@./tests.sh
 
 install: compile
 	cp irec /usr/bin/irec
