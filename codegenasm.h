@@ -1,6 +1,9 @@
 #ifndef __CODEGENASM_H__
 #define __CODEGENASM_H__
 
+#include"datastructs.h"
+#include"semantic.h"
+
 void awrite_header(State* state);
 void awrite_footer(State* state);
 void awrite_varinit(Variable* var, State* state);

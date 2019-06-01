@@ -1,6 +1,9 @@
 #ifndef __ERROR_H__
 #define __ERROR_H__
 
+#include"datastructs.h"
+
+#define LEXERROR 0
 #define SYNTAXERROR 1
 #define UNDEFVAR 2
 #define UNDEFTYPE 6
@@ -9,8 +12,18 @@
 #define DUPDEFVAR 5
 #define DUPDEFTYPE 7
 
-extern char* geterrorstr(int type);
-extern void error(int type, int line, char* token);
-extern void errornl(int type, char* msg);
-extern void warning(int type, int line, char* token);
+#define ERRORLEXING 1
+#define ERRORPARSING 2
+#define ERRORSEMANTIC 3
+
+typedef struct Error{
+    int type;
+    char* msg;
+    int count;
+    struct Error* next;
+} Error;
+
+void add_error(State* state, int code, int line, char* msg);
+void mark(State* state);
+
 #endif

@@ -2,6 +2,7 @@
 #define __PARSER_H__
 
 #include"lexer.h"
+#include"datastructs.h"
 
 //token types
 
@@ -38,33 +39,12 @@ typedef struct Token{
     long lnt;
     char chr;
     int subtoken_count;
+    int line;
     struct Token* subtokens;
     
 } Token;
 
+Token* parse_program(Lextoken* p, State* state);
 
 
-int match(Lextoken* p, int m);
-Lextoken* next(Lextoken* p);
-Lextoken* parse_constant(Lextoken* p, Token* t);
-Lextoken* parse_variable(Lextoken* p, Token* t);
-Lextoken* parse_type(Lextoken* p, Token* t);
-Lextoken* parse_expression(Lextoken* p, Token* t);
-Lextoken* parse_varinit(Lextoken* p, Token* t);
-Lextoken* parse_funcall(Lextoken* p, Token* t);
-Lextoken* parse_arrind(Lextoken* p, Token* e);
-Lextoken* parse_arrset(Lextoken* p, Token* e);
-Lextoken* parse_addeq(Lextoken* p, Token* e);
-Lextoken* parse_card(Lextoken* p, Token* e);
-Lextoken* parse_assignment(Lextoken* p, Token* t);
-Lextoken* parse_statement(Lextoken* p, Token* t);
-Lextoken* parse_body(Lextoken* p, Token* t);
-Lextoken* parse_funcdef(Lextoken* p, Token* t);
-Lextoken* parse_function(Lextoken* p, Token* t);
-Token* parse_program(Lextoken* p);
-void print_tree(Token* p, int lvl);
-char* type(Token* t);
-Token* init_token();
-Token* realloc_token(Token* ptr, int len);
-void destroy_token(Token* ptr);
 #endif

@@ -8,10 +8,35 @@
 #include"parser.h"
 
 
+int match(Lextoken* p, int m);
+Lextoken* next(Lextoken* p);
+Lextoken* parse_constant(Lextoken* p, Token* t);
+Lextoken* parse_variable(Lextoken* p, Token* t);
+Lextoken* parse_type(Lextoken* p, Token* t);
+Lextoken* parse_expression(Lextoken* p, Token* t);
+Lextoken* parse_varinit(Lextoken* p, Token* t);
+Lextoken* parse_funcall(Lextoken* p, Token* t);
+Lextoken* parse_arrind(Lextoken* p, Token* e);
+Lextoken* parse_arrset(Lextoken* p, Token* e);
+Lextoken* parse_addeq(Lextoken* p, Token* e);
+Lextoken* parse_card(Lextoken* p, Token* e);
+Lextoken* parse_assignment(Lextoken* p, Token* t);
+Lextoken* parse_statement(Lextoken* p, Token* t);
+Lextoken* parse_body(Lextoken* p, Token* t);
+Lextoken* parse_funcdef(Lextoken* p, Token* t);
+Lextoken* parse_function(Lextoken* p, Token* t);
+void print_tree(Token* p, int lvl);
+char* type(Token* t);
+Token* init_token();
+Token* realloc_token(Token* ptr, int len);
+void destroy_token(Token* ptr);
+
 // THIS IS THE FIFTH TIME THE PARSER HAS BEEN REWRITTEN. and hopefully the last.
 
 /**
  * EBNF OF SYNTAX
+ * 
+ *  This is outdated. see comments before funcs for more up to date.
  * 
  *  constant = (["-"], int) | char
  * variable = identifier
@@ -143,7 +168,7 @@ Lextoken* parse_expression(Lextoken* p, Token* e){
 
 // varinit = type, identifier
 Lextoken* parse_varinit(Lextoken* p, Token* e){
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     e->subtoken_count = 1;
     Lextoken* l = parse_type(p, e->subtokens);
     if(match(l, IDENTIFIER)){
@@ -168,7 +193,7 @@ Lextoken* parse_funcall(Lextoken* p, Token* e){
     e->type = T_FUNCALL;
     e->str = malloc(strlen(p->str) + 1);
     memcpy(e->str, p->str, strlen(p->str)+1);
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     Lextoken* l = parse_expression(next(next(p)), e->subtokens);
     if(l == NULL){
         i = i && match(next(next(p)), RIGHT_PAREN);
@@ -219,7 +244,7 @@ Lextoken* parse_funcall(Lextoken* p, Token* e){
 Lextoken* parse_assignment(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     i = i && match(next(p), EQUALS);
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     e->subtoken_count = 1;
     Lextoken* l = parse_expression(next(next(p)), e->subtokens);
     if(i && l != NULL){
@@ -260,7 +285,7 @@ Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
 // this _should_ be equivalent. 
 Lextoken* parse_arrind(Lextoken* p, Token* e){
     // despite the name its left and right.
-    Token* left = init_token();
+    Token* left = init_token(p->line);
     left = realloc_token(left, 2);
     Lextoken* expr = parse_expression_noarr(p, left);
     int a = 0;
@@ -276,7 +301,7 @@ Lextoken* parse_arrind(Lextoken* p, Token* e){
             e->subtoken_count = 2;
             e->subtokens = left;
             e->type = T_INDGET;
-            left = init_token();
+            left = init_token(p->line);
             left = realloc_token(left, 2);
             left->subtokens = e->subtokens;
             left->subtoken_count = 2;
@@ -298,7 +323,7 @@ Lextoken* parse_arrind(Lextoken* p, Token* e){
 
 // arrset = arrind, "=", expression
 Lextoken* parse_arrset(Lextoken* p, Token* e){
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     e->subtokens = realloc_token(e->subtokens, 2);
     e->subtoken_count = 2;
     Lextoken* a = parse_arrind(p, e->subtokens);
@@ -316,7 +341,7 @@ Lextoken* parse_arrset(Lextoken* p, Token* e){
 
 // addeq = expression, "+=", expression
 Lextoken* parse_addeq(Lextoken* p, Token* e){
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     e->subtokens = realloc_token(e->subtokens, 2);
     e->subtoken_count = 2;
     Lextoken* a = parse_expression(p, e->subtokens);
@@ -337,7 +362,7 @@ Lextoken* parse_card(Lextoken* p, Token* e){
     if(!match(p, PIPE)){
         return NULL;
     }
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     e->type = T_CARDINALITY;
     e->subtoken_count = 1;
     Lextoken* a = parse_expression(next(p), e->subtokens);
@@ -353,7 +378,7 @@ Lextoken* parse_return(Lextoken* p, Token* e){
     if(!match(p, RETURN)){
         return NULL;
     }
-    e->subtokens = init_token();
+    e->subtokens = init_token(p->line);
     e->subtoken_count = 1;
     Lextoken* k = next(p);
     Lextoken* a = parse_expression(k, e->subtokens);
@@ -394,7 +419,7 @@ Lextoken* parse_statement(Lextoken* p, Token* e){
 // body = {[statement], term}
 Lextoken* parse_body(Lextoken* p, Token* body){
     int ind = 0;
-    body->subtokens = init_token();
+    body->subtokens = init_token(p->line);
     body->type = T_BODY;
     while(1){
         Lextoken* o = p;
@@ -424,7 +449,7 @@ Lextoken* parse_body(Lextoken* p, Token* body){
  // funcdef = type, identifier, "(", [type, identifier], {"," type,  identifier}, ")", "{"
 Lextoken* parse_funcdef(Lextoken* p, Token* def){
     def->type = T_FUNCDEF;
-    def->subtokens = init_token();
+    def->subtokens = init_token(p->line);
     def->subtokens = realloc_token(def->subtokens, 2);
     def->subtoken_count = 1;
     Lextoken* l = parse_type(p, def->subtokens);
@@ -487,7 +512,7 @@ Lextoken* parse_funcdef(Lextoken* p, Token* def){
 
 // function = funcdef, body, "}"
 Lextoken* parse_function(Lextoken* p, Token* func){
-    func->subtokens = init_token();
+    func->subtokens = init_token(p->line);
     func->subtokens = realloc_token(func->subtokens, 2);
     func->subtoken_count = 2;
     Lextoken* l = parse_funcdef(p, &func->subtokens[0]);
@@ -507,37 +532,40 @@ Lextoken* parse_function(Lextoken* p, Token* func){
 }
 
 // program = {[function] term }
-Token* parse_program(Lextoken* p){
-    Token* prog = init_token();
+Token* parse_program(Lextoken* p, State* state){
+    Token* prog = init_token(p->line);
     prog->type = T_PROGRAM;
-    prog->subtokens = init_token();
+    prog->subtokens = init_token(p->line);
     int i = 0;
     while(1){
-        Lextoken* l = parse_function(p, &prog->subtokens[i]);
-        if(l != NULL){
-            p = l;
-        }
-        if(!match(p, TERM)){
-            break;
-        }
-        else if (l == NULL){
+        if(match(p, TERM)){
             p = next(p);
             continue;
         }
+        if(match(p, LEOF)){
+            break;
+        }
+        Lextoken* l = parse_function(p, &prog->subtokens[i]);
+        if(l == NULL){
+            add_error(state, SYNTAXERROR, p->line, "Bad function");
+        }
+        p = l;
         i += 1;
         prog->subtoken_count = i;
         prog->subtokens = realloc_token(prog->subtokens, (i+1));
-        p = next(p);
     }
-    print_tree(prog, 0);
+    if(state->verbose){
+        print_tree(prog, 0);
+    }
     return prog;
 }
 
-Token* init_token(){
+Token* init_token(int line){
     Token* t = malloc(sizeof(struct Token));
     t->str = NULL;
     t->subtoken_count = 0;
     t->lnt = 0;
+    t->line = line;
     t->subtokens = NULL;
     t->chr = 0;
     return t;
@@ -548,6 +576,7 @@ Token* realloc_token(Token* ptr, int len){
     pt[len-1].str = NULL;
     pt[len-1].subtoken_count = 0;
     pt[len-1].lnt = 0;
+    pt[len-1].line = ptr->line;
     pt[len-1].subtokens = NULL;
     pt[len-1].chr = 0;
     return pt;

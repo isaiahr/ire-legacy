@@ -10,6 +10,7 @@
 #include"pre_s.h"
 #include"irec.h"
 #include"commitid.h"
+#include"semantic.h"
 
 /**
 CALLING CONVENTIONS.

@@ -1,11 +1,13 @@
 #ifndef __LEXER_H__
 #define __LEXER_H__
 
+#include"datastructs.h"
+
 #define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
 #define ISNUMERIC(x) (x > 47 && x < 58)
 
 
-#define LEXERROR -1
+#define LEXERROR 0
 #define LEFT_PAREN 1
 #define RIGHT_PAREN 2
 #define LEFT_SQPAREN 3
@@ -35,7 +37,7 @@ typedef struct Lextoken{
     struct Lextoken* prev;
 } Lextoken;
 
-extern Lextoken* lex(char* input);
+extern Lextoken* lex(char* input, State* state);
 extern Lextoken* lexone(char** i, int* line);
 extern int digit(char input);
 extern char* proc_str(char* data, char** adv);

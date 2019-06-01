@@ -4,6 +4,7 @@
 
 #include"parser.h"
 #include"semantic.h"
+#include"error.h"
 
 /**
  * semantic.c -- does semantic analysis of the program.
@@ -16,7 +17,23 @@
  * 
  */
 
+
+void process_function(Token* xd, Function* func, Program* prog, State* state);
+void* process_stmt(Token* t, Function* func, Program* prog);
+char* formatvar(Variable* var);
+void print_func(Function* func);
+void print_type(Type* t);
+void print_prog(Program* prog);
+Type* proc_type(char* ident, Program* prog);
+Variable* mkvar(Function* func, Type* t);
+Variable* mknvar(Function* func, char* str, Type* t);
+Statement* mkinit(Variable* v);
+Variable* proc_var(char* str, Function* func);
+Function* proc_func(char* funcname, Program* prog);
+char* clone(char* str);
+void add_stmt_func(Statement* stmt, Function* func);
 Type* arr_subtype(Type* arr, Program* p);
+
 
 VarList* add_varlist(VarList* vl, Variable* var){
     if(vl == NULL){
@@ -35,7 +52,7 @@ VarList* add_varlist(VarList* vl, Variable* var){
     return orig;
 }
 
-Program* process_program(Token* t){
+Program* process_program(Token* t, State* state){
     Program* po = malloc(sizeof(struct Program));
     int num_nativefuncs = 1;
     po->func_count = t->subtoken_count+num_nativefuncs;
@@ -77,18 +94,21 @@ Program* process_program(Token* t){
     po->funcs[0].native = 1;
     for(int i = num_nativefuncs; i < po->func_count; i++){
         po->funcs[i].native = 0;
-        process_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po);
+        process_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
     }
     print_prog(po);
     return po;
 }
 
 
-void process_function(Token* xd, Function* func, Program* prog){
+void process_function(Token* xd, Function* func, Program* prog, State* state){
     Token def = xd->subtokens[0];
     Token body = xd->subtokens[1];
     func->name = clone(def.str);
     func->retval = proc_type(def.subtokens[0].str, prog);
+    if(func->retval == NULL){
+        add_error(state, UNDEFTYPE, def.subtokens->line, def.subtokens[0].str);
+    }
     func->params = NULL;
     if(def.subtoken_count == 2 && def.subtokens[1].subtoken_count == 0){
         func->param_count = 0; // for empty varparam
@@ -347,8 +367,6 @@ Type* proc_type(char* ident, Program* prog){
             return &prog->types[i];
         }
     }
-    // no type found, TODO error
-    exit(55);
     return NULL;
 }
 

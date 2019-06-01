@@ -33,6 +33,7 @@ int main(int argc, char **argv)
     state->llvm = 1;
     state->comp_llvm = 0;
     state->writ_return = 0;
+    state->errors = NULL;
     char c = 0;
     int ind = 0;
     while((c = getopt_long(argc, argv, "ao:vnb:l", options, &ind)) != -1){
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
                 printf("-l, --llvm                Output llvm IR and stop\n");
                 printf("irec is distributed under the LGPL v3 License.\n");
                 printf("See LICENSE for details. If you do not have the source code\n");
-                printf("for this application, you may acquire it at github.com/isaiahr/irec\n");
+                printf("for this application, you may acquire it at github.com/isaiahr/ire\n");
                 return 0;
             case '?':
                 printf("Try %s --help for usage.\n", argv[0]);
@@ -164,18 +165,6 @@ int main(int argc, char **argv)
         cur = cur->next;
     }
     compile(state, all);
-    // check if state is ok.
-    // make sure all functions are defined
-    /**
-    List* head = state->functions;
-    while(head != NULL){
-        Function* f = (Function*) head->data;
-        if(f->defined == 0){
-            errornl(UNDEFFUNC, f->name);
-        }
-        head = head->next;
-    }
-    */
     write_footer(state);
     fclose(state->fp);
     if(state->comp_llvm){

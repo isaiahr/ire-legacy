@@ -2,6 +2,7 @@
 #define __SEMANTIC_H__
 
 #include"parser.h"
+#include"datastructs.h"
 
 #define S_ASSIGNMENT 1
 #define S_CONSTANTASSIGNMENT 2
@@ -125,20 +126,7 @@ typedef struct Cardinality{
     Variable* to;
 } Cardinality;
 
-Program* process_program(Token* t);
-void process_function(Token* xd, Function* func, Program* prog);
-void* process_stmt(Token* t, Function* func, Program* prog);
-char* formatvar(Variable* var);
-void print_func(Function* func);
-void print_type(Type* t);
-void print_prog(Program* prog);
-Type* proc_type(char* ident, Program* prog);
-Variable* mkvar(Function* func, Type* t);
-Variable* mknvar(Function* func, char* str, Type* t);
-Statement* mkinit(Variable* v);
-Variable* proc_var(char* str, Function* func);
-Function* proc_func(char* funcname, Program* prog);
-char* clone(char* str);
-void add_stmt_func(Statement* stmt, Function* func);
+Program* process_program(Token* t, State* state);
+
 
 #endif

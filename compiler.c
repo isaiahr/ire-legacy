@@ -18,8 +18,10 @@ void compile_func(Function* f, State* state);
 void compile_stmt(Statement* stmt, Function* f, State* state);
 
 Token* parsefile(State* state, char* data){
-    Lextoken* l = lex(data);
-    Token* t = parse_program(l);
+    Lextoken* l = lex(data, state);
+    mark(state);
+    Token* t = parse_program(l, state);
+    mark(state);
     return t;
 }
 
@@ -37,7 +39,10 @@ Token* join(Token* first, Token* second){
 }
 
 void compile(State* state, Token* t){
-    Program* p = process_program(t);
+    Program* p = process_program(t, state);
+    mark(state);
+    // at this point, any error stopping the program from producing code and running normally
+    // should be considered a bug.
     int log_c = 1;
     for(int i = 0; i < p->func_count; i++){
         // compute 10^n

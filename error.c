@@ -4,43 +4,96 @@
 #include"error.h"
 
 char* geterrorstr(int type){
-
-    if(type == SYNTAXERROR)
-        return "Syntax error";
-    if(type == UNDEFTYPE)
-        return "Undefined type";
-    if(type == UNDEFVAR)
-        return "Undefined variable";
-    if(type == UNDEFFUNC)
-        return "Undefined function";
-    if(type == DUPDEFFUNC)
-        return "Duplicate definition of function";
-    if(type == DUPDEFVAR)
-        return "Duplicate definition of variable";
-    if(type == DUPDEFTYPE)
-        return "Duplicate definition of type";
+    switch(type){
+        case LEXERROR:
+            return "Unknown Symbol";
+        case SYNTAXERROR:
+            return "Syntax error";
+        case UNDEFTYPE:
+            return "Undefined type";
+        case UNDEFVAR:
+            return "Undefined variable";
+        case UNDEFFUNC:
+            return "Undefined function";
+        case DUPDEFFUNC:
+            return "Duplicate definition of function";
+        case DUPDEFVAR:
+            return "Duplicate definition of variable";
+        case DUPDEFTYPE:
+            return "Duplicate definition of type";
+        default:
+            break;
+    }
     fprintf(stderr, "Unknown error occurred.\n");
     fprintf(stderr, "Exiting\n");
     exit(-50);
 }
 
-void errornl(int type, char* msg){
-    char* error = geterrorstr(type);
-    fprintf(stderr, "Compilation Failed.\n");
-    fprintf(stderr, "%s %s\n", error, msg);
+int stage(int type){
+    switch(type){
+        case LEXERROR:
+            return ERRORLEXING;
+        case SYNTAXERROR:
+            return ERRORPARSING;
+        case UNDEFTYPE:
+        case UNDEFVAR:
+        case UNDEFFUNC:
+        case DUPDEFFUNC:
+        case DUPDEFVAR:
+        case DUPDEFTYPE:
+            return ERRORSEMANTIC;
+    }
+    fprintf(stderr, "Unknown error occurred.\n");
     fprintf(stderr, "Exiting\n");
-    exit(1);
+    exit(-50);
+}
+
+char* stagename(int stage){
+    switch(stage){
+        case ERRORLEXING:
+            return "Reading input file";
+        case ERRORPARSING:
+            return "Parsing input file";
+        case ERRORSEMANTIC:
+            return "Translating program";
+    }
+    fprintf(stderr, "Unknown error occurred.\n");
+    fprintf(stderr, "Exiting\n");
+    exit(-50);
 }
 
 
-void error(int type, int line, char* token){
-    char* error = geterrorstr(type);
-    fprintf(stderr, "Compilation Failed.\n");
-    fprintf(stderr, "%s on line %i, token \"%s\"\n", error, line, token);
-    fprintf(stderr, "Exiting\n");
-    exit(1);
+void add_error(State* state, int code, int line, char* info){
+    Error* new = malloc(sizeof(struct Error));
+    new->type = code;
+    new->next = NULL;
+    new->count = 1;
+    char* msgp1 = geterrorstr(code);
+    char* msgp2 = info;
+    char* msgp3 = "%s on line %i: %s\n";
+    new->msg = malloc(sizeof(msgp1)+sizeof(msgp2)+sizeof(msgp3)+21);// 20 = len of 2^64
+    snprintf(new->msg, sizeof(msgp1)+sizeof(msgp2)+sizeof(msgp3)+20, msgp3, msgp1, line, msgp2);
+    if(state->errors == NULL){
+        state->errors = new;
+        return;
+    }
+    Error* e = state->errors;
+    e->count = e->count + 1;
+    while(e->next != NULL){
+        e = e->next;
+    }
+    e->next = new;
 }
 
-void warning(int type, int line, char* token){
-    //TODO add warnings
+void mark(State* state){
+    if(state->errors == NULL){
+        return; // no errors
+    }
+    Error* head = state->errors;
+    fprintf(stderr, "%i errors occurred %s\n", head->count, stagename(stage(head->type)));
+    while(head != NULL){
+        fprintf(stderr, head->msg);
+        head = head->next;
+    }
+    exit(stage(state->errors->type));
 }

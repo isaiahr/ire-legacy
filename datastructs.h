@@ -3,8 +3,6 @@
 #define ENTRYFUNC "main"
 //Data structures
 
-#include"semantic.h"
-
 //linked list
 typedef struct List{
     void* data;
@@ -25,6 +23,7 @@ typedef struct State{
     int verbose;
     int annotate;
     int writ_return;
+    struct Error* errors;
     FILE* fp;
 } State;
 

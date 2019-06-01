@@ -3,6 +3,8 @@
 #include<string.h>
 #include<stdio.h>
 #include"lexer.h"
+#include"common.h"
+#include"error.h"
 
 /**
  *
@@ -11,7 +13,7 @@
  * 
  */
 
-Lextoken* lex(char* input){
+Lextoken* lex(char* input, State* state){
     char** i = &input;
     int line = 1;
     Lextoken* cur = lexone(i, &line);
@@ -29,11 +31,14 @@ Lextoken* lex(char* input){
     final->str = NULL;
     cur->next = final;
     cur = first;
-    printf("Lexer symbol stream\n");
+    debug(state, "Lexer symbol stream\n");
     while(cur->next != NULL){
         char* str;
         switch(cur->type){
-            case LEXERROR: str = "ERROR"; break;
+            case LEXERROR:
+                str = "ERROR";
+                add_error(state, LEXERROR, cur->line, cur->str);
+                break;
             case LEFT_PAREN: str = "LEFT_PAREN"; break;
             case RIGHT_PAREN: str = "RIGHT_PAREN"; break;
             case LEFT_SQPAREN: str = "LEFT_SQPAREN"; break;
@@ -55,10 +60,10 @@ Lextoken* lex(char* input){
             default: str = "???"; break;
         }
         if(cur->str){
-            printf("%s [%s], ", str, cur->str);
+            debug(state, "%s [%s], ", str, cur->str);
         }
         else{
-            printf("%s, ", str);
+            debug(state, "%s, ", str);
         }
         cur = cur->next;
     }
@@ -190,6 +195,9 @@ Lextoken* lexone(char** i, int* line){
     while(input[z] != ' ' && input[z] != ';' && input[z] != '\n' && input[z] != 0){
         z += 1;
     }
+    l->str = malloc(z+1);
+    memcpy(l->str, input, z);
+    l->str[z] = 0;
     (*i) += z;
     return l;
 }
