@@ -104,9 +104,10 @@ Lextoken* lexone(char** i, int* line){
         return l;
     }
     if(input[0] == '+' && input[1] == '='){
-        (*i) += 2;
-        l->type = ADDEQ;
-        return l;
+        // (*i) += 2;
+        // remove dynamic arrays (for now)
+        // l->type = ADDEQ;
+        // return l;
     }
     if(ISNUMERIC(input[0])){
         l->lnt = 0;
