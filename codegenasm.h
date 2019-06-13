@@ -19,5 +19,6 @@ void awrite_indset(Variable* arr, Variable* ind, Variable* from, State* state);
 void awrite_addeq(Variable* arr, Variable* delta, State* state);
 void awrite_string(Variable* to, char* str, int len, State* state);
 void awrite_card(Variable* to, Variable* from, State* state);
+void awrite_newarr(Variable* to, Variable* len, State* state);
 
 #endif

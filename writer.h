@@ -33,4 +33,5 @@ void write_indget(Variable* arr, Variable* ind, Variable* to, State* state);
 void write_indset(Variable* arr, Variable* ind, Variable* from, State* state);
 void write_addeq(Variable* arr, Variable* delta, State* state);
 void write_card(Variable* to, Variable* from, State* state);
+void write_newarr(Variable* to, Variable* len, State* state);
 #endif

@@ -159,6 +159,11 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
             Cardinality* card = (Cardinality*) stmt->stmt;
             write_card(card->to, card->from, state);
             break;
+        case S_NEWARRAY:
+            ;
+            NewArray* ne = (NewArray*) stmt->stmt;
+            write_newarr(ne->to, ne->size, state);
+            break;
         case S_RETURN:
             ;
             Return* r = (Return*) stmt->stmt;

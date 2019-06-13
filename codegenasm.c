@@ -39,16 +39,7 @@ void awrite_footer(State* state){
 }
 
 void awrite_varinit(Variable* var, State* state){
-    if((strcmp(var->type->identifier, "Byte[]") == 0) || strcmp(var->type->identifier, "Int[]") == 0){
-        fprintf(state->fp, "movq $1024, %%rax\n");
-        fprintf(state->fp, "call alloc\n");
-        fprintf(state->fp, "movq $0, (%%rax)\n");
-        fprintf(state->fp, "addq $8, %%rax\n");
-        fprintf(state->fp, "pushq %%rax\n");
-    }
-    else{
-        fprintf(state->fp, "pushq $0\n");
-    }
+    fprintf(state->fp, "pushq $0\n");
 }
 
 void awrite_funcreturn(Function* func, Variable* var, State* state){
@@ -180,4 +171,25 @@ void awrite_card(Variable* to, Variable* from, State* state){
     fprintf(state->fp, "movq %i(%%rsp), %%rax\n", from->offset);
     fprintf(state->fp, "movq -8(%%rax), %%rax\n");
     fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+}
+
+
+void awrite_newarr(Variable* to, Variable* len, State* state){
+    if(strcmp(to->type->identifier, "Byte[]") == 0){
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
+        fprintf(state->fp, "call alloc\n");
+        fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
+        fprintf(state->fp, "movq %%rbx, (%%rax)\n");
+        fprintf(state->fp, "addq $8, %%rax\n");
+        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+    }
+    else{
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
+        fprintf(state->fp, "imul $8, %%rax, %%rax\n");
+        fprintf(state->fp, "call alloc\n");
+        fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
+        fprintf(state->fp, "movq %%rbx, (%%rax)\n");
+        fprintf(state->fp, "addq $8, %%rax\n");
+        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+    }
 }

@@ -168,3 +168,12 @@ void write_card(Variable* to, Variable* from, State* state){
         awrite_card(to, from, state);
     }
 }
+
+void write_newarr(Variable* to, Variable* size, State* state){
+    if(state->llvm){
+        lwrite_newarr(to, size, state);
+    }
+    else {
+        awrite_newarr(to, size, state);
+    }
+}

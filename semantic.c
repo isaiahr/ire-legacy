@@ -252,6 +252,15 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             add_stmt_func(mkinit(card->to), func);
             add_stmt_func(stmt, func);
             return card->to;
+        case T_NEWARR:
+            stmt->type = S_NEWARRAY;
+            stmt->stmt = malloc(sizeof(struct NewArray));
+            NewArray* new = (NewArray*) stmt->stmt;
+            new->size = process_stmt(&t->subtokens[1], func, prog);
+            new->to = mkvar(func, proc_type(t->subtokens[0].str, prog));
+            add_stmt_func(mkinit(new->to), func);
+            add_stmt_func(stmt, func);
+            return new->to;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
             Variable* v32 = proc_var(t->str, func);

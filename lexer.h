@@ -26,6 +26,7 @@
 #define RETURN 16
 #define ADDEQ 17
 #define PIPE 18
+#define NEW 19
 
 typedef struct Lextoken{
     int line;

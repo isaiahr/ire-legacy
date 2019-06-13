@@ -20,6 +20,7 @@ Lextoken* parse_arrind(Lextoken* p, Token* e);
 Lextoken* parse_arrset(Lextoken* p, Token* e);
 Lextoken* parse_addeq(Lextoken* p, Token* e);
 Lextoken* parse_card(Lextoken* p, Token* e);
+Lextoken* parse_newarr(Lextoken* p, Token* e);
 Lextoken* parse_assignment(Lextoken* p, Token* t);
 Lextoken* parse_statement(Lextoken* p, Token* t);
 Lextoken* parse_body(Lextoken* p, Token* t);
@@ -153,6 +154,9 @@ Lextoken* parse_expression(Lextoken* p, Token* e){
     }
     if((l = parse_card(p, e))){
         return l;
+    }    
+    if((l = parse_newarr(p, e))){
+        return l;
     }
     if((l = parse_arrind(p, e))){
         return l;
@@ -269,6 +273,9 @@ Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
     }
     if((l = parse_card(p, e))){
         return l;
+    }    
+    if((l = parse_newarr(p, e))){
+        return l;
     }
     if(match(p, LSTRING)){
         e->type = T_STRING;
@@ -371,6 +378,33 @@ Lextoken* parse_card(Lextoken* p, Token* e){
         return NULL;
     }
     return next(a);
+}
+
+/// newarr = new, type, "[", expr, "]"
+Lextoken* parse_newarr(Lextoken* p, Token* e){
+    if(!match(p, NEW)){
+        return NULL;
+    }
+    e->subtokens = init_token(p->line);
+    e->subtokens = realloc_token(e->subtokens, 2);
+    e->subtoken_count = 2;
+    Lextoken* l = parse_type(next(p), e->subtokens);
+    if(l == NULL || (!match(l, LEFT_SQPAREN))){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        e->subtoken_count = 0;
+        return NULL;
+    }
+    Lextoken* l2 = parse_expression(next(l), &e->subtokens[1]);
+    if(l2 == NULL || (!match(l2, RIGHT_SQPAREN))){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        e->subtoken_count = 0;
+        return NULL;
+    }
+    // good
+    e->type = T_NEWARR;
+    return next(l2);
 }
 
 // return = return, expression

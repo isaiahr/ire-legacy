@@ -56,6 +56,7 @@ Lextoken* lex(char* input, State* state){
             case EQUALS: str = "EQUALS"; break;
             case LEOF: str = "EOF"; break;
             case ADDEQ: str = "ADDEQ"; break;
+            case NEW: str = "NEW"; break;
             case PIPE: str = "PIPE"; break;
             default: str = "???"; break;
         }
@@ -154,6 +155,11 @@ Lextoken* lexone(char** i, int* line){
     if(beginswith("return ", input)){
         (*i) += strlen("return ");
         l->type = RETURN;
+        return l;
+    }
+    if(beginswith("new ", input)){
+        (*i) += strlen("new ");
+        l->type = NEW;
         return l;
     }
     if(beginswith("//", input)){

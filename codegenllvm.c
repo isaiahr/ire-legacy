@@ -21,26 +21,7 @@ void lwrite_footer(State* state){
 }
 
 void lwrite_varinit(Variable* var, State* state){
-    if((strcmp(var->type->identifier, "Byte[]") == 0)){
-        fprintf(state->fp, "%%%i = call i8* @alloc(i64 1024)\n", state->tempnum);
-        fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
-        state->tempnum += 1;
-        fprintf(state->fp, "store i64 0, i64* %%%i\n", state->tempnum);
-        fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 1\n", state->tempnum+1, state->tempnum);
-        state->tempnum += 1;
-        var->num = state->tempnum + 1;
-        fprintf(state->fp, "%%%i = bitcast i64* %%%i to i8*\n", var->num, state->tempnum);
-        state->tempnum += 2;
-    }
-    else if((strcmp(var->type->identifier, "Int[]") == 0)){
-        fprintf(state->fp, "%%%i = call i8* @alloc(i64 1024)\n", state->tempnum);
-        fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
-        state->tempnum += 1;
-        fprintf(state->fp, "store i64 0, i64* %%%i\n", state->tempnum);
-        fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 1\n", state->tempnum+1, state->tempnum);
-        var->num = state->tempnum+1;
-        state->tempnum += 2;
-    }
+    // nop
 }
 
 void lwrite_funcreturn(Function* func, Variable* var, State* state){
@@ -222,6 +203,31 @@ void lwrite_card(Variable* to, Variable* from, State* state){
         fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 -1\n", state->tempnum, from->num);
         to->num = state->tempnum + 1;
         fprintf(state->fp, "%%%i = load i64, i64* %%%i\n", to->num, state->tempnum);
+        state->tempnum += 2;
+    }
+}
+
+void lwrite_newarr(Variable* to, Variable* size, State* state){
+    if(strcmp(to->type->identifier, "Byte[]") == 0){
+        fprintf(state->fp, "%%%i = call i8* @alloc(i64 %%%i)\n", state->tempnum, size->num);
+        fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
+        state->tempnum += 1;
+        fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", size->num, state->tempnum);
+        fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 1\n", state->tempnum+1, state->tempnum);
+        state->tempnum += 1;
+        to->num = state->tempnum+1;
+        fprintf(state->fp, "%%%i = bitcast i64* %%%i to i8*\n", to->num, state->tempnum);
+        state->tempnum += 2;
+    }
+    else{
+        fprintf(state->fp, "%%%i = shl nuw i64 %%%i, 3\n", state->tempnum, size->num);
+        state->tempnum += 1;
+        fprintf(state->fp, "%%%i = call i8* @alloc(i64 %%%i)\n", state->tempnum, state->tempnum-1);
+        fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
+        state->tempnum += 1;
+        fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", size->num, state->tempnum);
+        to->num = state->tempnum+1;
+        fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 1\n", to->num, state->tempnum);
         state->tempnum += 2;
     }
 }

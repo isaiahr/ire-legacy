@@ -12,6 +12,7 @@
 #define T_ASSIGNMENT 3
 #define T_TYPE 4
 #define T_VARIABLE 5
+// 6 = ???
 #define T_CHAR 7
 #define T_INT 8
 #define T_STRING 9
@@ -25,6 +26,7 @@
 #define T_INDSET 17
 #define T_ADDEQ 18
 #define T_CARDINALITY 19
+#define T_NEWARR 20
 
 /**
  *
