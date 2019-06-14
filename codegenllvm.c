@@ -209,7 +209,9 @@ void lwrite_card(Variable* to, Variable* from, State* state){
 
 void lwrite_newarr(Variable* to, Variable* size, State* state){
     if(strcmp(to->type->identifier, "Byte[]") == 0){
-        fprintf(state->fp, "%%%i = call i8* @alloc(i64 %%%i)\n", state->tempnum, size->num);
+        fprintf(state->fp, "%%%i = add i64 %%%i, 8\n", state->tempnum, size->num);
+        state->tempnum += 1;
+        fprintf(state->fp, "%%%i = call i8* @alloc(i64 %%%i)\n", state->tempnum, state->tempnum-1);
         fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
         state->tempnum += 1;
         fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", size->num, state->tempnum);
@@ -221,7 +223,8 @@ void lwrite_newarr(Variable* to, Variable* size, State* state){
     }
     else{
         fprintf(state->fp, "%%%i = shl nuw i64 %%%i, 3\n", state->tempnum, size->num);
-        state->tempnum += 1;
+        fprintf(state->fp, "%%%i = add i64 %%%i, 8\n", state->tempnum+1, state->tempnum);
+        state->tempnum += 2;
         fprintf(state->fp, "%%%i = call i8* @alloc(i64 %%%i)\n", state->tempnum, state->tempnum-1);
         fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
         state->tempnum += 1;

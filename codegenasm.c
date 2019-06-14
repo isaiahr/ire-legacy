@@ -177,6 +177,7 @@ void awrite_card(Variable* to, Variable* from, State* state){
 void awrite_newarr(Variable* to, Variable* len, State* state){
     if(strcmp(to->type->identifier, "Byte[]") == 0){
         fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
+        fprintf(state->fp, "addb $8, %%rax\n");
         fprintf(state->fp, "call alloc\n");
         fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
         fprintf(state->fp, "movq %%rbx, (%%rax)\n");
@@ -186,6 +187,7 @@ void awrite_newarr(Variable* to, Variable* len, State* state){
     else{
         fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
         fprintf(state->fp, "imul $8, %%rax, %%rax\n");
+        fprintf(state->fp, "addq $8, %%rax\n");
         fprintf(state->fp, "call alloc\n");
         fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
         fprintf(state->fp, "movq %%rbx, (%%rax)\n");
