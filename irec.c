@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     state->errors = NULL;
     char c = 0;
     int ind = 0;
-    while((c = getopt_long(argc, argv, "ao:vnb:l", options, &ind)) != -1){
+    while((c = getopt_long(argc, argv, "ao:vnb:hl", options, &ind)) != -1){
         switch(c){
             case 'a':
                 state->comp_asm = 1;
@@ -177,7 +177,13 @@ int main(int argc, char **argv)
     if(state->llvm){
         //invoke llc
         printf("Done compilation. Generating asm...\n");
-        char* t = tempnam(NULL, "irecv");
+        char* t = NULL;
+        if(state->comp_asm){
+            t = state->outputfile;
+        }
+        else{
+            t = tempnam(NULL, "irecv");
+        }
         int i = fork();
         if(i == 0){
             execl("/usr/bin/llc", "/usr/bin/llc", compto, "-o", t, (char*) NULL);
