@@ -18,6 +18,7 @@
  */
 
 
+void compile_function(Token* xd, Function* func, Program* prog, State* state);
 void process_function(Token* xd, Function* func, Program* prog, State* state);
 void* process_stmt(Token* t, Function* func, Program* prog);
 char* formatvar(Variable* var);
@@ -96,6 +97,24 @@ Program* process_program(Token* t, State* state){
         po->funcs[i].native = 0;
         process_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
     }
+    for(int i = 0; i < po->func_count; i++){
+        Function* f = &po->funcs[i];
+        if(f->native){
+            continue;
+        }
+        if(strcmp(f->name, ENTRYFUNC) == 0){
+            f->write_name = "_start";
+        }
+        else{
+            f->write_name = malloc(6+20);//20 digits = max of int
+            f->max_offset = 0;
+            sprintf(f->write_name, "func_%i", i);
+        }
+    }
+    // seperate proccessing function header from body to enable calling funcs declared after.
+    for(int i = num_nativefuncs; i < po->func_count; i++){
+        compile_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
+    }
     print_prog(po);
     return po;
 }
@@ -103,7 +122,6 @@ Program* process_program(Token* t, State* state){
 
 void process_function(Token* xd, Function* func, Program* prog, State* state){
     Token def = xd->subtokens[0];
-    Token body = xd->subtokens[1];
     func->name = clone(def.str);
     func->retval = proc_type(def.subtokens[0].str, prog);
     if(func->retval == NULL){
@@ -129,8 +147,11 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
         var->identifier = ident;
         func->params = add_varlist(func->params, var);
     }
-    for(int i = 0; i < body.subtoken_count; i ++){
-        process_stmt(&body.subtokens[i], func, prog);
+}
+
+void compile_function(Token* t, Function* f, Program* prog, State* state){
+    for(int i = 0; i < t->subtokens[1].subtoken_count; i ++){
+        process_stmt(&t->subtokens[1].subtokens[i], f, prog);
     }
 }
 

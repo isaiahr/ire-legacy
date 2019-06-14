@@ -43,28 +43,8 @@ void compile(State* state, Token* t){
     mark(state);
     // at this point, any error stopping the program from producing code and running normally
     // should be considered a bug.
-    int log_c = 1;
     for(int i = 0; i < p->func_count; i++){
-        // compute 10^n
-        int tmp = 10;
-        for(int j = 1; j < log_c; j++){
-            tmp = tmp * tmp;
-        }
-        if(i > tmp){
-            log_c += 1;
-        }
         Function* f = &p->funcs[i];
-        if(f->native){
-            continue;
-        }
-        if(strcmp(f->name, ENTRYFUNC) == 0){
-            f->write_name = "_start";
-        }
-        else{
-            f->write_name = malloc(6+(int)((1+(log_c))));
-            f->max_offset = 0;
-            sprintf(f->write_name, "func_%i", i);
-        }
         if(!f->native){
             compile_func(f, state);
         }
