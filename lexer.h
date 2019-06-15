@@ -26,7 +26,13 @@
 #define RETURN 16
 #define ADDEQ 17
 #define PIPE 18
-#define NEW 19
+#define PLUS 19
+#define DOUBLEEQUALS 20
+#define LESS 21
+#define GREATER 22
+#define SUBTRACT 23
+#define MULT 24
+#define NEW 25
 
 typedef struct Lextoken{
     int line;

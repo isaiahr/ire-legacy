@@ -58,6 +58,12 @@ Lextoken* lex(char* input, State* state){
             case ADDEQ: str = "ADDEQ"; break;
             case NEW: str = "NEW"; break;
             case PIPE: str = "PIPE"; break;
+            case PLUS: str = "PLUS"; break;
+            case DOUBLEEQUALS: str = "DOUBLEEQUALS"; break;
+            case LESS: str = "LESS"; break;
+            case GREATER: str = "GREATER"; break;
+            case SUBTRACT: str = "SUBTRACT"; break;
+            case MULT: str = "MULT"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -84,6 +90,17 @@ Lextoken* lexone(char** i, int* line){
     l->next = NULL;
     l->type = LEXERROR;
     l->str = NULL;
+    if(input[0] == '+' && input[1] == '='){
+        // remove dynamic arrays (for now)
+        // (*i) += 2;
+        // l->type = ADDEQ;
+        // return l;
+    }
+    if(input[0] == '=' && input[1] == '='){
+        (*i) += 2;
+        l->type = DOUBLEEQUALS;
+        return l;
+    }
     int match = 1;
     switch(input[0]){
         case '(': l->type = LEFT_PAREN; break;
@@ -92,9 +109,14 @@ Lextoken* lexone(char** i, int* line){
         case ']': l->type = RIGHT_SQPAREN; break;
         case '{': l->type = LEFT_CRPAREN; break;
         case '}': l->type = RIGHT_CRPAREN; break;
-        case '-': l->type = MINUS_SYM; break;
+        // case '-': l->type = MINUS_SYM; break;
         case ',': l->type = COMMA; break;
         case '=': l->type = EQUALS; break;
+        case '+': l->type = PLUS; break;
+        case '<': l->type = LESS; break;
+        case '>': l->type = GREATER; break;
+        case '-': l->type = SUBTRACT; break;
+        case '*': l->type = MULT; break;
         case '|': l->type = PIPE; break;
         case ';': l->type = TERM; break;
         case '\n': l->type = TERM; (*line)++; break;
@@ -103,12 +125,6 @@ Lextoken* lexone(char** i, int* line){
     if(match){
         (*i) ++ ; // advance one char
         return l;
-    }
-    if(input[0] == '+' && input[1] == '='){
-        // (*i) += 2;
-        // remove dynamic arrays (for now)
-        // l->type = ADDEQ;
-        // return l;
     }
     if(ISNUMERIC(input[0])){
         l->lnt = 0;

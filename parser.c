@@ -7,6 +7,9 @@
 #include"lexer.h"
 #include"parser.h"
 
+#define FLAG_ARRIND 1
+#define FLAG_ARITH 2
+
 
 int match(Lextoken* p, int m);
 Lextoken* next(Lextoken* p);
@@ -14,13 +17,18 @@ Lextoken* parse_constant(Lextoken* p, Token* t);
 Lextoken* parse_variable(Lextoken* p, Token* t);
 Lextoken* parse_type(Lextoken* p, Token* t);
 Lextoken* parse_expression(Lextoken* p, Token* t);
+Lextoken* parse_expression_flags(Lextoken* p, Token* t, int flags);
 Lextoken* parse_varinit(Lextoken* p, Token* t);
 Lextoken* parse_funcall(Lextoken* p, Token* t);
 Lextoken* parse_arrind(Lextoken* p, Token* e);
+Lextoken* parse_arrind_flags(Lextoken* p, Token* e, int flags);
 Lextoken* parse_arrset(Lextoken* p, Token* e);
 Lextoken* parse_addeq(Lextoken* p, Token* e);
 Lextoken* parse_card(Lextoken* p, Token* e);
 Lextoken* parse_newarr(Lextoken* p, Token* e);
+Lextoken* parse_arith(Lextoken* p, Token* e);
+Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags);
+Lextoken* parse_brexpr(Lextoken* p, Token* e);
 Lextoken* parse_assignment(Lextoken* p, Token* t);
 Lextoken* parse_statement(Lextoken* p, Token* t);
 Lextoken* parse_body(Lextoken* p, Token* t);
@@ -84,7 +92,7 @@ Lextoken* next(Lextoken* p){
 
 // constant = (["-"], int) | char
 Lextoken* parse_constant(Lextoken* p, Token* e){
-    int i = match(p, MINUS_SYM);
+    int i = match(p, SUBTRACT);
     i = i && match(next(p), INTEGER);
     if(!i){
         int i = match(p, LCHAR);
@@ -145,29 +153,7 @@ Lextoken* parse_type(Lextoken* p, Token* e){
 
 // expression = (constant | string | variable | funccall | arrind)
 Lextoken* parse_expression(Lextoken* p, Token* e){
-    Lextoken* l = NULL;
-    if((l = parse_funcall(p, e))){
-        return l;
-    }
-    if((l = parse_constant(p, e))){
-        return l;
-    }
-    if((l = parse_card(p, e))){
-        return l;
-    }    
-    if((l = parse_newarr(p, e))){
-        return l;
-    }
-    if((l = parse_arrind(p, e))){
-        return l;
-    }
-    if(match(p, LSTRING)){
-        e->type = T_STRING;
-        e->str = malloc(strlen(p->str)+1);
-        memcpy(e->str, p->str, strlen(p->str)+1);
-        return next(p);
-    }
-    return parse_variable(p, e);
+    return parse_expression_flags(p, e, 0);
 }
 
 // varinit = type, identifier
@@ -262,8 +248,9 @@ Lextoken* parse_assignment(Lextoken* p, Token* e){
     return NULL;
 }
 
-// helper, see below
-Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
+// expr with flags telling it what not to parse.
+// this is to avoid infinite left recursion.
+Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     Lextoken* l = NULL;
     if((l = parse_funcall(p, e))){
         return l;
@@ -277,6 +264,15 @@ Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
     if((l = parse_newarr(p, e))){
         return l;
     }
+    if((l = parse_brexpr(p, e))){
+        return l;
+    }
+    if((!(FLAGS & FLAG_ARRIND)) && (l = parse_arrind_flags(p, e, FLAGS))){
+        return l;
+    }
+    if((!(FLAGS & FLAG_ARITH)) && (l = parse_arith_flags(p, e, FLAGS))){
+        return l;
+    }
     if(match(p, LSTRING)){
         e->type = T_STRING;
         e->str = malloc(strlen(p->str)+1);
@@ -286,15 +282,19 @@ Lextoken* parse_expression_noarr(Lextoken* p, Token* e){
     return parse_variable(p, e);
 }
 
+Lextoken* parse_arrind(Lextoken* p, Token* e){
+    return parse_arrind_flags(p, e, 0);
+}
+
 // arrind = expression "[", expression, "]"
 // to avoid infinite left recursion, parse as
 // arrind = exprnoarrind "[", expression, "]", {"[", expression, "]" }
 // this _should_ be equivalent. 
-Lextoken* parse_arrind(Lextoken* p, Token* e){
+Lextoken* parse_arrind_flags(Lextoken* p, Token* e, int FLAGS){
     // despite the name its left and right.
     Token* left = init_token(p->line);
     left = realloc_token(left, 2);
-    Lextoken* expr = parse_expression_noarr(p, left);
+    Lextoken* expr = parse_expression_flags(p, left, FLAG_ARRIND | FLAGS);
     int a = 0;
     while(1){
         int j = match(expr, LEFT_SQPAREN);
@@ -364,7 +364,7 @@ Lextoken* parse_addeq(Lextoken* p, Token* e){
     return NULL;
 }
 
-// card = | expression | 
+// card = "|",  expression,  "|"
 Lextoken* parse_card(Lextoken* p, Token* e){
     if(!match(p, PIPE)){
         return NULL;
@@ -405,6 +405,189 @@ Lextoken* parse_newarr(Lextoken* p, Token* e){
     // good
     e->type = T_NEWARR;
     return next(l2);
+}
+
+// arith = exprnoarith ("<" | ">" | "=" | "+" | "-") exprnoarith
+/**
+* Algorithmn details: O(n) n = length of sentence (also scales with symbols)
+*/
+
+typedef struct ArithExpr{
+    Token* p;
+    struct OpExpr* next;
+    struct OpExpr* prev;
+} ArithExpr;
+
+typedef struct OpExpr {
+    int type;
+    struct ArithExpr* next;
+    struct ArithExpr* prev;
+} OpExpr;
+
+OpExpr* opexprhelper(Lextoken* p){
+    switch(p->type){
+        case PLUS:
+        case DOUBLEEQUALS:
+        case LESS:
+        case GREATER:
+        case SUBTRACT:
+        case MULT:
+            ; // nessecary
+            OpExpr* o = malloc(sizeof(struct OpExpr));
+            o->type = p->type;
+            o->next = NULL;
+            o->prev = NULL;
+            return o;
+        default: return NULL;
+    }
+}
+
+#define LAST_ORDER 3
+
+int ordermatches (int order, int type){
+    switch(type){
+        case PLUS:
+        case SUBTRACT:
+            return order == 0;
+        case MULT:
+            return order == 1;
+        case LESS:
+        case GREATER:
+            return order == 2;
+        case DOUBLEEQUALS:
+            return order == 3;
+        default:
+            return 0;
+    }
+    return 0; // shouldnt happen
+}
+
+Lextoken* parse_arith(Lextoken* p, Token* e){
+    return parse_arith_flags(p, e, 0);
+}
+
+Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags){
+    // 1. build the initial list.
+    ArithExpr* head = malloc(sizeof(struct ArithExpr));
+    Token* o = init_token(p->line);
+    Lextoken* l = parse_expression_flags(p, o, FLAG_ARITH | flags);
+    if(l == NULL){
+        destroy_token(o);
+        free(head);
+        return NULL;
+    }
+    head->p = o;
+    head->next = opexprhelper(l);
+    head->prev = NULL;
+    if(head->next == NULL){
+        destroy_token(o);
+        free(head);
+        return NULL;
+    }
+    head->next->next = malloc(sizeof(struct ArithExpr));
+    o = init_token(p->line);
+    l = parse_expression_flags(next(l), o, FLAG_ARITH);
+    if(l == NULL){
+        destroy_token(head->p);
+        destroy_token(o);
+        free(head);
+        free(head->next);
+        free(head->next->next);
+        return NULL;
+    }
+    head->next->next->p = o;
+    head->next->next->next = NULL;
+    head->next->next->prev = head->next;
+    head->next->prev = head;
+    // valid.
+    ArithExpr* cur = head->next->next;
+    while(1){
+        OpExpr* op = opexprhelper(l);
+        if(op == NULL){
+            //ok. proceed.
+            break;
+        }
+        op->next = NULL;
+        cur->next = op;
+        cur->next->prev = cur;
+        Token* newt = init_token(next(l)->line);
+        l = parse_expression_flags(next(l), newt, FLAG_ARITH);
+        if(l == NULL){
+            // failed, no expr on end (such as "3*2*")
+            // gc all held items
+            int y = 1;
+            void* hed = (void*) head;
+            while(head != NULL){
+                if(y){
+                    ArithExpr* ae = (ArithExpr*) hed;
+                    destroy_token(ae->p);
+                    free(ae);
+                    hed = (void*) ae->next;
+                }
+                else{
+                    OpExpr* oe = (OpExpr*) hed;
+                    free(oe);
+                    hed = (void*) oe->next;
+                }
+                y = !y;
+            }
+            return NULL;
+        }
+        cur->next->next = malloc(sizeof(struct ArithExpr*));
+        cur->next->next->prev = cur->next;
+        cur->next->next->next = NULL;
+        cur->next->next->p = newt;
+        cur = cur->next->next;
+        // ok. proceed.
+    }
+    // 2. parse flat tree to account for order of operations.
+    // lower order = first.
+    for(int order = 0; order <= LAST_ORDER; order++){
+        ArithExpr* cur = head;
+        while(cur->next != NULL){
+            // note cur->next nonull implies cur->next->next exists.
+            if(ordermatches(order, cur->next->type)){
+                // replace this one.
+                Token* repl = init_token(cur->p->line);
+                repl->subtoken_count = 2;
+                repl->subtokens = init_token(cur->p->line);
+                repl->subtokens = realloc_token(repl->subtokens, 2);
+                repl->lnt = cur->next->type; // set operation
+                memcpy(repl->subtokens, cur->p, sizeof(struct Token));
+                memcpy(&repl->subtokens[1], cur->next->next->p, sizeof(struct Token));
+                repl->type = T_ARITH;
+                destroy_token(cur->p);
+                destroy_token(cur->next->next->p);
+                cur->p = repl;
+                OpExpr* destroy = cur->next;
+                cur->next = cur->next->next->next;
+                cur->next->prev = cur;
+                free(destroy);
+                free(destroy->next);
+                // ok.
+            }
+            else{
+                cur = cur->next->next;
+                // not precedence we are looking for.
+            }
+        }
+    }
+    // should be binary tree now.
+    memcpy(e, head->p, sizeof(struct Token));
+    destroy_token(head->p);
+    return l;
+}
+
+// brexpr = "(", expression, ")"
+Lextoken* parse_brexpr(Lextoken* p, Token* e){
+    if(!match(p, LEFT_PAREN)){
+        return NULL;
+    }
+    Lextoken* o = parse_expression(next(p), e);
+    if(o == NULL || !match(o, RIGHT_PAREN)){
+        return NULL;
+    }
+    return next(o);
 }
 
 // return = return, expression
@@ -618,6 +801,7 @@ Token* realloc_token(Token* ptr, int len){
 
 void destroy_token(Token* ptr){
     return; // TODO make this work in the future.
+    // note: dont recurse, functions already should do that
     if(ptr == NULL){
         return;
     }
@@ -674,6 +858,7 @@ char* type(Token* p){
         case T_INDSET: return "INDSET";
         case T_ADDEQ: return "ADDEQ";
         case T_CARDINALITY: return "CARD";
+        case T_ARITH: return "ARITH";
         default: return "UNKNOWN";
     }
     
