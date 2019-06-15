@@ -39,6 +39,7 @@ char* type(Token* t);
 Token* init_token();
 Token* realloc_token(Token* ptr, int len);
 void destroy_token(Token* ptr);
+char sym(int id);
 
 // THIS IS THE FIFTH TIME THE PARSER HAS BEEN REWRITTEN. and hopefully the last.
 
@@ -264,9 +265,7 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((l = parse_newarr(p, e))){
         return l;
     }
-    if((l = parse_brexpr(p, e))){
-        return l;
-    }
+
     if((!(FLAGS & FLAG_ARRIND)) && (l = parse_arrind_flags(p, e, FLAGS))){
         return l;
     }
@@ -278,6 +277,12 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
         e->str = malloc(strlen(p->str)+1);
         memcpy(e->str, p->str, strlen(p->str)+1);
         return next(p);
+    }
+    
+    // ordering important here. both brexpr and arith can pass on (a+b)*c.
+    // however (a+b) will fail later.
+    if((l = parse_brexpr(p, e))){
+        return l;
     }
     return parse_variable(p, e);
 }
@@ -444,12 +449,21 @@ OpExpr* opexprhelper(Lextoken* p){
 
 #define LAST_ORDER 3
 
+/**
+ *
+ * Note: lower order = strong associativity. (or higher order)
+ * higher orders "wait" for lower orders to compute before computing.
+ * a expr like a == b * c + d
+ * will be (a == ((b*c)+d))
+ * 
+ */
+
 int ordermatches (int order, int type){
     switch(type){
+        case MULT:
+            return order == 0;
         case PLUS:
         case SUBTRACT:
-            return order == 0;
-        case MULT:
             return order == 1;
         case LESS:
         case GREATER:
@@ -561,7 +575,10 @@ Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags){
                 cur->p = repl;
                 OpExpr* destroy = cur->next;
                 cur->next = cur->next->next->next;
-                cur->next->prev = cur;
+                if(cur->next != NULL){
+                    cur->next->prev = cur;
+                    // possible case. ok.
+                }
                 free(destroy);
                 free(destroy->next);
                 // ok.
@@ -824,7 +841,10 @@ void print_tree(Token* p, int lvl){
         lvlstr[i] = ' ';
     }
     lvlstr[lvl] = 0;
-    if(p->str == NULL){
+    if(p->type == T_ARITH){
+        printf("%s%s <%c>\n", lvlstr, type(p), sym(p->lnt));
+    }
+    else if(p->str == NULL){
         printf("%s%s\n", lvlstr, type(p));
     } else {
         printf("%s%s [%s]\n", lvlstr, type(p), p->str);
@@ -834,6 +854,18 @@ void print_tree(Token* p, int lvl){
         for(int i = 0; i < p->subtoken_count; i++){
             print_tree(&p->subtokens[i], lvl+4);
         }
+    }
+}
+
+char sym(int id){
+    switch(id){
+        case PLUS: return '+';
+        case DOUBLEEQUALS: return '=';
+        case LESS: return '<';
+        case GREATER: return '>';
+        case SUBTRACT: return '-';
+        case MULT: return '*';
+        default: exit(67); // shouldn't happen, but easy to track down if it does
     }
 }
 
