@@ -57,6 +57,7 @@ void compile_func(Function* f, State* state){
     VarList* prev = NULL;
     VarList* head = NULL;
     f->writ_return = 0;
+    annotate(state, "Function defn for %s", f->name);
     while(cur != NULL){
         VarList* new = malloc(sizeof(struct VarList));
         new->var = cur->var;
@@ -105,11 +106,15 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
         case S_FUNCTIONCALL:
             ;
             FunctionCall* fc = (FunctionCall*) stmt->stmt;
+            annotate(state, "call func %s", fc->func->name);
             write_funcall(fc, state);
             break;
         case S_VARINIT:
             ;
             VarInit* vi = (VarInit*) stmt->stmt;
+            if(vi->var->identifier != NULL){
+                annotate(state, "init var %s", vi->var->identifier);
+            }
             VarList* vl = f->vars;
             while(vl->var != vi->var){
                 vl->var->offset += 8;

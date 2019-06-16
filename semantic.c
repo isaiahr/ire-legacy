@@ -116,7 +116,9 @@ Program* process_program(Token* t, State* state){
     for(int i = num_nativefuncs; i < po->func_count; i++){
         compile_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
     }
-    print_prog(po);
+    if(state->verbose){
+        print_prog(po);
+    }
     return po;
 }
 

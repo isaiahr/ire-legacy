@@ -26,10 +26,17 @@
 void annotate(State* state, char* format, ...){
     if(!state->annotate)
         return;
+    if(state->llvm){
+        fprintf(state->fp, ";");
+    }
+    else{
+        fprintf(state->fp, "#");
+    }
     va_list args;
     va_start(args, format);
     vfprintf(state->fp, format, args);
     va_end(args);
+    fprintf(state->fp, "\n");
 }
 
 

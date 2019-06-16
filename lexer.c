@@ -74,7 +74,7 @@ Lextoken* lex(char* input, State* state){
         }
         cur = cur->next;
     }
-    printf("\n");
+    debug(state, "\n");
     return first;
 }
 
