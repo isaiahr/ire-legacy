@@ -195,3 +195,42 @@ void awrite_newarr(Variable* to, Variable* len, State* state){
         fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
     }
 }
+
+void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", left->offset);
+    fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", right->offset);
+    switch(op){
+        case PLUS:
+            fprintf(state->fp, "addq %%rax, %%rbx\n");
+            break;
+        case DOUBLEEQUALS:
+            //TODO reduce # of ops here ? 
+            fprintf(state->fp, "xor %%r10, %%r10\n");
+            fprintf(state->fp, "cmpq %%rax, %%rbx\n"); // rbx - rax
+            fprintf(state->fp, "movq $1, %%rcx\n");
+            fprintf(state->fp, "cmovzq %%rcx, %%r10\n");
+            fprintf(state->fp, "movq %%r10, %i(%%rsp)\n", to->offset);
+            return;
+        case LESS:
+            fprintf(state->fp, "xor %%r10, %%r10\n");
+            fprintf(state->fp, "cmpq %%rbx, %%rax\n"); // left - right (l < r) 
+            fprintf(state->fp, "movq $1, %%rcx\n");
+            fprintf(state->fp, "cmovsq %%rcx, %%r10\n");
+            fprintf(state->fp, "movq %%r10, %i(%%rsp)\n", to->offset);
+            return;
+        case GREATER:
+            fprintf(state->fp, "xor %%r10, %%r10\n");
+            fprintf(state->fp, "cmpq %%rax, %%rbx\n"); // left - right (l < r) 
+            fprintf(state->fp, "movq $1, %%rcx\n");
+            fprintf(state->fp, "cmovsq %%rcx, %%r10\n");
+            fprintf(state->fp, "movq %%r10, %i(%%rsp)\n", to->offset);
+            return;
+        case SUBTRACT:
+            fprintf(state->fp, "subq %%rbx, %%rax\n");
+            fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+            return;
+        case MULT:
+            fprintf(state->fp, "imul %%rax, %%rbx\n");
+    }
+    fprintf(state->fp, "movq %%rbx, %i(%%rsp)\n", to->offset);
+}

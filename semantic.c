@@ -5,6 +5,7 @@
 #include"parser.h"
 #include"semantic.h"
 #include"error.h"
+#include"common.h"
 
 /**
  * semantic.c -- does semantic analysis of the program.
@@ -282,6 +283,18 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             add_stmt_func(mkinit(new->to), func);
             add_stmt_func(stmt, func);
             return new->to;
+        case T_ARITH:
+            stmt->type = S_ARITHMETIC;
+            stmt->stmt = malloc(sizeof(struct Arithmetic));
+            Arithmetic* arith = (Arithmetic*) stmt->stmt;
+            arith->left = process_stmt(&t->subtokens[0], func, prog);
+            arith->right = process_stmt(&t->subtokens[1], func, prog);
+            arith->operation = t->lnt;
+            // TODO another hardcoded type.
+            arith->to = mkvar(func, &prog->types[0]); 
+            add_stmt_func(mkinit(arith->to), func);
+            add_stmt_func(stmt, func);
+            return arith->to;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
             Variable* v32 = proc_var(t->str, func);
@@ -362,6 +375,10 @@ void print_func(Function* func){
                 Cardinality* card = (Cardinality*) cur->stmt->stmt;
                 printf("    %s = |%s|\n", formatvar(card->to), formatvar(card->from));
                 break;
+            case S_ARITHMETIC:
+                ;
+                Arithmetic* arith = (Arithmetic*) cur->stmt->stmt;
+                printf("    %s = %s %c %s\n", formatvar(arith->to), formatvar(arith->left), sym(arith->operation), formatvar(arith->right));
             case S_RETURN:
                 ;
                 Return* ret = (Return*) cur->stmt->stmt;

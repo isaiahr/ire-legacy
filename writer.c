@@ -177,3 +177,12 @@ void write_newarr(Variable* to, Variable* size, State* state){
         awrite_newarr(to, size, state);
     }
 }
+
+void write_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
+    if(state->llvm){
+        lwrite_arith(to, left, right, op, state);
+    }
+    else {   
+        awrite_arith(to, left, right, op, state);
+    }
+}

@@ -26,12 +26,7 @@
 #define RETURN 16
 #define ADDEQ 17
 #define PIPE 18
-#define PLUS 19
-#define DOUBLEEQUALS 20
-#define LESS 21
-#define GREATER 22
-#define SUBTRACT 23
-#define MULT 24
+#include"operators.h" // MAKE SURE THESE MATCH UP ( no duplicates). compiler should warn if incorrect
 #define NEW 25
 
 typedef struct Lextoken{

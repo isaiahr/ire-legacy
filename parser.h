@@ -27,7 +27,7 @@
 #define T_ADDEQ 18
 #define T_CARDINALITY 19
 #define T_NEWARR 20
-#define T_ARITH 20
+#define T_ARITH 21
 
 /**
  *

@@ -292,3 +292,7 @@ void lwrite_newarr(Variable* to, Variable* size, State* state){
         state->tempnum += 2;
     }
 }
+
+void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
+    //  to do
+}

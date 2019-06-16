@@ -144,6 +144,11 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
             NewArray* ne = (NewArray*) stmt->stmt;
             write_newarr(ne->to, ne->size, state);
             break;
+        case S_ARITHMETIC:
+            ;
+            Arithmetic* arith = (Arithmetic*) stmt->stmt;
+            write_arith(arith->to, arith->left, arith->right, arith->operation, state);
+            break;
         case S_RETURN:
             ;
             Return* r = (Return*) stmt->stmt;

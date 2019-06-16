@@ -39,7 +39,6 @@ char* type(Token* t);
 Token* init_token();
 Token* realloc_token(Token* ptr, int len);
 void destroy_token(Token* ptr);
-char sym(int id);
 
 // THIS IS THE FIFTH TIME THE PARSER HAS BEEN REWRITTEN. and hopefully the last.
 
@@ -253,6 +252,9 @@ Lextoken* parse_assignment(Lextoken* p, Token* e){
 // this is to avoid infinite left recursion.
 Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     Lextoken* l = NULL;
+    if((!(FLAGS & FLAG_ARITH)) && (l = parse_arith_flags(p, e, FLAGS))){
+        return l;
+    }
     if((l = parse_funcall(p, e))){
         return l;
     }
@@ -269,9 +271,7 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((!(FLAGS & FLAG_ARRIND)) && (l = parse_arrind_flags(p, e, FLAGS))){
         return l;
     }
-    if((!(FLAGS & FLAG_ARITH)) && (l = parse_arith_flags(p, e, FLAGS))){
-        return l;
-    }
+
     if(match(p, LSTRING)){
         e->type = T_STRING;
         e->str = malloc(strlen(p->str)+1);
@@ -854,18 +854,6 @@ void print_tree(Token* p, int lvl){
         for(int i = 0; i < p->subtoken_count; i++){
             print_tree(&p->subtokens[i], lvl+4);
         }
-    }
-}
-
-char sym(int id){
-    switch(id){
-        case PLUS: return '+';
-        case DOUBLEEQUALS: return '=';
-        case LESS: return '<';
-        case GREATER: return '>';
-        case SUBTRACT: return '-';
-        case MULT: return '*';
-        default: exit(67); // shouldn't happen, but easy to track down if it does
     }
 }
 

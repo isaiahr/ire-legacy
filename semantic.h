@@ -14,6 +14,7 @@
 #define S_ADDEQUALS 8
 #define S_CARDINALITY 9
 #define S_NEWARRAY 10
+#define S_ARITHMETIC 11
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -131,6 +132,13 @@ typedef struct NewArray{
     Variable* size;
     Variable* to;
 } NewArray;
+
+typedef struct Arithmetic{
+    Variable* left;
+    Variable* right;
+    Variable* to;
+    int operation;
+} Arithmetic;
 
 
 Program* process_program(Token* t, State* state);
