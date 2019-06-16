@@ -30,6 +30,14 @@ then
     exit
 fi
 
+./irec -basm arith.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile arith.ire
+    echo Failed
+    exit
+fi
 
 ./exit
 if [ "$?" -eq 33 ]
@@ -61,6 +69,15 @@ fail=$((fail+1))
 echo -n "E"
 fi
 
+./arith
+if [ "$?" -eq 3 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
 
 
 # 
@@ -94,6 +111,16 @@ then
     exit
 fi
 
+./irec -bllvm arith.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile arith.ire
+    echo Failed
+    exit
+fi
+
+
 ./exit
 if [ "$?" -eq 33 ]
 then
@@ -124,6 +151,15 @@ fail=$((fail+1))
 echo -n "E"
 fi
 
+./arith
+if [ "$?" -eq 3 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
 
 echo ""
 # end part
