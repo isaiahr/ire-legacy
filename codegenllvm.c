@@ -293,6 +293,47 @@ void lwrite_newarr(Variable* to, Variable* size, State* state){
     }
 }
 
-void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
-    //  to do
+void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){ 
+    int left_ = state->tempnum;
+    int right_ = state->tempnum+1;
+    state->tempnum += 2;
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", left_, left->type->llvm, left->type->llvm, left->num);
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", right_, right->type->llvm, right->type->llvm, right->num);
+    int result = -343434;
+    switch(op){
+        case PLUS:
+            fprintf(state->fp, "%%%i = add %s %%%i, %%%i\n", state->tempnum, to->type->llvm, left_, right_);
+            result = state->tempnum;
+            state->tempnum += 1;
+            break;
+        case DOUBLEEQUALS:
+            fprintf(state->fp, "%%%i = icmp eq i64 %%%i, %%%i\n", state->tempnum, left_, right_);
+            result = state->tempnum + 1;
+            fprintf(state->fp, "%%%i = zext i1 %%%i to i64\n", result, state->tempnum);
+            state->tempnum += 2;
+            break;
+        case LESS:         
+            fprintf(state->fp, "%%%i = icmp slt i64 %%%i, %%%i\n", state->tempnum, left_, right_);
+            result = state->tempnum + 1;
+            fprintf(state->fp, "%%%i = zext i1 %%%i to i64\n", result, state->tempnum);
+            state->tempnum += 2;
+            break;
+        case GREATER:
+            fprintf(state->fp, "%%%i = icmp sgt i64 %%%i, %%%i\n", state->tempnum, left_, right_);
+            result = state->tempnum + 1;
+            fprintf(state->fp, "%%%i = zext i1 %%%i to i64\n", result, state->tempnum);
+            state->tempnum += 2;
+            break;
+        case SUBTRACT:
+            fprintf(state->fp, "%%%i = sub %s %%%i, %%%i\n", state->tempnum, to->type->llvm, left_, right_);
+            result = state->tempnum;
+            state->tempnum += 1;
+            break;
+        case MULT:
+            fprintf(state->fp, "%%%i = mul %s %%%i, %%%i\n", state->tempnum, to->type->llvm, left_, right_);
+            result = state->tempnum;
+            state->tempnum += 1;
+            break;
+    }
+    fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", result, to->num);
 }
