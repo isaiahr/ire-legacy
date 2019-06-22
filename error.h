@@ -11,6 +11,7 @@
 #define DUPDEFFUNC 4
 #define DUPDEFVAR 5
 #define DUPDEFTYPE 7
+#define INCOMPATTYPE 8
 
 #define ERRORLEXING 1
 #define ERRORPARSING 2

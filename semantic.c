@@ -21,7 +21,7 @@
 
 void compile_function(Token* xd, Function* func, Program* prog, State* state);
 void process_function(Token* xd, Function* func, Program* prog, State* state);
-void* process_stmt(Token* t, Function* func, Program* prog);
+void* process_stmt(Token* t, Function* func, Program* prog, State* state);
 char* formatvar(Variable* var);
 void print_func(Function* func);
 void print_type(Type* t);
@@ -114,6 +114,15 @@ Program* process_program(Token* t, State* state){
     }
     // seperate proccessing function header from body to enable calling funcs declared after.
     for(int i = num_nativefuncs; i < po->func_count; i++){
+        for(int j = 0; j < i; j++){
+            if(i-num_nativefuncs == j){
+                continue;
+            }
+            if(strcmp(t->subtokens[i-num_nativefuncs].subtokens[0].str, t->subtokens[j].subtokens[0].str) == 0){
+                char* msg = format("function %s redefined", t->subtokens[j].subtokens[0].str);
+                add_error(state, DUPDEFFUNC, t->subtokens[i-num_nativefuncs].subtokens[0].line, msg);
+            }
+        }
         compile_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
     }
     if(state->verbose){
@@ -154,11 +163,11 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
 
 void compile_function(Token* t, Function* f, Program* prog, State* state){
     for(int i = 0; i < t->subtokens[1].subtoken_count; i ++){
-        process_stmt(&t->subtokens[1].subtokens[i], f, prog);
+        process_stmt(&t->subtokens[1].subtokens[i], f, prog, state);
     }
 }
 
-void* process_stmt(Token* t, Function* func, Program* prog){
+void* process_stmt(Token* t, Function* func, Program* prog, State* state){
     Statement* stmt = malloc(sizeof(struct Statement));
     switch(t->type){
         case T_ASSIGNMENT:
@@ -167,10 +176,20 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             Assignment* an = (Assignment*) stmt->stmt;
             an->to = proc_var(t->str, func);
             // resolve from into a var
-            an->from = process_stmt(t->subtokens, func, prog);
+            an->from = process_stmt(t->subtokens, func, prog, state);
+            if(an->to->type != an->from->type){
+                char* to_tyname = an->to->type->identifier;
+                char* from_tyname = an->from->type->identifier;
+                char* msg = format("assigning %s to declared variable of type %s", from_tyname, to_tyname);
+                add_error(state, INCOMPATTYPE, t->line, msg);
+            }
             add_stmt_func(stmt, func);
             break;
         case T_VARINIT:
+            if(proc_var(t->str, func) != NULL){
+                char* msg = format("variable %s redefined", t->str);
+                add_error(state, DUPDEFVAR, t->line, msg);
+            }
             stmt->type = S_VARINIT;
             stmt->stmt = malloc(sizeof(struct VarInit));
             VarInit* v = (VarInit*) stmt->stmt;
@@ -181,7 +200,11 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             stmt->type = S_RETURN;
             stmt->stmt = malloc(sizeof(struct Return));
             Return* ret = (Return*) stmt->stmt;
-            ret->var = process_stmt(&t->subtokens[0], func, prog);
+            ret->var = process_stmt(&t->subtokens[0], func, prog, state);
+            if(ret->var->type != func->retval){
+                char* msg = format("returning %s from function of type %s", ret->var->type->identifier, func->retval->identifier);
+                add_error(state, INCOMPATTYPE, t->line, msg);
+            }
             add_stmt_func(stmt, func);
             break;
         case T_CHAR:
@@ -224,9 +247,57 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             fn->func = proc_func(t->str, prog);
             fn->var_count = t->subtoken_count;
             fn->vars = NULL;
+            int error = 0;
+            VarList* comp = fn->func->params;
             for(int i = 0; i < t->subtoken_count; i++){
-                Variable* new = process_stmt(&t->subtokens[i], func, prog);
+                Variable* new = process_stmt(&t->subtokens[i], func, prog, state);
+                if((!fn->func->native) && comp == NULL){
+                    error = 1;
+                }
+                if(!error && (!fn->func->native && new->type != comp->var->type)){
+                    error = 1;
+                }
                 fn->vars = add_varlist(fn->vars, new);
+                if(comp != NULL){
+                    comp = comp->next;
+
+                } else if(!fn->func->native){
+                    error = 1;
+                }
+            }
+            if(comp != NULL){
+                // still more params
+                error = 1;
+            }
+            if(error){
+                VarList* comp2 = fn->func->params;
+                char* defnd = format("%s", "("); // to call free on const
+                while(comp2 != NULL){
+                    char* o = defnd;
+                    if(comp2 == fn->func->params){
+                        defnd = format("%s%s", defnd, comp2->var->type->identifier);
+                    }
+                    else{
+                        defnd = format("%s, %s", defnd, comp2->var->type->identifier);
+                    }
+                    free(o);
+                    comp2 = comp2->next;
+                }
+                VarList* comp3 = fn->vars;
+                char* defnd2 = format("%s", "(");
+                while(comp3 != NULL){
+                    char* o = defnd2;   
+                    if(comp3 == fn->vars){
+                        defnd2 = format("%s%s", defnd2, comp3->var->type->identifier);
+                    }
+                    else{
+                        defnd2 = format("%s, %s", defnd2, comp3->var->type->identifier);
+                    }
+                    free(o);
+                    comp3 = comp3->next;
+                }
+                char* msg = format("calling %s with %s), but definition wants %s)", fn->func->name, defnd2, defnd);
+                add_error(state, INCOMPATTYPE, t->line, msg);
             }
             if(!fn->func->native){
                 fn->to = mkvar(func, fn->func->retval);
@@ -242,8 +313,8 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             stmt->type = S_INDEX;
             stmt->stmt = malloc(sizeof(struct Index));
             Index* in = (Index*) stmt->stmt;
-            in->arr = process_stmt(&t->subtokens[0], func, prog);
-            in->ind = process_stmt(&t->subtokens[1], func, prog);
+            in->arr = process_stmt(&t->subtokens[0], func, prog, state);
+            in->ind = process_stmt(&t->subtokens[1], func, prog, state);
             in->to = mkvar(func, arr_subtype(in->arr->type, prog));
             add_stmt_func(mkinit(in->to), func);
             add_stmt_func(stmt, func);
@@ -253,24 +324,24 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             stmt->type = S_INDEXEQUALS;
             stmt->stmt = malloc(sizeof(struct IndexEquals));
             IndexEquals* ie = (IndexEquals*) stmt->stmt;
-            ie->arr = process_stmt(&t->subtokens[0].subtokens[0], func, prog);
-            ie->ind = process_stmt(&t->subtokens[0].subtokens[1], func, prog);
-            ie->eq = process_stmt(&t->subtokens[1], func, prog);
+            ie->arr = process_stmt(&t->subtokens[0].subtokens[0], func, prog, state);
+            ie->ind = process_stmt(&t->subtokens[0].subtokens[1], func, prog, state);
+            ie->eq = process_stmt(&t->subtokens[1], func, prog, state);
             add_stmt_func(stmt, func);
             break;
         case T_ADDEQ:
             stmt->type = S_ADDEQUALS;
             stmt->stmt = malloc(sizeof(struct AddEquals));
             AddEquals* ae = (AddEquals*) stmt->stmt;
-            ae->var = process_stmt(&t->subtokens[0], func, prog);
-            ae->delta = process_stmt(&t->subtokens[1], func, prog);
+            ae->var = process_stmt(&t->subtokens[0], func, prog, state);
+            ae->delta = process_stmt(&t->subtokens[1], func, prog, state);
             add_stmt_func(stmt, func);
             break;
         case T_CARDINALITY:
             stmt->type = S_CARDINALITY;
             stmt->stmt = malloc(sizeof(struct Cardinality));
             Cardinality* card = (Cardinality*) stmt->stmt;
-            card->from = process_stmt(t->subtokens, func, prog);
+            card->from = process_stmt(t->subtokens, func, prog, state);
             // TODO un hardcode type here
             card->to = mkvar(func, &prog->types[0]);
             add_stmt_func(mkinit(card->to), func);
@@ -280,7 +351,7 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             stmt->type = S_NEWARRAY;
             stmt->stmt = malloc(sizeof(struct NewArray));
             NewArray* new = (NewArray*) stmt->stmt;
-            new->size = process_stmt(&t->subtokens[1], func, prog);
+            new->size = process_stmt(&t->subtokens[1], func, prog, state);
             new->to = mkvar(func, proc_type(t->subtokens[0].str, prog));
             add_stmt_func(mkinit(new->to), func);
             add_stmt_func(stmt, func);
@@ -289,8 +360,8 @@ void* process_stmt(Token* t, Function* func, Program* prog){
             stmt->type = S_ARITHMETIC;
             stmt->stmt = malloc(sizeof(struct Arithmetic));
             Arithmetic* arith = (Arithmetic*) stmt->stmt;
-            arith->left = process_stmt(&t->subtokens[0], func, prog);
-            arith->right = process_stmt(&t->subtokens[1], func, prog);
+            arith->left = process_stmt(&t->subtokens[0], func, prog, state);
+            arith->right = process_stmt(&t->subtokens[1], func, prog, state);
             arith->operation = t->lnt;
             // TODO another hardcoded type.
             arith->to = mkvar(func, &prog->types[0]); 
@@ -439,10 +510,6 @@ Statement* mkinit(Variable* var){
 
 // make named var
 Variable* mknvar(Function* func, char* str, Type* t){
-    if(proc_var(str, func) != NULL){
-        // error
-        exit(27);
-    }
     func->var_count += 1;
     Variable* data = malloc(sizeof (struct Variable));
     func->vars = add_varlist(func->vars, data);

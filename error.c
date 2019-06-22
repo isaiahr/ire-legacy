@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 #include"datastructs.h"
 #include"error.h"
 
@@ -21,6 +22,8 @@ char* geterrorstr(int type){
             return "Duplicate definition of variable";
         case DUPDEFTYPE:
             return "Duplicate definition of type";
+        case INCOMPATTYPE:
+            return "Incompatible types";
         default:
             break;
     }
@@ -41,6 +44,7 @@ int stage(int type){
         case DUPDEFFUNC:
         case DUPDEFVAR:
         case DUPDEFTYPE:
+        case INCOMPATTYPE:
             return ERRORSEMANTIC;
     }
     fprintf(stderr, "Unknown error occurred.\n");
@@ -51,11 +55,11 @@ int stage(int type){
 char* stagename(int stage){
     switch(stage){
         case ERRORLEXING:
-            return "Reading input file";
+            return "reading input file";
         case ERRORPARSING:
-            return "Parsing input file";
+            return "parsing input file";
         case ERRORSEMANTIC:
-            return "Translating program";
+            return "translating program";
     }
     fprintf(stderr, "Unknown error occurred.\n");
     fprintf(stderr, "Exiting\n");
@@ -71,8 +75,8 @@ void add_error(State* state, int code, int line, char* info){
     char* msgp1 = geterrorstr(code);
     char* msgp2 = info;
     char* msgp3 = "%s on line %i: %s\n";
-    new->msg = malloc(sizeof(msgp1)+sizeof(msgp2)+sizeof(msgp3)+21);// 20 = len of 2^64
-    snprintf(new->msg, sizeof(msgp1)+sizeof(msgp2)+sizeof(msgp3)+20, msgp3, msgp1, line, msgp2);
+    new->msg = malloc(strlen(msgp1)+strlen(msgp2)+strlen(msgp3)+21);// 20 = len of 2^64
+    snprintf(new->msg, strlen(msgp1)+strlen(msgp2)+strlen(msgp3)+20, msgp3, msgp1, line, msgp2);
     if(state->errors == NULL){
         state->errors = new;
         return;
