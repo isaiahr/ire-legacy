@@ -177,7 +177,13 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             an->to = proc_var(t->str, func);
             // resolve from into a var
             an->from = process_stmt(t->subtokens, func, prog, state);
-            if(an->to->type != an->from->type){
+            if(an->to == NULL){
+                add_error(state, UNDEFVAR, t->line, format("assigning to undeclared variable %s", t->str));
+            }
+            else if(an->from == NULL){
+                add_error(state, UNDEFVAR, t->line, "reference of undeclared variable");
+            } 
+            else if(an->to->type != an->from->type){
                 char* to_tyname = an->to->type->identifier;
                 char* from_tyname = an->from->type->identifier;
                 char* msg = format("assigning %s to declared variable of type %s", from_tyname, to_tyname);

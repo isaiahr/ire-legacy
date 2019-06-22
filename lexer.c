@@ -28,11 +28,12 @@ Lextoken* lex(char* input, State* state){
     final->line = line;
     final->next = NULL;
     final->type = LEOF;
+    final->prev = cur;
     final->str = NULL;
     cur->next = final;
     cur = first;
     debug(state, "Lexer symbol stream\n");
-    while(cur->next != NULL){
+    while(cur != NULL){
         char* str;
         switch(cur->type){
             case LEXERROR:
@@ -54,7 +55,7 @@ Lextoken* lex(char* input, State* state){
             case MINUS_SYM: str = "MINUS_SYM"; break;
             case COMMA: str = "COMMA"; break;
             case EQUALS: str = "EQUALS"; break;
-            case LEOF: str = "EOF"; break;
+            case LEOF: str = "LEOF"; break;
             case ADDEQ: str = "ADDEQ"; break;
             case NEW: str = "NEW"; break;
             case PIPE: str = "PIPE"; break;
