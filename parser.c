@@ -31,9 +31,9 @@ Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags);
 Lextoken* parse_brexpr(Lextoken* p, Token* e);
 Lextoken* parse_assignment(Lextoken* p, Token* t);
 Lextoken* parse_statement(Lextoken* p, Token* t);
-Lextoken* parse_body(Lextoken* p, Token* t);
+Lextoken* parse_body(Lextoken* p, Token* t, State* state);
 Lextoken* parse_funcdef(Lextoken* p, Token* t);
-Lextoken* parse_function(Lextoken* p, Token* t);
+Lextoken* parse_function(Lextoken* p, Token* t, State* state);
 void print_tree(Token* p, int lvl);
 char* type(Token* t);
 Token* init_token();
@@ -651,7 +651,7 @@ Lextoken* parse_statement(Lextoken* p, Token* e){
 }
 
 // body = {[statement], term}
-Lextoken* parse_body(Lextoken* p, Token* body){
+Lextoken* parse_body(Lextoken* p, Token* body, State* state){
     int ind = 0;
     body->subtokens = init_token(p->line);
     body->type = T_BODY;
@@ -667,6 +667,7 @@ Lextoken* parse_body(Lextoken* p, Token* body){
                 p = next(p);
             }
             else{
+                add_error(state, SYNTAXERROR, p->line, "failed to parse statement");
                 return NULL; // statement with no term
             }
             
@@ -674,8 +675,10 @@ Lextoken* parse_body(Lextoken* p, Token* body){
         else if(match(o, TERM)){
             p = next(o); // empty stmt
         }
-        else{
+        else if(match(o, RIGHT_CRPAREN)){
             return o; // end of statements
+        } else {
+            add_error(state, SYNTAXERROR, p->line, "failed to parse statement");
         }
     }
 }
@@ -745,7 +748,7 @@ Lextoken* parse_funcdef(Lextoken* p, Token* def){
 }
 
 // function = funcdef, body, "}"
-Lextoken* parse_function(Lextoken* p, Token* func){
+Lextoken* parse_function(Lextoken* p, Token* func, State* state){
     func->subtokens = init_token(p->line);
     func->subtokens = realloc_token(func->subtokens, 2);
     func->subtoken_count = 2;
@@ -755,7 +758,7 @@ Lextoken* parse_function(Lextoken* p, Token* func){
         func->subtokens = NULL;
         return NULL;
     }
-    l = parse_body(l, &func->subtokens[1]);
+    l = parse_body(l, &func->subtokens[1], state);
     if(l != NULL && match(l, RIGHT_CRPAREN)){
         func->type = T_FUNCTION;
         return next(l);
@@ -779,9 +782,10 @@ Token* parse_program(Lextoken* p, State* state){
         if(match(p, LEOF)){
             break;
         }
-        Lextoken* l = parse_function(p, &prog->subtokens[i]);
+        Lextoken* l = parse_function(p, &prog->subtokens[i], state);
         if(l == NULL){
-            add_error(state, SYNTAXERROR, p->line, "Bad function");
+            add_error(state, SYNTAXERROR, p->line, "failed to parse function definition or body");
+            return NULL;
         }
         p = l;
         i += 1;
