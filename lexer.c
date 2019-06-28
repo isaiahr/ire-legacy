@@ -65,6 +65,11 @@ Lextoken* lex(char* input, State* state){
             case GREATER: str = "GREATER"; break;
             case SUBTRACT: str = "SUBTRACT"; break;
             case MULT: str = "MULT"; break;
+            case AMPERSAND: str = "AMPERSAND"; break;
+            case CARET: str = "CARET"; break;
+            case VOID: str = "VOID"; break;
+            case TYPE: str = "TYPE"; break;
+            case COLON: str = "COLON"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -119,6 +124,9 @@ Lextoken* lexone(char** i, int* line){
         case '-': l->type = SUBTRACT; break;
         case '*': l->type = MULT; break;
         case '|': l->type = PIPE; break;
+        case '&': l->type = AMPERSAND; break;
+        case '^': l->type = CARET; break;
+        case ':': l->type = COLON; break;
         case ';': l->type = TERM; break;
         case '\n': l->type = TERM; (*line)++; break;
         default: match = 0; break;
@@ -177,6 +185,17 @@ Lextoken* lexone(char** i, int* line){
     if(beginswith("new ", input)){
         (*i) += strlen("new ");
         l->type = NEW;
+        return l;
+    }
+    if(beginswith("type ", input)){
+        (*i) += strlen("type ");
+        l->type = TYPE;
+        return l;
+    }
+    // TODO: consider allowing certain chars directly after "void" (no space)  ?
+    if(beginswith("void ", input)){
+        (*i) += strlen("void ");
+        l->type = VOID;
         return l;
     }
     if(beginswith("//", input)){

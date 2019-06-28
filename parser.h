@@ -28,6 +28,11 @@
 #define T_CARDINALITY 19
 #define T_NEWARR 20
 #define T_ARITH 21
+#define T_TYPEDEF 22
+#define T_TYPEVAL 23
+#define T_ANDTYPE 24
+#define T_ORTYPE 25
+#define T_XORTYPE 26
 
 /**
  *

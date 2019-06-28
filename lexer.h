@@ -28,6 +28,9 @@
 #define PIPE 18
 #include"operators.h" // MAKE SURE THESE MATCH UP ( no duplicates). compiler should warn if incorrect
 #define NEW 25
+#define VOID 26
+#define TYPE 27
+#define COLON 28
 
 typedef struct Lextoken{
     int line;

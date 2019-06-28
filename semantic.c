@@ -57,10 +57,21 @@ VarList* add_varlist(VarList* vl, Variable* var){
 Program* process_program(Token* t, State* state){
     Program* po = malloc(sizeof(struct Program));
     int num_nativefuncs = 1;
-    po->func_count = t->subtoken_count+num_nativefuncs;
+    po->func_count = num_nativefuncs;
+    po->type_count = 4; // (num_nativetypes)
+    for(int jk = 0; jk < t->subtoken_count; jk++){
+        if(t->subtokens[jk].type == T_TYPEDEF){
+            po->type_count += 1;
+        }
+        else if(t->subtokens[jk].type == T_FUNCTION){
+            po->func_count += 1;
+        }
+        else{
+            exit(55); // impossible probably
+        }
+    }
     po->funcs = malloc(po->func_count*sizeof(struct Function));
-    po->type_count = 4;
-    po->types = malloc(4* sizeof(struct Type));
+    po->types = malloc(po->type_count*sizeof(struct Type));
     po->types[0].width = 64;
     po->types[0].identifier = "Int";
     po->types[0].llvm = "i64";
@@ -94,9 +105,14 @@ Program* process_program(Token* t, State* state){
     po->funcs[0].param_count = 0;
     po->funcs[0].var_count = 0;
     po->funcs[0].native = 1;
+    int c0 = 0;
     for(int i = num_nativefuncs; i < po->func_count; i++){
         po->funcs[i].native = 0;
-        process_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
+        while(t->subtokens[c0].type != T_FUNCTION){
+            c0 += 1;
+        }
+        process_function(&t->subtokens[c0], &po->funcs[i], po, state);
+        c0 += 1;
     }
     for(int i = 0; i < po->func_count; i++){
         Function* f = &po->funcs[i];
@@ -113,8 +129,16 @@ Program* process_program(Token* t, State* state){
         }
     }
     // seperate proccessing function header from body to enable calling funcs declared after.
-    for(int i = num_nativefuncs; i < po->func_count; i++){
+    int jk = 0;
+    for(int i = num_nativefuncs; i < po->func_count+po->type_count-4; i++){
+        if(t->subtokens[i-num_nativefuncs].type == T_TYPEDEF){
+            continue;
+        }
+        jk += 1;
         for(int j = 0; j < i; j++){
+            if(t->subtokens[j].type == T_TYPEDEF){
+                continue;
+            }
             if(i-num_nativefuncs == j){
                 continue;
             }
@@ -123,7 +147,7 @@ Program* process_program(Token* t, State* state){
                 add_error(state, DUPDEFFUNC, t->subtokens[i-num_nativefuncs].subtokens[0].line, msg);
             }
         }
-        compile_function(&t->subtokens[i-num_nativefuncs], &po->funcs[i], po, state);
+        compile_function(&t->subtokens[i-num_nativefuncs], &po->funcs[jk], po, state);
     }
     if(state->verbose){
         print_prog(po);

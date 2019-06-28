@@ -7,8 +7,14 @@
 #include"lexer.h"
 #include"parser.h"
 
+// flags for avoiding infinite left-recursion.
+
 #define FLAG_ARRIND 1
 #define FLAG_ARITH 2
+
+// NOTE: these flags are independant
+
+#define FLAG_ANDTYPE 1
 
 
 int match(Lextoken* p, int m);
@@ -34,6 +40,13 @@ Lextoken* parse_statement(Lextoken* p, Token* t);
 Lextoken* parse_body(Lextoken* p, Token* t, State* state);
 Lextoken* parse_funcdef(Lextoken* p, Token* t);
 Lextoken* parse_function(Lextoken* p, Token* t, State* state);
+Lextoken* parse_subtype(Lextoken* p, Token* e);
+Lextoken* parse_subtype_flags(Lextoken* p, Token* e, int FLAGS);
+Lextoken* parse_andtype_flags(Lextoken* p, Token* e, int FLAGS);
+Lextoken* parse_xortype(Lextoken* p, Token* e);
+Lextoken* parse_ortype(Lextoken* p, Token* e);
+Lextoken* parse_typeval(Lextoken* p, Token* e);
+Lextoken* parse_typedef(Lextoken* p, Token* e, State* state);
 void print_tree(Token* p, int lvl);
 char* type(Token* t);
 Token* init_token();
@@ -579,8 +592,8 @@ Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags){
                     cur->next->prev = cur;
                     // possible case. ok.
                 }
-                free(destroy);
                 free(destroy->next);
+                free(destroy);
                 // ok.
             }
             else{
@@ -768,7 +781,240 @@ Lextoken* parse_function(Lextoken* p, Token* func, State* state){
     return NULL;
 }
 
-// program = {[function] term }
+
+/*
+ *
+ * parsing types section
+ * 
+ * this is outdated. see comments before funcs.
+ * typedef = "type",  identifier, "{", subtype, "}"
+ * subtype = andtype | ortype | xortype | typeval
+ * andtype = subtype { "&", subtype} 
+ * ortype = identifier, ":", ("(", subtype, ")", {identifier, ":", "(", subtype, ")", ("|" | "^")} | void)
+ * typeval = type, identifier
+ * 
+ */
+
+
+// typedef = "type",  identifier, "{", subtype, "}"
+Lextoken* parse_typedef(Lextoken* p, Token* e, State* state){
+    if(!match(p, TYPE)){
+        return NULL;
+    }
+    if(!match(next(p), IDENTIFIER)){
+        return NULL;
+    }
+    if(!match(next(next(p)), LEFT_CRPAREN)){
+        return NULL;
+    }
+    e->type = T_TYPEDEF;
+    e->subtokens = init_token(p->line);
+    Lextoken* a = parse_subtype(next(next(next(p))), e->subtokens);
+    if(a == NULL || !match(a, RIGHT_CRPAREN)){
+        destroy_token(e);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    return next(a);
+}
+
+Lextoken* parse_subtype(Lextoken* p, Token* e){
+    return parse_subtype_flags(p, e, 0);
+}
+
+// subtype = andtype | ortype | xortype | typeval
+Lextoken* parse_subtype_flags(Lextoken* p, Token* e, int FLAGS){
+    Lextoken* l = NULL;
+    if((FLAGS & FLAG_ANDTYPE) == 0){
+        l = parse_andtype_flags(p, e, FLAGS);
+        if(l != NULL){
+            return l;
+        }
+    }
+    l = parse_ortype(p, e);
+    if(l != NULL){
+        return l;
+    }
+    l = parse_xortype(p, e);
+    if(l != NULL){
+        return l;
+    }
+    return parse_typeval(p, e);
+}
+
+// andtype = subtype, "&", subtype, { "&", subtype} 
+Lextoken* parse_andtype_flags(Lextoken* p, Token* e, int FLAGS){
+    e->subtokens = init_token(p->line);
+    Lextoken* l = parse_subtype_flags(p, e->subtokens, FLAG_ANDTYPE);
+    if(l == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->subtoken_count = 1;
+    while(1){
+        if(!match(l, AMPERSAND)){
+            // possibly ok.
+            if(e->subtoken_count == 1){
+                // bad
+                e->subtokens = NULL;
+                e->subtoken_count = 0;
+                return NULL;
+            }
+            // reached end.
+            e->type = T_ANDTYPE;
+            return l;
+        }
+        // continue
+        e->subtokens = realloc_token(e->subtokens, e->subtoken_count+1);
+        e->subtoken_count += 1;
+        // not for left recursion, but will generate the wrong tree
+        l = parse_subtype_flags(next(l), &e->subtokens[e->subtoken_count-1], FLAG_ANDTYPE);
+        if(l == NULL){
+            // invalid
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            e->subtoken_count = 0;
+            return NULL;
+        }
+        
+    }
+}
+
+// ortype = ( "(", {identifier, ":", (subtype | void) , "|" }, ")" )
+Lextoken* parse_ortype(Lextoken* p, Token* e){
+    if(!match(p, LEFT_PAREN)){
+        return NULL;
+    }
+    p = next(p);
+    e->subtokens = init_token(p->line);
+    e->subtoken_count = 1;
+    while(1){
+        if(e->subtoken_count > 1){
+            if(!match(p, PIPE)){
+                if(match(p, RIGHT_PAREN)){
+                    // good
+                    e->type = T_ORTYPE;
+                    return next(p);
+                } 
+                // bad
+                e->subtoken_count = 0;
+                destroy_token(e->subtokens);
+                e->subtokens = NULL;
+                return NULL;
+            }
+            p = next(p);
+        }
+        if(!(match(p, IDENTIFIER) && match(next(p), COLON))){
+            // bad
+            e->subtoken_count = 0;
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            return NULL;
+        }
+        char* seg = p->str;
+        if(match(next(next(p)), VOID)){
+            p = next(next(next(p)));
+            // ok
+            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
+            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
+            e->subtoken_count += 1;
+            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
+        }
+        else{
+            p = parse_subtype(next(next(p)), &e->subtokens[e->subtoken_count-1]);
+            if(p == NULL){
+                // "segment" ":" (invalid)
+                e->subtoken_count = 0;
+                destroy_token(e->subtokens);
+                e->subtokens = NULL;
+                return NULL;
+            }
+            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
+            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
+            e->subtoken_count += 1;
+            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
+        }
+    }
+}
+
+// same as ortype.
+// TODO combine these 2 funcs ?
+// xortype = ( "(", {identifier, ":", (subtype | void) , "^" }, ")" )
+Lextoken* parse_xortype(Lextoken* p, Token* e){
+    if(!match(p, LEFT_PAREN)){
+        return NULL;
+    }
+    p = next(p);
+    e->subtokens = init_token(p->line);
+    e->subtoken_count = 1;
+    while(1){
+        if(e->subtoken_count > 1){
+            if(!match(p, CARET)){
+                if(match(p, RIGHT_PAREN)){
+                    // good
+                    e->type = T_XORTYPE;
+                    return next(p);
+                } 
+                // bad
+                e->subtoken_count = 0;
+                destroy_token(e->subtokens);
+                e->subtokens = NULL;
+                return NULL;
+            }
+            p = next(p);
+        }
+        if(!(match(p, IDENTIFIER) && match(next(p), COLON))){
+            // bad
+            e->subtoken_count = 0;
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            return NULL;
+        }
+        char* seg = p->str;
+        if(match(next(next(p)), VOID)){
+            p = next(next(next(p)));
+            // ok
+            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
+            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
+            e->subtoken_count += 1;
+            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
+        }
+        else{
+            p = parse_subtype(next(next(p)), &e->subtokens[e->subtoken_count-1]);
+            if(p == NULL){
+                // "segment" ":" (invalid)
+                e->subtoken_count = 0;
+                destroy_token(e->subtokens);
+                e->subtokens = NULL;
+                return NULL;
+            }
+            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
+            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
+            e->subtoken_count += 1;
+            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
+        }
+    }
+}
+
+// typeval = type, identifier
+Lextoken* parse_typeval(Lextoken* p, Token* e){
+    e->subtokens = init_token(p->line);
+    Lextoken* l = parse_type(p, &e->subtokens[0]);
+    if(match(l, IDENTIFIER)){
+        e->type = T_TYPEVAL;
+        e->str = malloc(strlen(l->str)+1);
+        memcpy(e->str, l->str, strlen(l->str)+1);
+        return next(l); 
+    }
+    destroy_token(e);
+    e->subtoken_count = 0;
+    e->subtokens = NULL;
+    return NULL;
+}
+
+
+// program = {[function | type] term }
 Token* parse_program(Lextoken* p, State* state){
     Token* prog = init_token(p->line);
     prog->type = T_PROGRAM;
@@ -784,8 +1030,11 @@ Token* parse_program(Lextoken* p, State* state){
         }
         Lextoken* l = parse_function(p, &prog->subtokens[i], state);
         if(l == NULL){
-            add_error(state, SYNTAXERROR, p->line, "failed to parse function definition or body");
-            return NULL;
+            l = parse_typedef(p, &prog->subtokens[i], state);
+            if(l == NULL){
+                add_error(state, SYNTAXERROR, p->line, "failed to parse function definition/body or type");
+                return NULL;
+            }
         }
         p = l;
         i += 1;
@@ -797,6 +1046,15 @@ Token* parse_program(Lextoken* p, State* state){
     }
     return prog;
 }
+
+
+/**
+ *
+ *  misc funcs section
+ * 
+ * 
+ */
+
 
 Token* init_token(int line){
     Token* t = malloc(sizeof(struct Token));
@@ -883,6 +1141,11 @@ char* type(Token* p){
         case T_ADDEQ: return "ADDEQ";
         case T_CARDINALITY: return "CARD";
         case T_ARITH: return "ARITH";
+        case T_TYPEDEF: return "TYPEDEF";
+        case T_ANDTYPE: return "ANDTYPE";
+        case T_ORTYPE: return "ORTYPE";
+        case T_XORTYPE: return "XORTYPE";
+        case T_TYPEVAL: return "TYPEVAL";
         default: return "UNKNOWN";
     }
     
