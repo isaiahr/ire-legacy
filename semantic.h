@@ -20,6 +20,11 @@
 #define S_CONST_BYTE 2
 #define S_CONST_INT 3
 
+#define S_MODE_AND 1
+#define S_MODE_OR 2
+#define S_MODE_XOR 3
+#define S_MODE_TYPE 4
+
 typedef struct Program {
     struct Function* funcs;
     int func_count;
@@ -68,9 +73,7 @@ typedef struct Type {
     int width;
     char* identifier;
     char* llvm;
-    struct Type** subtypes;
-    int subtype_count;
-    int* subtype_count_per;
+    struct TypeStructure* ts;
 } Type;
 
 typedef struct Statement {
@@ -140,6 +143,17 @@ typedef struct Arithmetic{
     int operation;
 } Arithmetic;
 
+typedef struct TypeStructure {
+    // descend
+    struct TypeStructure* sub;
+    // or
+    char* identifier;
+    Type* sbs;
+    // lateral
+    struct TypeStructure* next;
+    char* segment;
+    int mode;
+} TypeStructure;
 
 Program* process_program(Token* t, State* state);
 

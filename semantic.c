@@ -35,6 +35,10 @@ Function* proc_func(char* funcname, Program* prog);
 char* clone(char* str);
 void add_stmt_func(Statement* stmt, Function* func);
 Type* arr_subtype(Type* arr, Program* p);
+void print_type_helper(TypeStructure* ts);
+void process_type(Token* t, Type* y, Program* prog, State* state);
+void compile_type(Token* t, Type* y, Program* prog, State* state);
+void write_structure(TypeStructure* write, Token* src, Program* prog, State* state);
 
 
 VarList* add_varlist(VarList* vl, Variable* var){
@@ -57,6 +61,7 @@ VarList* add_varlist(VarList* vl, Variable* var){
 Program* process_program(Token* t, State* state){
     Program* po = malloc(sizeof(struct Program));
     int num_nativefuncs = 1;
+    int num_nativetypes = 4;
     po->func_count = num_nativefuncs;
     po->type_count = 4; // (num_nativetypes)
     for(int jk = 0; jk < t->subtoken_count; jk++){
@@ -67,7 +72,7 @@ Program* process_program(Token* t, State* state){
             po->func_count += 1;
         }
         else{
-            exit(55); // impossible probably
+            exit(55); // impossible probably (tm)
         }
     }
     po->funcs = malloc(po->func_count*sizeof(struct Function));
@@ -75,27 +80,19 @@ Program* process_program(Token* t, State* state){
     po->types[0].width = 64;
     po->types[0].identifier = "Int";
     po->types[0].llvm = "i64";
-    po->types[0].subtypes = NULL;
-    po->types[0].subtype_count_per = NULL;
-    po->types[0].subtype_count = 0;
+    po->types[0].ts = NULL;
     po->types[1].width = 8;
     po->types[1].identifier = "Byte";
     po->types[1].llvm = "i8";
-    po->types[1].subtypes = NULL;
-    po->types[1].subtype_count_per = NULL;
-    po->types[1].subtype_count = 0;   
-    po->types[2].width = 0; // width invalid. 
+    po->types[1].ts = NULL;  
+    po->types[2].width = 0;
     po->types[2].identifier = "Int[]";
     po->types[2].llvm = "i64*";
-    po->types[2].subtypes = NULL;
-    po->types[2].subtype_count_per = NULL;
-    po->types[2].subtype_count = 0;
-    po->types[3].width = 0; // width invalid. 
+    po->types[2].ts = NULL;
+    po->types[3].width = 0; 
     po->types[3].identifier = "Byte[]";
     po->types[3].llvm = "i8*";
-    po->types[3].subtypes = NULL;
-    po->types[3].subtype_count_per = NULL;
-    po->types[3].subtype_count = 0;
+    po->types[3].ts = NULL;
     po->funcs[0].name = "syscall";
     po->funcs[0].write_name = "syscall";
     po->funcs[0].retval = po->types; // i64
@@ -105,6 +102,24 @@ Program* process_program(Token* t, State* state){
     po->funcs[0].param_count = 0;
     po->funcs[0].var_count = 0;
     po->funcs[0].native = 1;
+    
+    // proc types first
+    int c12 = 0;
+    for(int i = 0; i < po->type_count-num_nativetypes; i++){
+        while(t->subtokens[c12].type != T_TYPEDEF){
+            c12 += 1;
+        }
+        process_type(&t->subtokens[c12], &po->types[i+num_nativetypes], po, state);
+        c12 += 1;
+    }   
+    c12 = 0;
+    for(int i = 0; i < po->type_count-num_nativetypes; i++){
+        while(t->subtokens[c12].type != T_TYPEDEF){
+            c12 += 1;
+        }
+        compile_type(&t->subtokens[c12], &po->types[i+num_nativetypes], po, state);
+        c12 += 1;
+    }
     int c0 = 0;
     for(int i = num_nativefuncs; i < po->func_count; i++){
         po->funcs[i].native = 0;
@@ -153,6 +168,68 @@ Program* process_program(Token* t, State* state){
         print_prog(po);
     }
     return po;
+}
+
+void process_type(Token* t, Type* y, Program* prog, State* state){
+    y->identifier = clone(t->str);
+}
+
+void compile_type(Token* t, Type* y, Program* prog, State* state){
+    // make sure type not redefined
+    for(int i = 0; i < prog->type_count; i++){
+        Type* cmp = &prog->types[i];
+        if((cmp != y) && strcmp(cmp->identifier, t->str) == 0){
+            char* msg = format("type %s redefined", t->str);
+            add_error(state, DUPDEFTYPE, t->line, msg);
+        }
+    }
+    y->ts = malloc(sizeof(struct TypeStructure));
+    y->ts->next = NULL;
+    y->ts->sub = NULL;
+    write_structure(y->ts, t->subtokens, prog, state);
+}
+
+void write_structure(TypeStructure* write, Token* src, Program* prog, State* state){
+    int mode = 100000;
+    switch(src->type){
+        case T_ANDTYPE: mode = S_MODE_AND; break;
+        case T_XORTYPE: mode = S_MODE_XOR; break;
+        case T_ORTYPE: mode = S_MODE_OR; break;
+        case T_SEGMENT: mode = S_MODE_TYPE; break;
+    }
+    write->mode = mode;
+    if(write->mode == S_MODE_TYPE){
+        // src = ident, so type is src->subtoken
+        write->sbs = proc_type(src->subtokens->subtokens->str, prog);
+        write->identifier = clone(src->subtokens->str);
+        if(src->str != NULL){
+            write->segment = clone(src->str);
+        }
+        if(write->sbs == NULL){
+            char* msg = format("unknown type %s", src->subtokens->str);
+            add_error(state, UNDEFTYPE, src->line, msg);
+        }
+        return;
+    }
+    TypeStructure* subcur = malloc(sizeof(struct TypeStructure));
+    write->sub = subcur;
+    TypeStructure* prev = NULL;
+    for(int i = 0; i < src->subtoken_count; i++){
+        subcur->sub = NULL; // for well-definedness, possibly overwritten.
+        write_structure(subcur, &src->subtokens[i], prog, state);
+        if(write->mode == T_ANDTYPE){
+            subcur->segment = NULL;
+        }
+        else{
+            subcur->segment = src->subtokens[i].str;
+        }
+        if(prev != NULL){
+            prev->next = subcur;
+        }
+        prev = subcur;
+        subcur = malloc(sizeof(struct TypeStructure));
+    }
+    subcur->next = NULL;
 }
 
 
@@ -493,9 +570,43 @@ void print_func(Function* func){
 }
 
 void print_type(Type* t){
-    printf("   %s, width %i\n", t->identifier, t->width);
+    if(t->ts == NULL){
+        printf("   %s, native, width %i\n", t->identifier, t->width);
+        return;
+    }
+    printf("   %s {", t->identifier);
+    print_type_helper(t->ts);
+    printf("}\n");
 }
 
+void print_type_helper(TypeStructure* ts){
+    if(ts->mode == S_MODE_TYPE){
+        if(ts->sbs == NULL){
+            printf("(?)");
+        }
+        else {
+            printf("%s %s", ts->sbs->identifier, ts->identifier);
+        }
+        return;
+    }
+    TypeStructure* t = ts->sub;
+    printf("(");
+    while(t != NULL){
+        if(ts->mode != S_MODE_AND){
+            printf("%s: ", t->segment);
+        }
+        print_type_helper(t);
+        t = t->next;
+        if(t != NULL){
+            switch(ts->mode){
+                case S_MODE_AND: printf(" & "); break;
+                case S_MODE_OR: printf(" | "); break;
+                case S_MODE_XOR: printf(" ^ "); break;
+            }
+        }
+    }
+    printf(")");
+}
 
 void print_prog(Program* prog){
     printf("PROGRAM\n");

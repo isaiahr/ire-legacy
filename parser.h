@@ -33,6 +33,7 @@
 #define T_ANDTYPE 24
 #define T_ORTYPE 25
 #define T_XORTYPE 26
+#define T_SEGMENT 27
 
 /**
  *

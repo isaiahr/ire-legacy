@@ -798,6 +798,8 @@ Lextoken* parse_function(Lextoken* p, Token* func, State* state){
 
 // typedef = "type",  identifier, "{", subtype, "}"
 Lextoken* parse_typedef(Lextoken* p, Token* e, State* state){
+    // clear from possible parse_function
+    e->subtoken_count = 0;
     if(!match(p, TYPE)){
         return NULL;
     }
@@ -815,6 +817,9 @@ Lextoken* parse_typedef(Lextoken* p, Token* e, State* state){
         e->subtokens = NULL;
         return NULL;
     }
+    e->subtoken_count = 1;
+    e->str = malloc(strlen(next(p)->str)+1);
+    memcpy(e->str, next(p)->str, strlen(next(p)->str)+1);
     return next(a);
 }
 
@@ -895,6 +900,7 @@ Lextoken* parse_ortype(Lextoken* p, Token* e){
                 if(match(p, RIGHT_PAREN)){
                     // good
                     e->type = T_ORTYPE;
+                    e->subtoken_count = e->subtoken_count-1;
                     return next(p);
                 } 
                 // bad
@@ -949,11 +955,13 @@ Lextoken* parse_xortype(Lextoken* p, Token* e){
     e->subtokens = init_token(p->line);
     e->subtoken_count = 1;
     while(1){
+        // subtoken_count actually less
         if(e->subtoken_count > 1){
             if(!match(p, CARET)){
                 if(match(p, RIGHT_PAREN)){
                     // good
                     e->type = T_XORTYPE;
+                    e->subtoken_count = e->subtoken_count-1;
                     return next(p);
                 } 
                 // bad
@@ -1000,13 +1008,20 @@ Lextoken* parse_xortype(Lextoken* p, Token* e){
 // typeval = type, identifier
 Lextoken* parse_typeval(Lextoken* p, Token* e){
     e->subtokens = init_token(p->line);
-    Lextoken* l = parse_type(p, &e->subtokens[0]);
+    e->subtokens->subtokens = init_token(p->line);
+    Lextoken* l = parse_type(p, &e->subtokens->subtokens[0]);
     if(match(l, IDENTIFIER)){
-        e->type = T_TYPEVAL;
-        e->str = malloc(strlen(l->str)+1);
-        memcpy(e->str, l->str, strlen(l->str)+1);
+        e->type = T_SEGMENT;
+        e->subtokens->type = T_TYPEVAL;
+        e->subtokens->str = malloc(strlen(l->str)+1);
+        e->subtokens->subtoken_count = 1;
+        e->subtoken_count = 1;
+        memcpy(e->subtokens->str, l->str, strlen(l->str)+1);
         return next(l); 
     }
+    e->subtokens->subtoken_count = 0;
+    e->subtokens->subtokens = NULL;
+    destroy_token(e->subtokens);
     destroy_token(e);
     e->subtoken_count = 0;
     e->subtokens = NULL;
@@ -1146,6 +1161,7 @@ char* type(Token* p){
         case T_ORTYPE: return "ORTYPE";
         case T_XORTYPE: return "XORTYPE";
         case T_TYPEVAL: return "TYPEVAL";
+        case T_SEGMENT: return "SEGMENT";
         default: return "UNKNOWN";
     }
     
