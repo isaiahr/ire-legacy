@@ -11,6 +11,7 @@
 
 #define FLAG_ARRIND 1
 #define FLAG_ARITH 2
+#define FLAG_ACCESSOR 4
 
 // NOTE: these flags are independant
 
@@ -47,6 +48,11 @@ Lextoken* parse_xortype(Lextoken* p, Token* e);
 Lextoken* parse_ortype(Lextoken* p, Token* e);
 Lextoken* parse_typeval(Lextoken* p, Token* e);
 Lextoken* parse_typedef(Lextoken* p, Token* e, State* state);
+Lextoken* parse_constructor(Lextoken* p, Token* e);
+Lextoken* parse_segconstruct(Lextoken* p, Token* e);
+Lextoken* parse_accessor(Lextoken* p, Token* e);
+Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS);
+Lextoken* parse_setmember(Lextoken* p, Token* e);
 void print_tree(Token* p, int lvl);
 char* type(Token* t);
 Token* init_token();
@@ -284,7 +290,12 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((!(FLAGS & FLAG_ARRIND)) && (l = parse_arrind_flags(p, e, FLAGS))){
         return l;
     }
-
+    if((l = parse_constructor(p, e))){
+        return l;
+    }
+    if((!(FLAGS & FLAG_ACCESSOR)) && (l = parse_accessor_flags(p, e, FLAGS))){
+        return l;
+    }
     if(match(p, LSTRING)){
         e->type = T_STRING;
         e->str = malloc(strlen(p->str)+1);
@@ -638,7 +649,7 @@ Lextoken* parse_return(Lextoken* p, Token* e){
     return a;
 }
 
-// statement = varinit | expression | assignment | return | arrset
+// statement = varinit | expression | assignment | return | arrset | setmember
 Lextoken* parse_statement(Lextoken* p, Token* e){
     Lextoken* l = parse_varinit(p, e);
     if(l != NULL){
@@ -657,6 +668,10 @@ Lextoken* parse_statement(Lextoken* p, Token* e){
         return l;
     }
     l = parse_arrset(p, e);
+    if(l != NULL){
+        return l;
+    }
+    l = parse_setmember(p, e);
     if(l != NULL){
         return l;
     }
@@ -1028,6 +1043,185 @@ Lextoken* parse_typeval(Lextoken* p, Token* e){
     return NULL;
 }
 
+/**
+ * type operations section
+ * constructor = new, type, segconstruct, {&, segconstruct}
+ * segconstruct = [identifier, { "." , identifier }] "(", {identifier = expression} ")"
+ * 
+ * accessor = expr "." identifier {".", identifier}
+ * setmember = accessor = expr
+ * 
+ */
+
+// constructor = new, type, segconstruct, {&, segconstruct}
+Lextoken* parse_constructor(Lextoken* p, Token* e){
+    if(!match(p, NEW)){
+        return NULL;
+    }
+    e->subtokens = init_token(p->line);
+    p = parse_type(next(p), e->subtokens);
+    if(p == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->subtokens = realloc_token(e->subtokens, 2);
+    p = parse_segconstruct(p, &e->subtokens[1]);
+    if(p == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    int ind = 2;
+    while(1){
+        if(!match(p, AMPERSAND)){
+            // ok.
+            e->subtoken_count = ind;
+            e->type = T_CONSTRUCTOR;
+            return p;
+        }
+        e->subtokens = realloc_token(e->subtokens, ind+1);
+        p = parse_segconstruct(next(p), &e->subtokens[ind]);
+        if(p == NULL){
+            // "&", then not segconstruct. fail.
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            return NULL;
+        }
+        ind += 1;
+    }
+}
+
+// segconstruct = [identifier, { "." , identifier }] "(", {identifier, "=", expression ","} ")"
+Lextoken* parse_segconstruct(Lextoken* p, Token* e){
+    // count str to get
+    int sz = 0;
+    Lextoken* o = p;
+    if(match(p, IDENTIFIER)){
+        int num = 1;
+        p = next(p);
+        sz += strlen(p->str);
+        while(match(p, DOT)){
+            if(!match(next(p), IDENTIFIER)){
+                // bad.
+                return NULL; 
+            }
+            num += 1;
+            sz += strlen(p->str)+1; // (for dot)
+            p = next(next(p));
+        }
+        e->str = malloc(sz+1);
+        e->str[0] = 0;
+        for(int i = 0; i < num; i++){
+            strcat(e->str, o->str);
+            strcat(e->str, ".");
+            o = next(next(o));
+        }
+    }
+    // op = "original p" (possibly. its next token.)
+    if(!match(o, LEFT_PAREN)){
+        return NULL; // free str possibly? (no)
+    }
+    if(match(next(o), RIGHT_PAREN)){
+        // empty. ok.
+        return next(next(o));
+    }
+    o = next(o);
+    e->subtokens = init_token(o->line);
+    int ind = 0;
+    while(1){
+        if(!(match(o, IDENTIFIER) && match(next(o), EQUALS))){
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            return NULL;
+        }
+        e->subtokens[ind].str = malloc(strlen(o->str)+1);
+        memcpy(e->subtokens[ind].str, o->str, strlen(o->str)+1);
+        e->subtokens[ind].subtokens = init_token(o->line);
+        o = parse_expression(next(next(o)), e->subtokens[ind].subtokens);
+        if(o == NULL){
+            // invalid.
+            // NOTE. not destroying e->subtokens[x].subtokens.
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            return NULL;
+        }
+        e->subtokens[ind].subtoken_count = 1;
+        if(!match(o, COMMA)){
+            break;
+        }
+        ind += 1;
+        o = next(o);
+    }
+    if(!match(next(o), RIGHT_PAREN)){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->subtoken_count = ind+1;
+    e->type = T_SEGCONSTRUCT;
+    return next(next(o));
+}
+
+// accessor = expr "." identifier { ".", identifier }
+Lextoken* parse_accessor(Lextoken* p, Token* e){
+    return parse_accessor_flags(p, e, 0);
+}
+
+Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
+    e->subtokens = init_token(p->line);
+    p = parse_expression_flags(p, e->subtokens, FLAGS | FLAG_ACCESSOR);
+    if(p == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    if(!(match(p, DOT) && match(next(p), IDENTIFIER))){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->str = malloc(strlen(next(p)->str)+1);
+    memcpy(e->str, next(p)->str, strlen(next(p)->str)+1);
+    p = next(next(p));
+    while(match(p, DOT)){
+        if(!match(next(p), IDENTIFIER)){
+            // bad
+            destroy_token(e->subtokens);
+            e->subtokens = NULL;
+            return NULL;
+        }
+        char* old = e->str;
+        e->str = malloc(strlen(next(p)->str)+strlen(e->str)+2);
+        memcpy(e->str, old, strlen(old));
+        memcpy(&e->str[strlen(old)], ".", 1);
+        memcpy(&e->str[strlen(old)+1], next(p)->str, strlen(next(p)->str)+1);
+        p = next(next(p));
+    }
+    e->type = T_ACCESSOR;
+    return next(next(p));
+}
+
+// setmember = accessor = expr
+Lextoken* parse_setmember(Lextoken* p, Token* e){
+    e->subtokens = init_token(p->line);
+    p = parse_accessor(p, e->subtokens);
+    if(p == NULL || (!match(next(p), EQUALS))){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->subtokens = realloc_token(e->subtokens, 2);
+    p = parse_expression(next(p), &e->subtokens[1]);
+    if(p == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->subtoken_count = 2;
+    e->type = T_SETMEMBER;
+    return p;
+}
 
 // program = {[function | type] term }
 Token* parse_program(Lextoken* p, State* state){

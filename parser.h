@@ -34,6 +34,10 @@
 #define T_ORTYPE 25
 #define T_XORTYPE 26
 #define T_SEGMENT 27
+#define T_CONSTRUCTOR 28
+#define T_SEGCONSTRUCT 29
+#define T_ACCESSOR 30
+#define T_SETMEMBER 31
 
 /**
  *

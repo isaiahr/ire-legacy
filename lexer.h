@@ -31,6 +31,7 @@
 #define VOID 26
 #define TYPE 27
 #define COLON 28
+#define DOT 29
 
 typedef struct Lextoken{
     int line;
