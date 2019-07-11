@@ -15,6 +15,9 @@
 #define S_CARDINALITY 9
 #define S_NEWARRAY 10
 #define S_ARITHMETIC 11
+#define S_CONSTRUCTOR 12
+#define S_ACCESSOR 13
+#define S_SETMEMBER 14
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -154,6 +157,29 @@ typedef struct TypeStructure {
     char* segment;
     int mode;
 } TypeStructure;
+
+typedef struct Cons {
+    char* segment;
+    Variable* data;
+    struct Cons* next;
+} Cons;
+
+typedef struct Constructor {
+    Cons* c;
+    Variable* to;
+} Constructor;
+
+typedef struct Accessor {
+    Variable* src;
+    int offsetptr;
+    Variable* to;
+} Accessor;
+
+typedef struct Setmember{
+    Variable* dest;
+    int offsetptr;
+    Variable* from;
+} Setmember;
 
 Program* process_program(Token* t, State* state);
 

@@ -1099,8 +1099,8 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
     Lextoken* o = p;
     if(match(p, IDENTIFIER)){
         int num = 1;
-        p = next(p);
         sz += strlen(p->str);
+        p = next(p);
         while(match(p, DOT)){
             if(!match(next(p), IDENTIFIER)){
                 // bad.
@@ -1115,8 +1115,11 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
         for(int i = 0; i < num; i++){
             strcat(e->str, o->str);
             strcat(e->str, ".");
+            if(i+1 < num){
             o = next(next(o));
+            }
         }
+        o = next(o);
     }
     // op = "original p" (possibly. its next token.)
     if(!match(o, LEFT_PAREN)){
@@ -1136,6 +1139,7 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
             return NULL;
         }
         e->subtokens[ind].str = malloc(strlen(o->str)+1);
+        e->subtokens[ind].type = T_CONSTRUCTASSIGN;
         memcpy(e->subtokens[ind].str, o->str, strlen(o->str)+1);
         e->subtokens[ind].subtokens = init_token(o->line);
         o = parse_expression(next(next(o)), e->subtokens[ind].subtokens);
@@ -1153,14 +1157,14 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
         ind += 1;
         o = next(o);
     }
-    if(!match(next(o), RIGHT_PAREN)){
+    if(!match(o, RIGHT_PAREN)){
         destroy_token(e->subtokens);
         e->subtokens = NULL;
         return NULL;
     }
     e->subtoken_count = ind+1;
     e->type = T_SEGCONSTRUCT;
-    return next(next(o));
+    return next(o);
 }
 
 // accessor = expr "." identifier { ".", identifier }
@@ -1199,14 +1203,14 @@ Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
         p = next(next(p));
     }
     e->type = T_ACCESSOR;
-    return next(next(p));
+    return p;
 }
 
 // setmember = accessor = expr
 Lextoken* parse_setmember(Lextoken* p, Token* e){
     e->subtokens = init_token(p->line);
     p = parse_accessor(p, e->subtokens);
-    if(p == NULL || (!match(next(p), EQUALS))){
+    if(p == NULL || (!match(p, EQUALS))){
         destroy_token(e->subtokens);
         e->subtokens = NULL;
         return NULL;
@@ -1356,6 +1360,11 @@ char* type(Token* p){
         case T_XORTYPE: return "XORTYPE";
         case T_TYPEVAL: return "TYPEVAL";
         case T_SEGMENT: return "SEGMENT";
+        case T_CONSTRUCTOR: return "CONSTRUCTOR";
+        case T_SEGCONSTRUCT: return "SEGCONSTRUCT";
+        case T_ACCESSOR: return "ACCESSOR";
+        case T_SETMEMBER: return "SETMEMBER";
+        case T_CONSTRUCTASSIGN: return "CONSTRUCTASSIGN";
         default: return "UNKNOWN";
     }
     

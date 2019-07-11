@@ -38,6 +38,7 @@
 #define T_SEGCONSTRUCT 29
 #define T_ACCESSOR 30
 #define T_SETMEMBER 31
+#define T_CONSTRUCTASSIGN 32
 
 /**
  *

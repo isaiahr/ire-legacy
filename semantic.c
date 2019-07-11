@@ -85,11 +85,11 @@ Program* process_program(Token* t, State* state){
     po->types[1].identifier = "Byte";
     po->types[1].llvm = "i8";
     po->types[1].ts = NULL;  
-    po->types[2].width = 0;
+    po->types[2].width = 64;
     po->types[2].identifier = "Int[]";
     po->types[2].llvm = "i64*";
     po->types[2].ts = NULL;
-    po->types[3].width = 0; 
+    po->types[3].width = 64; 
     po->types[3].identifier = "Byte[]";
     po->types[3].llvm = "i8*";
     po->types[3].ts = NULL;
@@ -475,6 +475,18 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             add_stmt_func(mkinit(arith->to), func);
             add_stmt_func(stmt, func);
             return arith->to;
+        case T_CONSTRUCTOR:
+            stmt->type = S_CONSTRUCTOR;
+            stmt->stmt = malloc(sizeof(struct Constructor));
+            Constructor* cons = (Constructor*) stmt->stmt;
+        case T_ACCESSOR:
+            stmt->type = S_ACCESSOR;
+            stmt->stmt = malloc(sizeof(struct Accessor));
+            Accessor* acc = (Accessor*) stmt->stmt;
+        case T_SETMEMBER:
+            stmt->type = S_SETMEMBER;
+            stmt->stmt = malloc(sizeof(struct Setmember));
+            Setmember* setm = (Setmember*) stmt->stmt;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
             Variable* v32 = proc_var(t->str, func);
