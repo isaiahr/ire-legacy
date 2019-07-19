@@ -1107,16 +1107,16 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
                 return NULL; 
             }
             num += 1;
-            sz += strlen(p->str)+1; // (for dot)
+            sz += strlen(next(p)->str)+1; // (for dot)
             p = next(next(p));
         }
         e->str = malloc(sz+1);
         e->str[0] = 0;
         for(int i = 0; i < num; i++){
             strcat(e->str, o->str);
-            strcat(e->str, ".");
             if(i+1 < num){
-            o = next(next(o));
+                strcat(e->str, ".");
+                o = next(next(o));
             }
         }
         o = next(o);
@@ -1155,6 +1155,7 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
             break;
         }
         ind += 1;
+        e->subtokens = realloc_token(e->subtokens, ind+1);
         o = next(o);
     }
     if(!match(o, RIGHT_PAREN)){
@@ -1203,6 +1204,7 @@ Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
         p = next(next(p));
     }
     e->type = T_ACCESSOR;
+    e->subtoken_count = 1;
     return p;
 }
 
@@ -1222,7 +1224,29 @@ Lextoken* parse_setmember(Lextoken* p, Token* e){
         e->subtokens = NULL;
         return NULL;
     }
-    e->subtoken_count = 2;
+    e->subtoken_count = 3;
+    e->subtokens = realloc_token(e->subtokens, 3);
+    
+    // weird hack to split apart the accessor, to make it easy for semantic to proccess.
+    int ind = 0;
+    int lastdot = -1;
+    while(e->subtokens[0].str[ind] != 0){
+        if(e->subtokens[0].str[ind] == '.')
+            lastdot = ind;
+        ind += 1;
+    }
+    if(lastdot == -1){
+        // corner case: one level of nesting. ("a.b")
+        // "lift" the accessor subtoken onto setmember subtoken, to remove accessor.
+        e->subtokens[2].type = T_MEMBERIDENT;
+        e->subtokens[2].str = e->subtokens[0].str;
+        e->type = T_SETMEMBER;
+        memcpy(e->subtokens, e->subtokens[0].subtokens, sizeof(struct Token));
+        return p;
+    }
+    e->subtokens[0].str[lastdot] = 0;
+    e->subtokens[2].type = T_MEMBERIDENT;
+    e->subtokens[2].str = &e->subtokens[0].str[lastdot+1];
     e->type = T_SETMEMBER;
     return p;
 }
@@ -1365,6 +1389,7 @@ char* type(Token* p){
         case T_ACCESSOR: return "ACCESSOR";
         case T_SETMEMBER: return "SETMEMBER";
         case T_CONSTRUCTASSIGN: return "CONSTRUCTASSIGN";
+        case T_MEMBERIDENT: return "MEMBERIDENT";
         default: return "UNKNOWN";
     }
     

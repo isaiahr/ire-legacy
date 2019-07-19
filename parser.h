@@ -39,6 +39,7 @@
 #define T_ACCESSOR 30
 #define T_SETMEMBER 31
 #define T_CONSTRUCTASSIGN 32
+#define T_MEMBERIDENT 33
 
 /**
  *

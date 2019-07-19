@@ -39,6 +39,9 @@ void print_type_helper(TypeStructure* ts);
 void process_type(Token* t, Type* y, Program* prog, State* state);
 void compile_type(Token* t, Type* y, Program* prog, State* state);
 void write_structure(TypeStructure* write, Token* src, Program* prog, State* state);
+int findoffset(Type* t, char* id);
+int findoffsettag(Type* t, char* id);
+Type* findtype(Type* t, char* id);
 
 
 VarList* add_varlist(VarList* vl, Variable* var){
@@ -61,9 +64,9 @@ VarList* add_varlist(VarList* vl, Variable* var){
 Program* process_program(Token* t, State* state){
     Program* po = malloc(sizeof(struct Program));
     int num_nativefuncs = 1;
-    int num_nativetypes = 4;
+    int num_nativetypes = 2;
     po->func_count = num_nativefuncs;
-    po->type_count = 4; // (num_nativetypes)
+    po->type_count = num_nativetypes; // (num_nativetypes)
     for(int jk = 0; jk < t->subtoken_count; jk++){
         if(t->subtokens[jk].type == T_TYPEDEF){
             po->type_count += 1;
@@ -76,26 +79,24 @@ Program* process_program(Token* t, State* state){
         }
     }
     po->funcs = malloc(po->func_count*sizeof(struct Function));
-    po->types = malloc(po->type_count*sizeof(struct Type));
-    po->types[0].width = 64;
-    po->types[0].identifier = "Int";
-    po->types[0].llvm = "i64";
-    po->types[0].ts = NULL;
-    po->types[1].width = 8;
-    po->types[1].identifier = "Byte";
-    po->types[1].llvm = "i8";
-    po->types[1].ts = NULL;  
-    po->types[2].width = 64;
-    po->types[2].identifier = "Int[]";
-    po->types[2].llvm = "i64*";
-    po->types[2].ts = NULL;
-    po->types[3].width = 64; 
-    po->types[3].identifier = "Byte[]";
-    po->types[3].llvm = "i8*";
-    po->types[3].ts = NULL;
+    po->types = malloc(sizeof(struct TypeList));
+    Type* Int = malloc(sizeof(struct Type));
+    Type* Byte = malloc(sizeof(struct Type));
+    Int->width = 64;
+    Int->identifier = "Int";
+    Int->llvm = "i64";
+    Int->ts = NULL;
+    Byte->width = 8;
+    Byte->identifier = "Byte";
+    Byte->llvm = "i8";
+    Byte->ts = NULL; 
+    po->types->type = Int;
+    po->types->next = malloc(sizeof(struct TypeList));
+    po->types->next->type = Byte;
+    po->types->next->next = NULL;
     po->funcs[0].name = "syscall";
     po->funcs[0].write_name = "syscall";
-    po->funcs[0].retval = po->types; // i64
+    po->funcs[0].retval = Int; // i64
     po->funcs[0].params = NULL;
     po->funcs[0].vars = NULL;
     po->funcs[0].body = NULL;
@@ -105,19 +106,41 @@ Program* process_program(Token* t, State* state){
     
     // proc types first
     int c12 = 0;
-    for(int i = 0; i < po->type_count-num_nativetypes; i++){
+    TypeList* curt = po->types->next;
+    
+    while(c12 < t->subtoken_count){
         while(t->subtokens[c12].type != T_TYPEDEF){
             c12 += 1;
+            if(c12 >= t->subtoken_count){
+                break;
+            }
         }
-        process_type(&t->subtokens[c12], &po->types[i+num_nativetypes], po, state);
+        // double break;
+        if(c12 >= t->subtoken_count)
+            break;
+        Type* proct = malloc(sizeof(struct Type));
+        process_type(&t->subtokens[c12], proct, po, state);
+        TypeList* new = malloc(sizeof(TypeList));
+        new->next = NULL;
+        new->type = proct;
+        curt->next = new;
         c12 += 1;
+        curt = new;
     }   
     c12 = 0;
-    for(int i = 0; i < po->type_count-num_nativetypes; i++){
+    curt = po->types->next->next;
+    while(c12 < t->subtoken_count){
         while(t->subtokens[c12].type != T_TYPEDEF){
             c12 += 1;
+            if(c12 >= t->subtoken_count){
+                break;
+            }
         }
-        compile_type(&t->subtokens[c12], &po->types[i+num_nativetypes], po, state);
+        // double break;
+        if(c12 >= t->subtoken_count)
+            break;
+        compile_type(&t->subtokens[c12], curt->type, po, state);
+        curt = curt->next;
         c12 += 1;
     }
     int c0 = 0;
@@ -129,6 +152,8 @@ Program* process_program(Token* t, State* state){
         process_function(&t->subtokens[c0], &po->funcs[i], po, state);
         c0 += 1;
     }
+    
+    
     for(int i = 0; i < po->func_count; i++){
         Function* f = &po->funcs[i];
         if(f->native){
@@ -172,16 +197,20 @@ Program* process_program(Token* t, State* state){
 
 void process_type(Token* t, Type* y, Program* prog, State* state){
     y->identifier = clone(t->str);
+    y->llvm = "i64";
+    y->width = 64;
 }
 
 void compile_type(Token* t, Type* y, Program* prog, State* state){
     // make sure type not redefined
-    for(int i = 0; i < prog->type_count; i++){
-        Type* cmp = &prog->types[i];
+    TypeList* cur = prog->types;
+    while(cur != NULL){
+        Type* cmp = cur->type;
         if((cmp != y) && strcmp(cmp->identifier, t->str) == 0){
             char* msg = format("type %s redefined", t->str);
             add_error(state, DUPDEFTYPE, t->line, msg);
         }
+        cur = cur->next;
     }
     y->ts = malloc(sizeof(struct TypeStructure));
     y->ts->next = NULL;
@@ -212,6 +241,11 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
         return;
     }
     TypeStructure* subcur = malloc(sizeof(struct TypeStructure));
+    subcur->identifier = NULL;
+    subcur->segment = NULL;
+    subcur->next = NULL;
+    subcur->sub = NULL;
+    subcur->sbs = NULL;
     write->sub = subcur;
     TypeStructure* prev = NULL;
     for(int i = 0; i < src->subtoken_count; i++){
@@ -228,6 +262,11 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
         }
         prev = subcur;
         subcur = malloc(sizeof(struct TypeStructure));
+        subcur->identifier = NULL;
+        subcur->segment = NULL;
+        subcur->next = NULL;
+        subcur->sub = NULL;
+        subcur->sbs = NULL;
     }
     subcur->next = NULL;
 }
@@ -250,6 +289,7 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
     func->vars = NULL;
     func->body = NULL;
     for(int i = 1; i < def.subtoken_count; i++){
+        // changes width here??
         if(def.subtokens[i].str == NULL){
             continue; // empty varparam
         }
@@ -450,7 +490,7 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             Cardinality* card = (Cardinality*) stmt->stmt;
             card->from = process_stmt(t->subtokens, func, prog, state);
             // TODO un hardcode type here
-            card->to = mkvar(func, &prog->types[0]);
+            card->to = mkvar(func, prog->types->type);
             add_stmt_func(mkinit(card->to), func);
             add_stmt_func(stmt, func);
             return card->to;
@@ -471,7 +511,7 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             arith->right = process_stmt(&t->subtokens[1], func, prog, state);
             arith->operation = t->lnt;
             // TODO another hardcoded type.
-            arith->to = mkvar(func, &prog->types[0]); 
+            arith->to = mkvar(func, prog->types->type); 
             add_stmt_func(mkinit(arith->to), func);
             add_stmt_func(stmt, func);
             return arith->to;
@@ -479,14 +519,78 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             stmt->type = S_CONSTRUCTOR;
             stmt->stmt = malloc(sizeof(struct Constructor));
             Constructor* cons = (Constructor*) stmt->stmt;
+            cons->type = proc_type(t->subtokens->str, prog);
+            cons->to = mkvar(func, cons->type);
+            add_stmt_func(stmt, func);
+            // now set each member.
+            for(int i6 = 1; i6 < t->subtoken_count; i6++){
+                Token* tsc = &t->subtokens[i6];
+                for(int io = 0; io < tsc->subtoken_count; io++){
+                    // tsc is array of segconstructs.
+                    // now iterate through each constructassign
+                    Token* consassign = &tsc->subtokens[io];
+                    Setmember* setm = malloc(sizeof(struct Setmember));
+                    setm->from = process_stmt(consassign->subtokens, func, prog, state);
+                    setm->dest = cons->to;
+                    setm->offsetptr = findoffset(cons->type, consassign->str);
+                    Statement* stmt1 = malloc(sizeof(struct Statement));
+                    stmt1->stmt = setm;
+                    stmt1->type = S_SETMEMBER;
+                    add_stmt_func(stmt1, func);
+                }
+                // have to set flag ("tag") yet
+                SetTag* settag = malloc(sizeof(struct SetTag));
+                settag->dest = cons->to;
+                settag->offsetptr = findoffsettag(cons->type, tsc->str);
+                Statement* stmt2 = malloc(sizeof(struct Statement));
+                stmt2->stmt = settag;
+                stmt2->type = S_SETTAG;
+                add_stmt_func(stmt2, func);
+            }
+            return cons->to;
         case T_ACCESSOR:
-            stmt->type = S_ACCESSOR;
-            stmt->stmt = malloc(sizeof(struct Accessor));
-            Accessor* acc = (Accessor*) stmt->stmt;
+            // make own statements.
+            free(stmt); 
+            int ind = 0;
+            int init = 0;
+            // proc first expr (ex "func(args)" then .something.something etc)
+            Variable* cur = process_stmt(t->subtokens, func, prog, state);
+            Variable* last;
+            while(1){
+                if(t->str[ind] == '.' || t->str[ind] == 0){
+                    // copyinclusive
+                    char* ident = malloc(ind-init+1);
+                    memcpy(ident, &t->str[init], ind-init);
+                    ident[ind-init] = 0; 
+                    // o.k now proc. 
+                    Statement* sta = malloc(sizeof (struct Statement));
+                    sta->type = S_ACCESSOR;
+                    sta->stmt = malloc(sizeof(struct Accessor));
+                    Accessor* typedacc = (Accessor*) sta->stmt;
+                    typedacc->src = cur;
+                    typedacc->to = mkvar(func, findtype(cur->type, ident));
+                    typedacc->offsetptr = findoffset(cur->type, ident);
+                    add_stmt_func(mkinit(typedacc->to), func);
+                    add_stmt_func(sta, func);
+                    last = typedacc->to;
+                    cur = typedacc->to;
+                    init = ind+1;
+                }
+                if(t->str[ind] == 0)
+                    break;
+                ind += 1;
+            }
+            return last;
         case T_SETMEMBER:
             stmt->type = S_SETMEMBER;
             stmt->stmt = malloc(sizeof(struct Setmember));
             Setmember* setm = (Setmember*) stmt->stmt;
+            // dest = accessor
+            setm->dest = process_stmt(t->subtokens, func, prog, state);
+            setm->from = process_stmt(&t->subtokens[1], func, prog, state);
+            setm->offsetptr = findoffset(setm->dest->type, t->subtokens[2].str);
+            add_stmt_func(stmt, func);
+            break;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
             Variable* v32 = proc_var(t->str, func);
@@ -495,8 +599,146 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
         default: exit(34);
             // error
     }
-    // does not resolve into variable (return, varinit, assignment)
+    // does not resolve into variable (return, varinit, assignment, etc)
     return NULL;
+}
+
+// returns bits needed to store number
+int log_2(long long input){
+    int l = 0;
+    int a = 1;
+    // possibly make this algo faster in future.
+    while(a < input){
+        l += 1;
+        a = a * 2;
+    }
+    return l;
+}
+
+// bytes needed to store a given structure.
+// NOTE: includes tag. 
+int bytes(TypeStructure* ts){
+    if(ts->sub == NULL){
+        return ts->sbs->width;
+    }
+    else {
+        int total = 0;
+        TypeStructure* cur = ts->sub;
+        int numtags = 0;
+        while(cur != NULL){
+            numtags += 1;
+            if(ts->mode == S_MODE_XOR){
+                int b = bytes(cur);
+                if(b > total){
+                    total = b;
+                }
+            }
+            else{
+                total += bytes(cur);
+            }
+            cur = cur->next;
+        }
+        if(ts->mode == S_MODE_XOR){
+            // could log2 instead.
+            total += (numtags);
+        }
+        else if(ts->mode == S_MODE_OR){
+            // need a bit for each tag.
+            total += numtags;
+        }
+        return total;
+    }
+}
+
+Type* findtypehelper(TypeStructure* ts, char* ident){
+    if(ts->sub == NULL){
+        if(strcmp(ident, ts->identifier) == 0){
+            return ts->sbs;
+        }
+        return NULL;
+    }
+    TypeStructure* cur = ts->sub;
+    while(cur != NULL){
+        Type* t = findtypehelper(cur, ident);
+        if(t != NULL){
+            return t;
+        }
+        cur = cur->next;
+    }
+    return NULL;
+}
+
+// finds type of variable with name "ident" in type t
+Type* findtype(Type* t, char* ident){
+    TypeStructure* cur = t->ts;
+    return findtypehelper(cur, ident);
+}
+
+int findoffsethelper(TypeStructure* ts, char* ident){
+    if(ts->sub == NULL){
+        if(strcmp(ident, ts->identifier) == 0){
+            return 0;
+        }
+        return -1; // not found.
+    }
+    else{
+        TypeStructure* cur = ts->sub;
+        int sum = 0;
+        while(cur != NULL){
+            int this = findoffsethelper(cur, ident);
+            if(this == -1){
+                sum += bytes(cur);
+            }
+            else{
+                return sum + this;
+            }
+            cur = cur->next;
+        }
+    }
+    return -1;
+}
+
+int findoffsettaghelper(TypeStructure* ts, char* ident){
+    if(ts->sub == NULL){
+        return -1;
+    }
+    if(ts->mode == S_MODE_AND){
+        return -1;
+    }
+    TypeStructure* cur = ts->sub;
+    int off = 0;
+    int offt = 0;
+    while(cur != NULL){
+        if(strcmp(cur->segment, ident) == 0){
+            // found in this block. 
+            return off;
+        }
+        int ab = findoffsettaghelper(cur->sub, ident);
+        // ab = offset inside child block.
+        if(ab != -1){
+            // add to offset of the child block.
+            // and add to offset of tag seg of currentblock
+            while(cur != NULL){
+                off += 1;
+            }
+            return ab + offt + off;
+        }
+        cur = cur->next;
+        off += 1;
+        offt += bytes(cur);
+    }
+    return -1;
+}
+
+// finds offset where "ident" should be in t.
+int findoffset(Type* t, char* ident){
+    // TODO: -1 check.
+    return findoffsethelper(t->ts, ident);
+}
+
+// same as "findoffset" but for tags.
+int findoffsettag(Type* t, char* ident){
+    return findoffsettaghelper(t->ts, ident);
 }
 
 char* formatvar(Variable* var){
@@ -571,6 +813,26 @@ void print_func(Function* func){
                 ;
                 Arithmetic* arith = (Arithmetic*) cur->stmt->stmt;
                 printf("    %s = %s %c %s\n", formatvar(arith->to), formatvar(arith->left), sym(arith->operation), formatvar(arith->right));
+                break;
+            case S_CONSTRUCTOR:
+                ;
+                Constructor* cons = (Constructor*) cur->stmt->stmt;
+                printf("    %s = new %s\n", formatvar(cons->to), cons->type->identifier);
+                break;
+            case S_SETMEMBER:
+                ;
+                Setmember* setm = (Setmember*) cur->stmt->stmt;
+                printf("    %s {%i} = %s\n", formatvar(setm->dest), setm->offsetptr, formatvar(setm->from));
+                break;
+            case S_SETTAG:
+                ;
+                SetTag* sett = (SetTag*) cur->stmt->stmt;
+                printf("    settag %s bit offset %i\n", formatvar(sett->dest), sett->offsetptr);
+                break;
+            case S_ACCESSOR:
+                ;
+                Accessor* acce = (Accessor*) cur->stmt->stmt;
+                printf("    %s = %s {%i}\n", formatvar(acce->to), formatvar(acce->src), acce->offsetptr);
             case S_RETURN:
                 ;
                 Return* ret = (Return*) cur->stmt->stmt;
@@ -629,16 +891,45 @@ void print_prog(Program* prog){
         }
     }
     printf("TYPES\n");
-    for(int i = 0; i < prog->type_count; i++){
-        print_type(&prog->types[i]);
+    TypeList* cur = prog->types;
+    while(cur != NULL){
+        print_type(cur->type);
+        cur = cur->next;
     }
 }
 
-Type* proc_type(char* ident, Program* prog){
-    for(int i = 0; i < prog->type_count; i++){
-        if(strcmp(prog->types[i].identifier, ident) == 0){
-            return &prog->types[i];
+Type* proc_type(char* ident, Program* prog){    
+    TypeList* cur = prog->types;
+    TypeList* prev = NULL;
+    while(cur != NULL){
+        if(strcmp(cur->type->identifier, ident) == 0){
+            return cur->type;
         }
+        prev = cur;
+        cur = cur->next;
+    }
+    int s = strlen(ident);
+    if(ident[s-1] == ']' && ident[s-2] == '['){
+        char* subt = malloc(s-1);
+        memcpy(subt, ident, s-2);
+        subt[s-2] = 0;
+        Type* t = proc_type(subt, prog);
+        if(t != NULL){
+            // construct array type
+            prog->type_count += 1;
+            Type* res = malloc(sizeof(struct Type));
+            res->array_subtype = t;
+            res->width = 64;
+            res->llvm = "i64";
+            res->identifier = ident;
+            TypeList* new = malloc(sizeof(struct TypeList));
+            new->next = NULL;
+            new->type = res;
+            prev->next = new;
+            free(subt);
+            return res;
+        }
+        free(subt);
     }
     return NULL;
 }
@@ -698,25 +989,10 @@ Function* proc_func(char* funcname, Program* prog){
     return NULL;
 }
 
-// returns subtype of arr.
+// returns subtype of array (typeof array[0])
 Type* arr_subtype(Type* arr, Program* p){
-    // TODO change this when proper type system is implemented.
-    char* detect = NULL;
-    if(strcmp(arr->identifier, "Byte[]") == 0){
-       detect = "Byte"; 
-    }
-    if(strcmp(arr->identifier, "Int[]") == 0){
-        detect = "Int";
-    }
-    if(detect == NULL){
-       return NULL;
-    }
-    for(int i =0; i < p->type_count; i++){
-        if(strcmp(p->types[i].identifier, detect) == 0){
-            return &p->types[i];
-        }
-    }
-    return NULL;
+    // TODO remove this func
+    return arr->array_subtype;
 }
 
 char* clone(char* str){

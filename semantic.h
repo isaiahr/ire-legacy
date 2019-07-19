@@ -18,6 +18,7 @@
 #define S_CONSTRUCTOR 12
 #define S_ACCESSOR 13
 #define S_SETMEMBER 14
+#define S_SETTAG 15
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -31,7 +32,7 @@
 typedef struct Program {
     struct Function* funcs;
     int func_count;
-    struct Type* types;
+    struct TypeList* types;
     int type_count;
 } Program;
 
@@ -61,6 +62,11 @@ typedef struct VarList {
     struct VarList* next;
 } VarList;
 
+typedef struct TypeList {
+    struct Type* type;
+    struct TypeList* next;
+} TypeList;
+
 typedef struct Variable {
     struct Type* type;
     char* identifier;
@@ -76,7 +82,11 @@ typedef struct Type {
     int width;
     char* identifier;
     char* llvm;
+    // defined type <=> ts nonnull
     struct TypeStructure* ts;
+    int internal_width; // for defined types
+    // nonnull = array
+    struct Type* array_subtype;
 } Type;
 
 typedef struct Statement {
@@ -158,14 +168,8 @@ typedef struct TypeStructure {
     int mode;
 } TypeStructure;
 
-typedef struct Cons {
-    char* segment;
-    Variable* data;
-    struct Cons* next;
-} Cons;
-
 typedef struct Constructor {
-    Cons* c;
+    Type* type;
     Variable* to;
 } Constructor;
 
@@ -180,6 +184,11 @@ typedef struct Setmember{
     int offsetptr;
     Variable* from;
 } Setmember;
+
+typedef struct SetTag{
+    Variable* dest;
+    int offsetptr;
+} SetTag;
 
 Program* process_program(Token* t, State* state);
 
