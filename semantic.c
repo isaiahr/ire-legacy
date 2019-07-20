@@ -42,6 +42,7 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
 int findoffset(Type* t, char* id);
 int findoffsettag(Type* t, char* id);
 Type* findtype(Type* t, char* id);
+int bytes(TypeStructure* t);
 
 
 VarList* add_varlist(VarList* vl, Variable* var){
@@ -216,6 +217,7 @@ void compile_type(Token* t, Type* y, Program* prog, State* state){
     y->ts->next = NULL;
     y->ts->sub = NULL;
     write_structure(y->ts, t->subtokens, prog, state);
+    y->internal_width = bytes(y->ts);
 }
 
 void write_structure(TypeStructure* write, Token* src, Program* prog, State* state){
@@ -538,14 +540,16 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
                     stmt1->type = S_SETMEMBER;
                     add_stmt_func(stmt1, func);
                 }
-                // have to set flag ("tag") yet
-                SetTag* settag = malloc(sizeof(struct SetTag));
-                settag->dest = cons->to;
-                settag->offsetptr = findoffsettag(cons->type, tsc->str);
-                Statement* stmt2 = malloc(sizeof(struct Statement));
-                stmt2->stmt = settag;
-                stmt2->type = S_SETTAG;
-                add_stmt_func(stmt2, func);
+                if(tsc->str != NULL){
+                    // have to set flag ("tag") yet
+                    SetTag* settag = malloc(sizeof(struct SetTag));
+                    settag->dest = cons->to;
+                    settag->offsetptr = findoffsettag(cons->type, tsc->str);
+                    Statement* stmt2 = malloc(sizeof(struct Statement));
+                    stmt2->stmt = settag;
+                    stmt2->type = S_SETTAG;
+                    add_stmt_func(stmt2, func);
+                }
             }
             return cons->to;
         case T_ACCESSOR:
@@ -675,25 +679,37 @@ Type* findtype(Type* t, char* ident){
 }
 
 int findoffsethelper(TypeStructure* ts, char* ident){
+    int cachedresult = 0;
+    int numtags = 0;
+    int found = 0;
     if(ts->sub == NULL){
         if(strcmp(ident, ts->identifier) == 0){
             return 0;
         }
         return -1; // not found.
     }
+    
     else{
         TypeStructure* cur = ts->sub;
         int sum = 0;
         while(cur != NULL){
+            if(ts->mode != S_MODE_AND)
+                numtags += 1;
             int this = findoffsethelper(cur, ident);
             if(this == -1){
-                sum += bytes(cur);
+                if((ts->mode != S_MODE_XOR) && cachedresult == 0){
+                    sum += bytes(cur);
+                }
             }
             else{
-                return sum + this;
+                cachedresult = sum + this;
+                found = 1;
             }
             cur = cur->next;
         }
+    }
+    if(found){
+        return numtags+cachedresult;
     }
     return -1;
 }
@@ -702,30 +718,31 @@ int findoffsettaghelper(TypeStructure* ts, char* ident){
     if(ts->sub == NULL){
         return -1;
     }
-    if(ts->mode == S_MODE_AND){
-        return -1;
-    }
     TypeStructure* cur = ts->sub;
     int off = 0;
     int offt = 0;
     while(cur != NULL){
-        if(strcmp(cur->segment, ident) == 0){
+        if(ts->mode != S_MODE_AND && strcmp(cur->segment, ident) == 0){
             // found in this block. 
             return off;
         }
-        int ab = findoffsettaghelper(cur->sub, ident);
+        int ab = findoffsettaghelper(cur, ident);
         // ab = offset inside child block.
         if(ab != -1){
             // add to offset of the child block.
             // and add to offset of tag seg of currentblock
-            while(cur != NULL){
-                off += 1;
+            if(ts->mode != S_MODE_AND){
+                while(cur != NULL){
+                    off += 1;
+                    cur = cur->next;
+                }
             }
             return ab + offt + off;
         }
-        cur = cur->next;
-        off += 1;
         offt += bytes(cur);
+        cur = cur->next;
+        if(ts->mode != S_MODE_AND)
+            off += 1;
     }
     return -1;
 }
@@ -850,7 +867,7 @@ void print_type(Type* t){
     }
     printf("   %s {", t->identifier);
     print_type_helper(t->ts);
-    printf("}\n");
+    printf("}, internalwidth %i\n", t->internal_width);
 }
 
 void print_type_helper(TypeStructure* ts){
