@@ -170,25 +170,23 @@ Program* process_program(Token* t, State* state){
         }
     }
     // seperate proccessing function header from body to enable calling funcs declared after.
-    int jk = 0;
-    for(int i = num_nativefuncs; i < po->func_count+po->type_count-4; i++){
-        if(t->subtokens[i-num_nativefuncs].type == T_TYPEDEF){
+    for(int i = 0; i < t->subtoken_count; i++){
+        if(t->subtokens[i].type == T_TYPEDEF){
             continue;
         }
-        jk += 1;
         for(int j = 0; j < i; j++){
             if(t->subtokens[j].type == T_TYPEDEF){
                 continue;
             }
-            if(i-num_nativefuncs == j){
+            if(j == i){
                 continue;
             }
-            if(strcmp(t->subtokens[i-num_nativefuncs].subtokens[0].str, t->subtokens[j].subtokens[0].str) == 0){
+            if(strcmp(t->subtokens[i].subtokens[0].str, t->subtokens[j].subtokens[0].str) == 0){
                 char* msg = format("function %s redefined", t->subtokens[j].subtokens[0].str);
                 add_error(state, DUPDEFFUNC, t->subtokens[i-num_nativefuncs].subtokens[0].line, msg);
             }
         }
-        compile_function(&t->subtokens[i-num_nativefuncs], &po->funcs[jk], po, state);
+        compile_function(&t->subtokens[i], &po->funcs[num_nativefuncs+i], po, state);
     }
     if(state->verbose){
         print_prog(po);
@@ -937,7 +935,10 @@ Type* proc_type(char* ident, Program* prog){
             Type* res = malloc(sizeof(struct Type));
             res->array_subtype = t;
             res->width = 64;
-            res->llvm = "i64";
+            res->llvm = malloc(strlen(t->llvm)+2);
+            memcpy(res->llvm, t->llvm, strlen(t->llvm));
+            res->llvm[strlen(t->llvm)] = '*';
+            res->llvm[strlen(t->llvm)+1] = 0;
             res->identifier = ident;
             TypeList* new = malloc(sizeof(struct TypeList));
             new->next = NULL;

@@ -107,39 +107,45 @@ void awrite_int(Variable* to, int immediate, State* state){
 }
 
 void awrite_indget(Variable* arr, Variable* ind, Variable* to, State* state){
-    if(strcmp(arr->type->identifier, "Byte[]") == 0){
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq (%%r15), %%rax\n");
-        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+    fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
+    switch(arr->type->array_subtype->width){
+        case 64:
+            fprintf(state->fp, "imul $8, %%rax, %%rax\n");
+            break;
+        case 32:
+            fprintf(state->fp, "imul $4, %%rax, %%rax\n");
+            break;
+        case 16:
+            fprintf(state->fp, "imul $2, %%rax, %%rax\n");
+            break;
+        case 8:
+            break;
     }
-    else {
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", arr->offset);
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", ind->offset);
-        fprintf(state->fp, "imul $8, %%rax, %%rax\n");
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq (%%r15), %%rax\n");
-        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
-    }
+    fprintf(state->fp, "addq %%rax, %%r15\n");
+    fprintf(state->fp, "movq (%%r15), %%rax\n");
+    fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
 }
 
 void awrite_indset(Variable* arr, Variable* ind, Variable* from, State* state){
-    if(strcmp(arr->type->identifier, "Byte[]") == 0){
-        fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
+    fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
+    switch(arr->type->array_subtype->width){
+        case 64:
+            fprintf(state->fp, "imul $8, %%r15, %%r15\n");
+            break;
+        case 32:
+            fprintf(state->fp, "imul $4, %%r15, %%r15\n");
+            break;
+        case 16:
+            fprintf(state->fp, "imul $2, %%r15, %%r15\n");
+            break;
+        case 8:
+            break;
     }
-    else {
-        fprintf(state->fp, "movq %i(%%rsp), %%r14\n", from->offset); // val
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", arr->offset); // arr
-        fprintf(state->fp, "movq %i(%%rsp), %%r15\n", ind->offset); // index
-        fprintf(state->fp, "imul $8, %%r15, %%r15\n");
-        fprintf(state->fp, "addq %%rax, %%r15\n");
-        fprintf(state->fp, "movq %%r14, (%%r15)\n");
-    }
+    fprintf(state->fp, "addq %%rax, %%r15\n");
+    fprintf(state->fp, "movq %%r14, (%%r15)\n");
 }
 
 void awrite_addeq(Variable* arr, Variable* delta, State* state){
@@ -175,25 +181,26 @@ void awrite_card(Variable* to, Variable* from, State* state){
 
 
 void awrite_newarr(Variable* to, Variable* len, State* state){
-    if(strcmp(to->type->identifier, "Byte[]") == 0){
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
-        fprintf(state->fp, "addb $8, %%rax\n");
-        fprintf(state->fp, "call alloc\n");
-        fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
-        fprintf(state->fp, "movq %%rbx, (%%rax)\n");
-        fprintf(state->fp, "addq $8, %%rax\n");
-        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
-    }
-    else{
-        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", len->offset);
+    switch(to->type->array_subtype->width){
+    case 64:
         fprintf(state->fp, "imul $8, %%rax, %%rax\n");
-        fprintf(state->fp, "addq $8, %%rax\n");
-        fprintf(state->fp, "call alloc\n");
-        fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
-        fprintf(state->fp, "movq %%rbx, (%%rax)\n");
-        fprintf(state->fp, "addq $8, %%rax\n");
-        fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+        break;
+    case 32:
+        fprintf(state->fp, "imul $4, %%rax, %%rax\n");
+        break;
+    case 16:
+        fprintf(state->fp, "imul $2, %%rax, %%rax\n");
+        break;
+    case 8:
+        break;
     }
+    fprintf(state->fp, "addq $8, %%rax\n");
+    fprintf(state->fp, "call alloc\n");
+    fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", len->offset);
+    fprintf(state->fp, "movq %%rbx, (%%rax)\n");
+    fprintf(state->fp, "addq $8, %%rax\n");
+    fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
 }
 
 void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){

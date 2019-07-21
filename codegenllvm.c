@@ -171,20 +171,12 @@ void lwrite_indget(Variable* arr, Variable* ind, Variable* to, State* state){
     state->tempnum += 2;
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", arr_, arr->type->llvm, arr->type->llvm, arr->num);
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", ind_, ind->type->llvm, ind->type->llvm, ind->num);
-    if((strcmp(arr->type->identifier, "Byte[]") == 0)){
-        fprintf(state->fp, "%%%i = getelementptr inbounds i8, i8* %%%i, %s %%%i\n", state->tempnum, arr_, ind->type->llvm, ind_);
-        fprintf(state->fp, "%%%i = load i8, i8* %%%i\n", state->tempnum + 1, state->tempnum);
-        state->tempnum += 1;
-        fprintf(state->fp, "store i8 %%%i, i8* %%%i\n", state->tempnum, to->num);
-        state->tempnum += 1;
-    }
-    else {
-        fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, %s %%%i\n", state->tempnum, arr_, ind->type->llvm, ind_);
-        fprintf(state->fp, "%%%i = load i64, i64* %%%i\n", state->tempnum + 1, state->tempnum);
-        state->tempnum += 1;
-        fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", state->tempnum, to->num);
-        state->tempnum += 1;
-    }
+    fprintf(state->fp, "%%%i = getelementptr inbounds %s, %s %%%i, %s %%%i\n",
+        state->tempnum, arr->type->array_subtype->llvm, arr->type->llvm, arr_, ind->type->llvm, ind_);
+    fprintf(state->fp, "%%%i = load %s, %s %%%i\n", state->tempnum + 1, arr->type->array_subtype->llvm, arr->type->llvm, state->tempnum);
+    state->tempnum += 1;
+    fprintf(state->fp, "store %s %%%i, %s %%%i\n", arr->type->array_subtype->llvm, state->tempnum,  arr->type->llvm, to->num);
+    state->tempnum += 1;
 }
 
 void lwrite_indset(Variable* arr, Variable* ind, Variable* from, State* state){  
@@ -195,16 +187,10 @@ void lwrite_indset(Variable* arr, Variable* ind, Variable* from, State* state){
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", arr_, arr->type->llvm, arr->type->llvm, arr->num);
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", ind_, ind->type->llvm, ind->type->llvm, ind->num);    
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", from_, from->type->llvm, from->type->llvm, from->num);
-    if((strcmp(arr->type->identifier, "Byte[]") == 0)){
-        fprintf(state->fp, "%%%i = getelementptr inbounds i8, i8* %%%i, %s %%%i\n", state->tempnum, arr_, ind->type->llvm, ind_);
-        fprintf(state->fp, "store i8 %%%i, i8* %%%i\n", from_, state->tempnum);
-        state->tempnum += 1;
-    }
-    else {
-        fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, %s %%%i\n", state->tempnum, arr_, ind->type->llvm, ind_);
-        fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", from_, state->tempnum);
-        state->tempnum += 1;
-    }
+    fprintf(state->fp, "%%%i = getelementptr inbounds %s, %s %%%i, %s %%%i\n",
+        state->tempnum, arr->type->array_subtype->llvm, arr->type->llvm, arr_, ind->type->llvm, ind_);
+    fprintf(state->fp, "store %s %%%i, %s %%%i\n", arr->type->array_subtype->llvm, from_, arr->type->llvm, state->tempnum);
+    state->tempnum += 1;
 }
 
 void lwrite_addeq(Variable* arr, Variable* delta, State* state){
@@ -245,8 +231,8 @@ void lwrite_card(Variable* to, Variable* from, State* state){
     int from_ = state->tempnum;
     state->tempnum += 1;
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", from_, from->type->llvm, from->type->llvm, from->num);
-    if((strcmp(from->type->identifier, "Byte[]") == 0)){
-        fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum, from_);
+    if(strcmp(from->type->llvm, "i64*") != 0){
+        fprintf(state->fp, "%%%i = bitcast %s %%%i to i64*\n", state->tempnum, from->type->llvm, from_);
         state->tempnum += 1;
         fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 -1\n", state->tempnum, state->tempnum-1);
         fprintf(state->fp, "%%%i = load i64, i64* %%%i\n", state->tempnum+1, state->tempnum);
@@ -266,17 +252,31 @@ void lwrite_newarr(Variable* to, Variable* size, State* state){
     int size_ = state->tempnum;
     state->tempnum += 1;
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", size_, size->type->llvm, size->type->llvm, size->num);
-    if(strcmp(to->type->identifier, "Byte[]") == 0){
-        fprintf(state->fp, "%%%i = add i64 %%%i, 8\n", state->tempnum, size_);
-        state->tempnum += 1;
+    if(strcmp(to->type->llvm, "i64*") != 0){
+        switch(to->type->array_subtype->width){
+            case 64:
+                fprintf(state->fp, "%%%i = shl nuw i64 %%%i, 3\n", state->tempnum, size_);
+                break;
+            case 32:
+                fprintf(state->fp, "%%%i = shl nuw i64 %%%i, 2\n", state->tempnum, size_);
+                break;
+            case 16:
+                fprintf(state->fp, "%%%i = shl nuw i64 %%%i, 1\n", state->tempnum, size_);
+                break;
+            case 8:
+                state->tempnum = state->tempnum-1;
+                break;
+        }
+        fprintf(state->fp, "%%%i = add i64 %%%i, 8\n", state->tempnum+1, size_);
+        state->tempnum += 2;
         fprintf(state->fp, "%%%i = call i8* @alloc(i64 %%%i)\n", state->tempnum, state->tempnum-1);
         fprintf(state->fp, "%%%i = bitcast i8* %%%i to i64*\n", state->tempnum+1, state->tempnum);
         state->tempnum += 1;
         fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", size_, state->tempnum);
         fprintf(state->fp, "%%%i = getelementptr inbounds i64, i64* %%%i, i64 1\n", state->tempnum+1, state->tempnum);
         state->tempnum += 1;
-        fprintf(state->fp, "%%%i = bitcast i64* %%%i to i8*\n", state->tempnum+1, state->tempnum);
-        fprintf(state->fp, "store i8* %%%i, i8** %%%i\n", state->tempnum+1, to->num);
+        fprintf(state->fp, "%%%i = bitcast i64* %%%i to %s\n", state->tempnum+1, state->tempnum, to->type->llvm);
+        fprintf(state->fp, "store %s %%%i, %s* %%%i\n", to->type->llvm, state->tempnum+1, to->type->llvm, to->num);
         state->tempnum += 2;
     }
     else{
