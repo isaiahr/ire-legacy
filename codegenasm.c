@@ -241,3 +241,16 @@ void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
     }
     fprintf(state->fp, "movq %%rbx, %i(%%rsp)\n", to->offset);
 }
+
+void awrite_constructor(Variable* dest, int width, State* state){
+    
+}
+void awrite_accessor(Variable* dest, Variable* src, int off, State* state){
+    
+}
+void awrite_setmember(Variable* dest, Variable* src, int off, State* state){
+    
+}
+void awrite_settag(Variable* var, int off, State* state){
+    
+}

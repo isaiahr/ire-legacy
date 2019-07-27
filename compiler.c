@@ -14,6 +14,7 @@
 #include"semantic.h"
 
 
+
 void compile_func(Function* f, State* state);
 void compile_stmt(Statement* stmt, Function* f, State* state);
 
@@ -153,6 +154,26 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
             ;
             Arithmetic* arith = (Arithmetic*) stmt->stmt;
             write_arith(arith->to, arith->left, arith->right, arith->operation, state);
+            break;
+        case S_CONSTRUCTOR:
+            ;
+            Constructor* cons = (Constructor*) stmt->stmt;
+            write_constructor(cons->to, cons->type->internal_width, state);
+            break;
+        case S_ACCESSOR:
+            ;
+            Accessor* acce = (Accessor*) stmt->stmt;
+            write_accessor(acce->to, acce->src, acce->offsetptr, state);
+            break;
+        case S_SETMEMBER:
+            ;
+            Setmember* setm = (Setmember*) stmt->stmt;
+            write_setmember(setm->dest, setm->from, setm->offsetptr, state);
+            break;
+        case S_SETTAG:
+            ;
+            SetTag* sett = (SetTag*) stmt->stmt;
+            write_settag(sett->dest, sett->offsetptr, state);
             break;
         case S_RETURN:
             ;

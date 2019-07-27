@@ -170,6 +170,7 @@ Program* process_program(Token* t, State* state){
         }
     }
     // seperate proccessing function header from body to enable calling funcs declared after.
+    int funccount = 0;
     for(int i = 0; i < t->subtoken_count; i++){
         if(t->subtokens[i].type == T_TYPEDEF){
             continue;
@@ -186,7 +187,8 @@ Program* process_program(Token* t, State* state){
                 add_error(state, DUPDEFFUNC, t->subtokens[i-num_nativefuncs].subtokens[0].line, msg);
             }
         }
-        compile_function(&t->subtokens[i], &po->funcs[num_nativefuncs+i], po, state);
+        compile_function(&t->subtokens[i], &po->funcs[num_nativefuncs+funccount], po, state);
+        funccount += 1;
     }
     if(state->verbose){
         print_prog(po);
@@ -216,6 +218,10 @@ void compile_type(Token* t, Type* y, Program* prog, State* state){
     y->ts->sub = NULL;
     write_structure(y->ts, t->subtokens, prog, state);
     y->internal_width = bytes(y->ts);
+    y->llvm = malloc(32);
+    snprintf(y->llvm, 31, "i%i*", y->internal_width);
+    y->llvm[31] = 0;
+    y->width = 64;
 }
 
 void write_structure(TypeStructure* write, Token* src, Program* prog, State* state){
@@ -521,6 +527,7 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             Constructor* cons = (Constructor*) stmt->stmt;
             cons->type = proc_type(t->subtokens->str, prog);
             cons->to = mkvar(func, cons->type);
+            add_stmt_func(mkinit(cons->to), func);
             add_stmt_func(stmt, func);
             // now set each member.
             for(int i6 = 1; i6 < t->subtoken_count; i6++){

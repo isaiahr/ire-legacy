@@ -35,5 +35,9 @@ void write_addeq(Variable* arr, Variable* delta, State* state);
 void write_card(Variable* to, Variable* from, State* state);
 void write_newarr(Variable* to, Variable* len, State* state);
 void write_arith(Variable* to, Variable* left, Variable* right, int op, State* state);
+void write_constructor(Variable* dest, int width, State* state);
+void write_accessor(Variable* dest, Variable* src, int off, State* state);
+void write_setmember(Variable* dest, Variable* src, int off, State* state);
+void write_settag(Variable* var, int off, State* state);
 
 #endif

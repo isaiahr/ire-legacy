@@ -224,7 +224,7 @@ void lwrite_string(Variable* to, char* str, int len, State* state){
         fprintf(state->fp, "store i8 %i, i8* %%%i\n", (unsigned int) str[i], state->tempnum);
     }
     state->tempnum += 1;
-    fprintf(state->fp, "store i8* %%%i, i8** %%%i", spnum, to->num);
+    fprintf(state->fp, "store i8* %%%i, i8** %%%i\n", spnum, to->num);
 }
 
 void lwrite_card(Variable* to, Variable* from, State* state){
@@ -336,4 +336,109 @@ void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
             break;
     }
     fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", result, to->num);
+}
+
+void lwrite_constructor(Variable* dest, int width, State* state){
+    // dest = new (width)
+    // width in bytes. 
+    int allocwidth = (((int)(width / 8))+1);
+    fprintf(state->fp, "%%%i = call i8* @alloc(i64 %i)\n", state->tempnum, allocwidth);
+    fprintf(state->fp, "%%%i = bitcast i8* %%%i to i%i*\n", state->tempnum+1, state->tempnum, width);
+    fprintf(state->fp, "store %s %%%i, %s* %%%i\n", dest->type->llvm, state->tempnum+1, dest->type->llvm, dest->num);
+    state->tempnum += 2;
+}
+
+void lwrite_accessor(Variable* dest, Variable* src, int off, State* state){
+    // dest = src {off}
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, src->type->llvm, src->type->llvm, src->num);
+    fprintf(state->fp, "%%%i = load i%i, %s %%%i\n", state->tempnum+1, src->type->internal_width, src->type->llvm, state->tempnum);
+    state->tempnum += 1;
+    fprintf(state->fp, "%%%i = lshr i%i %%%i, %i\n", state->tempnum+1, src->type->internal_width, state->tempnum, off);
+    fprintf(state->fp, "%%%i = trunc i%i %%%i to i%i\n", state->tempnum+2, src->type->internal_width, state->tempnum+1, dest->type->width);
+    if(dest->type->llvm[strlen(dest->type->llvm)-1] == '*'){
+        fprintf(state->fp, "%%%i = inttoptr i%i %%%i to %s\n", state->tempnum+3, dest->type->width, state->tempnum+2, dest->type->llvm);
+        fprintf(state->fp, "store %s %%%i, %s* %%%i\n", dest->type->llvm, state->tempnum+3, dest->type->llvm, dest->num);
+        state->tempnum += 4;
+    }
+    else{
+        fprintf(state->fp, "store %s %%%i, %s* %%%i\n", dest->type->llvm, state->tempnum+2, dest->type->llvm, dest->num);
+        state->tempnum += 3;
+    }
+}
+void lwrite_setmember(Variable* dest, Variable* src, int off, State* state){
+    // dest {off} = src
+    
+    // load dest and convert to type.
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, dest->type->llvm, dest->type->llvm, dest->num);
+    int a = off;
+    int b = src->type->width;
+    int c = dest->type->internal_width-src->type->width-off;
+    fprintf(state->fp, "%%%i = bitcast %s %%%i to i1*\n", state->tempnum+1, dest->type->llvm, state->tempnum);
+    fprintf(state->fp, "%%%i = getelementptr i1, i1* %%%i, i64 %i\n", state->tempnum+2, state->tempnum+1, off);
+    fprintf(state->fp, "%%%i = bitcast i1* %%%i to %s*\n", state->tempnum+3, state->tempnum+2, src->type->llvm);
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum+4, src->type->llvm, src->type->llvm, src->num);
+    fprintf(state->fp, "store %s %%%i, %s* %%%i\n", src->type->llvm, state->tempnum+4, src->type->llvm, state->tempnum+3);
+    state->tempnum += 5;
+    return;
+    // the struct is layed out like this
+    // [left-padding: offset number bits], [member: member.width bits], [right padding: remainder bits]
+    if(a != 0 && c != 0){
+        fprintf(state->fp, "%%%i = bitcast %s %%%i to <{i%i, i%i, i%i}>*\n", state->tempnum+1, dest->type->llvm, state->tempnum, a, b, c);
+    }
+    else if(a == 0 && c != 0){
+        // first elem in struct
+        fprintf(state->fp, "%%%i = bitcast %s %%%i to <{i%i, i%i}>*\n", state->tempnum+1, dest->type->llvm, state->tempnum, b, c);
+    }
+    else if(a != 0 && c == 0){
+        // last elem in struct
+        fprintf(state->fp, "%%%i = bitcast %s %%%i to <{i%i, i%i}>*\n", state->tempnum+1, dest->type->llvm, state->tempnum, a, b);
+    }
+    else {
+        // only one elem
+        fprintf(state->fp, "%%%i = bitcast %s %%%i to <{i%i}>*\n", state->tempnum+1, dest->type->llvm, state->tempnum, b);
+    }
+    // fprintf(state->fp, "%%%i = load <{i%i, i%i, i%i}>, <{i%i, i%i, i%i}>* %%%i\n", state->tempnum+2, a, b, c, a, b, c, state->tempnum+1);
+    
+    // load src and convert to int of appropriate size.
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum+2, src->type->llvm, src->type->llvm, src->num);
+    int o = state->tempnum+1;
+    if(src->type->llvm[strlen(src->type->llvm)-1] == '*'){
+        fprintf(state->fp, "%%%i = ptrtoint %s %%%i to i64\n", state->tempnum+3, src->type->llvm, state->tempnum+2); 
+        state->tempnum += 1;
+    }
+    if(a != 0 && c != 0){
+        fprintf(state->fp, "%%%i = getelementptr inbounds <{i%i, i%i, i%i}>, <{i%i, i%i, i%i}>* %%%i, i32 0, i32 1\n", state->tempnum+3, a, b, c, a, b, c, o);
+    }
+    else if(a == 0 && c != 0){
+        fprintf(state->fp, "%%%i = getelementptr inbounds <{i%i, i%i}>, <{i%i, i%i}>* %%%i, i32 0, i32 0\n", state->tempnum+3, b, c, b, c, o);
+    }
+    else if(a != 0 && c == 0){
+        fprintf(state->fp, "%%%i = getelementptr inbounds <{i%i, i%i}>, <{i%i, i%i}>* %%%i, i32 0, i32 1\n", state->tempnum+3, a, b, a, b, o);
+    }
+    else{
+        fprintf(state->fp, "%%%i = getelementptr inbounds <{i%i}>, <{i%i}>* %%%i, i32 0, i32 0\n", state->tempnum+3, b, b, o);
+    }
+    fprintf(state->fp, "store i%i %%%i, i%i* %%%i\n", src->type->width, state->tempnum+2, src->type->width, state->tempnum+3);
+    state->tempnum += 4;
+    
+    // insert src into dest
+
+    /**
+    // convert result back into dest, and store it.
+    fprintf(state->fp, "%%%i = bitcast <{i%i, i%i, i%i}> %%%i to i%i\n", state->tempnum+7, a, b, c, state->tempnum+6, dest->type->internal_width);
+    fprintf(state->fp, "store i%i, %s %%%i\n", dest->type->internal_width, dest->type->llvm, state->tempnum);
+    state->tempnum += 8;
+    **/
+}
+void lwrite_settag(Variable* var, int off, State* state){
+    return;
+    // special case of setmember, where src is const 0.
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, var->type->llvm, var->type->llvm, var->num);
+    fprintf(state->fp, "%%%i = load i%i, %s %%%i\n", state->tempnum+1, var->type->internal_width, var->type->llvm, state->tempnum);
+    state->tempnum += 1;
+    fprintf(state->fp, "%%%i = zext i1 1 to i%i\n", state->tempnum+1, var->type->internal_width);
+    fprintf(state->fp, "%%%i = lshr i%i %%%i, %i\n", state->tempnum+2, var->type->internal_width, state->tempnum+1, off);
+    fprintf(state->fp, "%%%i = and i%i %%%i, %%%i\n", state->tempnum+3, var->type->internal_width, state->tempnum+2, state->tempnum);
+    fprintf(state->fp, "store i%i %%%i, %s %%%i\n", var->type->internal_width, state->tempnum+3, var->type->llvm, state->tempnum-1);
+    state->tempnum += 4;
 }

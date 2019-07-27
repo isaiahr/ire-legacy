@@ -193,3 +193,36 @@ void write_arith(Variable* to, Variable* left, Variable* right, int op, State* s
         awrite_arith(to, left, right, op, state);
     }
 }
+
+void write_constructor(Variable* dest, int width, State* state){
+    if(state->llvm){
+        lwrite_constructor(dest, width, state);
+    }
+    else{
+        awrite_constructor(dest, width, state);
+    }
+}
+void write_accessor(Variable* dest, Variable* src, int off, State* state){
+    if(state->llvm){
+        lwrite_accessor(dest, src, off, state);
+    }
+    else{
+        awrite_accessor(dest, src, off, state);
+    }
+}
+void write_setmember(Variable* dest, Variable* src, int off, State* state){
+    if(state->llvm){
+        lwrite_setmember(dest, src, off, state);
+    }
+    else{
+        awrite_setmember(dest, src, off, state);
+    }
+}
+void write_settag(Variable* var, int off, State* state){
+    if(state->llvm){
+        lwrite_settag(var, off, state);
+    }
+    else{
+        awrite_settag(var, off, state);
+    }
+}
