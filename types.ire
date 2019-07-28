@@ -1,0 +1,18 @@
+import essential.ire
+
+// a point in space and time
+// yes this struct does not really make much sense, but it is for testing purposes to make sure the compiler
+// handles nested types of different kinds.
+type Point { (HasX: Int x ^ HasY: Int y) & Int time & (Country: Byte[] country | Continent: Byte[] continent)}
+
+type P2d { Int x & Int y }
+
+
+Int main(){
+    Point p
+    p = new Point HasY(y=3) & (time=2) & Country(country="Canada") & Continent(continent="North America")
+    print(p.continent)
+    print("\n")
+    exit(p.y + p.time)
+}
+

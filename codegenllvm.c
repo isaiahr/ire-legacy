@@ -373,9 +373,9 @@ void lwrite_setmember(Variable* dest, Variable* src, int off, State* state){
     int a = off;
     int b = src->type->width;
     int c = dest->type->internal_width-src->type->width-off;
-    fprintf(state->fp, "%%%i = bitcast %s %%%i to i1*\n", state->tempnum+1, dest->type->llvm, state->tempnum);
-    fprintf(state->fp, "%%%i = getelementptr i1, i1* %%%i, i64 %i\n", state->tempnum+2, state->tempnum+1, off);
-    fprintf(state->fp, "%%%i = bitcast i1* %%%i to %s*\n", state->tempnum+3, state->tempnum+2, src->type->llvm);
+    fprintf(state->fp, "%%%i = bitcast %s %%%i to i8*\n", state->tempnum+1, dest->type->llvm, state->tempnum);
+    fprintf(state->fp, "%%%i = getelementptr i8, i8* %%%i, i64 %i\n", state->tempnum+2, state->tempnum+1, off / 8);
+    fprintf(state->fp, "%%%i = bitcast i8* %%%i to %s*\n", state->tempnum+3, state->tempnum+2, src->type->llvm);
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum+4, src->type->llvm, src->type->llvm, src->num);
     fprintf(state->fp, "store %s %%%i, %s* %%%i\n", src->type->llvm, state->tempnum+4, src->type->llvm, state->tempnum+3);
     state->tempnum += 5;

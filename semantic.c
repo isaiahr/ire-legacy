@@ -635,7 +635,7 @@ int bytes(TypeStructure* ts){
         TypeStructure* cur = ts->sub;
         int numtags = 0;
         while(cur != NULL){
-            numtags += 1;
+            numtags += 8;
             if(ts->mode == S_MODE_XOR){
                 int b = bytes(cur);
                 if(b > total){
@@ -699,7 +699,7 @@ int findoffsethelper(TypeStructure* ts, char* ident){
         int sum = 0;
         while(cur != NULL){
             if(ts->mode != S_MODE_AND)
-                numtags += 1;
+                numtags += 8;
             int this = findoffsethelper(cur, ident);
             if(this == -1){
                 if((ts->mode != S_MODE_XOR) && cachedresult == 0){
@@ -738,7 +738,7 @@ int findoffsettaghelper(TypeStructure* ts, char* ident){
             // and add to offset of tag seg of currentblock
             if(ts->mode != S_MODE_AND){
                 while(cur != NULL){
-                    off += 1;
+                    off += 8;
                     cur = cur->next;
                 }
             }
@@ -747,7 +747,7 @@ int findoffsettaghelper(TypeStructure* ts, char* ident){
         offt += bytes(cur);
         cur = cur->next;
         if(ts->mode != S_MODE_AND)
-            off += 1;
+            off += 8;
     }
     return -1;
 }
