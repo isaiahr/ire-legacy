@@ -243,14 +243,52 @@ void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
 }
 
 void awrite_constructor(Variable* dest, int width, State* state){
+    fprintf(state->fp, "movq $%i, %%rax\n", width/8);
+    fprintf(state->fp, "call alloc\n");
+    fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", dest->offset);
     
 }
 void awrite_accessor(Variable* dest, Variable* src, int off, State* state){
-    
+    // dest = src {off}
+    // NOTE: off needs to be multiple of 8.
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", src->offset);
+    if(dest->type->width == 64){
+        fprintf(state->fp, "movq %i(%%rax), %%rbx\n", off/8); 
+        fprintf(state->fp, "movq %%rbx, %i(%%rsp)\n", dest->num);
+    }
+    else if(dest->type->width == 32){
+        fprintf(state->fp, "movl %i(%%rax), %%ebx\n", off/8); 
+        fprintf(state->fp, "movl %%ebx, %i(%%rsp)\n", dest->num);
+    }
+    else if(dest->type->width == 16){
+        fprintf(state->fp, "movw %i(%%rax), %%bx\n", off/8);
+        fprintf(state->fp, "movw %%bx, %i(%%rsp)\n", dest->num);
+    }
+    else if(dest->type->width == 8){
+        fprintf(state->fp, "movb %i(%%rax), %%bl\n", off/8);
+        fprintf(state->fp, "movb %%bx, %i(%%rsp)\n", dest->num);
+    }
 }
 void awrite_setmember(Variable* dest, Variable* src, int off, State* state){
-    
+    // dest {off} = src
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", dest->offset);
+    if(src->type->width == 64){
+        fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", src->offset);
+        fprintf(state->fp, "movq %%rbx, %i(%%rax)\n", off/8);
+    }
+    else if(src->type->width == 32){
+        fprintf(state->fp, "movl %i(%%rsp), %%ebx\n", src->offset);
+        fprintf(state->fp, "movl %%ebx, %i(%%rax)\n", off/8);
+    }
+    else if(src->type->width == 16){
+        fprintf(state->fp, "movw %i(%%rsp), %%bx\n", src->offset);
+        fprintf(state->fp, "movw %%bx, %i(%%rax)\n", off/8);
+    }
+    else if(src->type->width == 8){
+        fprintf(state->fp, "movb %i(%%rsp), %%bl\n", src->offset);
+        fprintf(state->fp, "movb %%bl, %i(%%rax)\n", off/8);
+    }
 }
 void awrite_settag(Variable* var, int off, State* state){
-    
+    // TODO
 }
