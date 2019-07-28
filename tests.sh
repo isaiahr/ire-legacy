@@ -1,3 +1,6 @@
+# TODO: restructure this file to group these test cases into functs
+
+
 echo "Running tests"
 
 pass=0
@@ -39,6 +42,16 @@ then
     exit
 fi
 
+./irec -basm types.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile types.ire
+    echo Failed
+    exit
+fi
+
+
 ./exit
 if [ "$?" -eq 33 ]
 then
@@ -71,6 +84,16 @@ fi
 
 ./arith
 if [ "$?" -eq 3 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
+
+OUTPUT=$(./types)
+if [ "$?" -eq 5 ] && [ "$OUTPUT" = $'North America' ]
 then
 pass=$((pass+1))
 echo -n "."
@@ -120,6 +143,15 @@ then
     exit
 fi
 
+./irec -bllvm types.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile types.ire
+    echo Failed
+    exit
+fi
+
 
 ./exit
 if [ "$?" -eq 33 ]
@@ -160,6 +192,20 @@ else
 fail=$((fail+1))
 echo -n "E"
 fi
+
+OUTPUT=$(./types)
+if [ "$?" -eq 5 ] && [ "$OUTPUT" = $'North America' ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
+
+
+
+
 
 echo ""
 # end part
