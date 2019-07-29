@@ -70,6 +70,7 @@ Lextoken* lex(char* input, State* state){
             case VOID: str = "VOID"; break;
             case TYPE: str = "TYPE"; break;
             case COLON: str = "COLON"; break;
+            case IF: str = "IF"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -186,6 +187,11 @@ Lextoken* lexone(char** i, int* line){
     if(beginswith("new ", input)){
         (*i) += strlen("new ");
         l->type = NEW;
+        return l;
+    }
+    if(beginswith("if ", input)){
+        (*i) += strlen("if ");
+        l->type = IF;
         return l;
     }
     if(beginswith("type ", input)){

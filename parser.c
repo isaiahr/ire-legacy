@@ -37,7 +37,7 @@ Lextoken* parse_arith(Lextoken* p, Token* e);
 Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags);
 Lextoken* parse_brexpr(Lextoken* p, Token* e);
 Lextoken* parse_assignment(Lextoken* p, Token* t);
-Lextoken* parse_statement(Lextoken* p, Token* t);
+Lextoken* parse_statement(Lextoken* p, Token* t, State* state);
 Lextoken* parse_body(Lextoken* p, Token* t, State* state);
 Lextoken* parse_funcdef(Lextoken* p, Token* t);
 Lextoken* parse_function(Lextoken* p, Token* t, State* state);
@@ -53,6 +53,7 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e);
 Lextoken* parse_accessor(Lextoken* p, Token* e);
 Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS);
 Lextoken* parse_setmember(Lextoken* p, Token* e);
+Lextoken* parse_if(Lextoken* p, Token* e, State* state);
 void print_tree(Token* p, int lvl);
 char* type(Token* t);
 Token* init_token();
@@ -650,32 +651,36 @@ Lextoken* parse_return(Lextoken* p, Token* e){
 }
 
 // statement = varinit | expression | assignment | return | arrset | setmember
-Lextoken* parse_statement(Lextoken* p, Token* e){
-    Lextoken* l = parse_varinit(p, e);
+Lextoken* parse_statement(Lextoken* p, Token* t, State* state){
+    Lextoken* l = parse_varinit(p, t);
     if(l != NULL){
         return l;
     }
-    l = parse_assignment(p, e);
+    l = parse_assignment(p, t);
     if(l != NULL){
         return l;
     }
-    l = parse_return(p, e);
+    l = parse_return(p, t);
     if(l != NULL){
         return l;
     }
-    l = parse_addeq(p, e);
+    l = parse_addeq(p, t);
     if(l != NULL){
         return l;
     }
-    l = parse_arrset(p, e);
+    l = parse_arrset(p, t);
     if(l != NULL){
         return l;
     }
-    l = parse_setmember(p, e);
+    l = parse_setmember(p, t);
     if(l != NULL){
         return l;
     }
-    return parse_expression(p, e);
+    l = parse_if(p, t, state);
+    if(l != NULL){
+        return l;
+    }
+    return parse_expression(p, t);
 }
 
 // body = {[statement], term}
@@ -685,7 +690,7 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
     body->type = T_BODY;
     while(1){
         Lextoken* o = p;
-        p = parse_statement(p, &body->subtokens[ind]);
+        p = parse_statement(p, &body->subtokens[ind], state);
         if(p != NULL){
             if(match(p, TERM)){
                 // good
@@ -706,7 +711,7 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
         else if(match(o, RIGHT_CRPAREN)){
             return o; // end of statements
         } else {
-            add_error(state, SYNTAXERROR, p->line, "failed to parse statement");
+            add_error(state, SYNTAXERROR, 0, "failed to parse statement");
         }
     }
 }
@@ -1251,6 +1256,28 @@ Lextoken* parse_setmember(Lextoken* p, Token* e){
     return p;
 }
 
+// if = if, expr, "{", body, "}"
+Lextoken* parse_if(Lextoken* p, Token* e, State* state){
+    if(!match(p, IF)){
+        return NULL;
+    }
+    e->subtokens = init_token(p->line);
+    Lextoken* a = parse_expression(next(p), &e->subtokens[0]);
+    if(a == NULL || !match(a, LEFT_CRPAREN)){
+        destroy_token(e->subtokens);
+        return NULL;
+    }
+    e->subtokens = realloc_token(e->subtokens, 2);
+    Lextoken* b = parse_body(next(a), &e->subtokens[1], state);
+    if(!match(b, RIGHT_CRPAREN)){
+        destroy_token(e->subtokens);
+        return NULL;
+    }
+    e->type = T_IF;
+    e->subtoken_count = 2;
+    return next(b);
+}
+
 // program = {[function | type] term }
 Token* parse_program(Lextoken* p, State* state){
     Token* prog = init_token(p->line);
@@ -1356,7 +1383,6 @@ void print_tree(Token* p, int lvl){
     }
 }
 
-
 char* type(Token* p){
     switch(p->type){
         case T_PROGRAM: return "PROGRAM";
@@ -1390,6 +1416,7 @@ char* type(Token* p){
         case T_SETMEMBER: return "SETMEMBER";
         case T_CONSTRUCTASSIGN: return "CONSTRUCTASSIGN";
         case T_MEMBERIDENT: return "MEMBERIDENT";
+        case T_IF: return "IF";
         default: return "UNKNOWN";
     }
     
