@@ -39,5 +39,7 @@ void write_constructor(Variable* dest, int width, State* state);
 void write_accessor(Variable* dest, Variable* src, int off, State* state);
 void write_setmember(Variable* dest, Variable* src, int off, State* state);
 void write_settag(Variable* var, int off, State* state);
+void write_conditional(Variable* test, char* truelbl, char* falselbl, State* state);
+void write_label(char* lbl, int uncond, State* state);
 
 #endif

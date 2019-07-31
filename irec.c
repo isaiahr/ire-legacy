@@ -32,6 +32,7 @@ int main(int argc, char **argv)
     state->annotate = 0;
     state->llvm = 1;
     state->comp_llvm = 0;
+    state->lblcount = 0;
     state->writ_return = 0;
     state->errors = NULL;
     char c = 0;

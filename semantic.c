@@ -21,21 +21,22 @@
 
 void compile_function(Token* xd, Function* func, Program* prog, State* state);
 void process_function(Token* xd, Function* func, Program* prog, State* state);
-void* process_stmt(Token* t, Function* func, Program* prog, State* state);
+void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 char* formatvar(Variable* var);
 void print_func(Function* func);
 void print_type(Type* t);
 void print_prog(Program* prog);
 Type* proc_type(char* ident, Program* prog);
-Variable* mkvar(Function* func, Type* t);
-Variable* mknvar(Function* func, char* str, Type* t);
+Variable* mkvar(Function* func, Scope* scope, Type* t);
+Variable* mknvar(Function* func, Scope* scope, char* str, Type* t);
 Statement* mkinit(Variable* v);
-Variable* proc_var(char* str, Function* func);
+Variable* proc_var(char* str, Scope* scope, Function* func);
 Function* proc_func(char* funcname, Program* prog);
 char* clone(char* str);
-void add_stmt_func(Statement* stmt, Function* func);
+void add_stmt_func(Statement* stmt, Function* func, Scope* scope);
 Type* arr_subtype(Type* arr, Program* p);
 void print_type_helper(TypeStructure* ts);
+void print_body(Body* body);
 void process_type(Token* t, Type* y, Program* prog, State* state);
 void compile_type(Token* t, Type* y, Program* prog, State* state);
 void write_structure(TypeStructure* write, Token* src, Program* prog, State* state);
@@ -102,7 +103,6 @@ Program* process_program(Token* t, State* state){
     po->funcs[0].vars = NULL;
     po->funcs[0].body = NULL;
     po->funcs[0].param_count = 0;
-    po->funcs[0].var_count = 0;
     po->funcs[0].native = 1;
     
     // proc types first
@@ -291,17 +291,16 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
     } else {
         func->param_count = (def.subtoken_count-1);
     }
-    func->var_count = 0;
     func->vars = NULL;
     func->body = NULL;
     for(int i = 1; i < def.subtoken_count; i++){
-        // changes width here??
         if(def.subtokens[i].str == NULL){
             continue; // empty varparam
         }
         char* ident = clone(def.subtokens[i].str);
         Type* t = proc_type(def.subtokens[i].subtokens[0].str, prog);
         Variable* var = malloc(sizeof(struct Variable));
+        var->inited = 0;
         var->type = t;
         var->identifier = ident;
         func->params = add_varlist(func->params, var);
@@ -310,20 +309,20 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
 
 void compile_function(Token* t, Function* f, Program* prog, State* state){
     for(int i = 0; i < t->subtokens[1].subtoken_count; i ++){
-        process_stmt(&t->subtokens[1].subtokens[i], f, prog, state);
+        process_stmt(&t->subtokens[1].subtokens[i], f, NULL, prog, state);
     }
 }
 
-void* process_stmt(Token* t, Function* func, Program* prog, State* state){
+void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     Statement* stmt = malloc(sizeof(struct Statement));
     switch(t->type){
         case T_ASSIGNMENT:
             stmt->type = S_ASSIGNMENT;
             stmt->stmt = malloc(sizeof(struct Assignment));
             Assignment* an = (Assignment*) stmt->stmt;
-            an->to = proc_var(t->str, func);
+            an->to = proc_var(t->str, scope, func);
             // resolve from into a var
-            an->from = process_stmt(t->subtokens, func, prog, state);
+            an->from = process_stmt(t->subtokens, func, scope, prog, state);
             if(an->to == NULL){
                 add_error(state, UNDEFVAR, t->line, format("assigning to undeclared variable %s", t->str));
             }
@@ -336,29 +335,29 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
                 char* msg = format("assigning %s to declared variable of type %s", from_tyname, to_tyname);
                 add_error(state, INCOMPATTYPE, t->line, msg);
             }
-            add_stmt_func(stmt, func);
+            add_stmt_func(stmt, func, scope);
             break;
         case T_VARINIT:
-            if(proc_var(t->str, func) != NULL){
+            if(proc_var(t->str, scope, func) != NULL){
                 char* msg = format("variable %s redefined", t->str);
                 add_error(state, DUPDEFVAR, t->line, msg);
             }
             stmt->type = S_VARINIT;
             stmt->stmt = malloc(sizeof(struct VarInit));
             VarInit* v = (VarInit*) stmt->stmt;
-            v->var = mknvar(func, t->str, proc_type(t->subtokens[0].str, prog));
-            add_stmt_func(stmt, func);
+            v->var = mknvar(func, scope, t->str, proc_type(t->subtokens[0].str, prog));
+            add_stmt_func(stmt, func, scope);
             break;
         case T_RETURN:
             stmt->type = S_RETURN;
             stmt->stmt = malloc(sizeof(struct Return));
             Return* ret = (Return*) stmt->stmt;
-            ret->var = process_stmt(&t->subtokens[0], func, prog, state);
+            ret->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
             if(ret->var->type != func->retval){
                 char* msg = format("returning %s from function of type %s", ret->var->type->identifier, func->retval->identifier);
                 add_error(state, INCOMPATTYPE, t->line, msg);
             }
-            add_stmt_func(stmt, func);
+            add_stmt_func(stmt, func, scope);
             break;
         case T_CHAR:
             stmt->type = S_CONSTANTASSIGNMENT;
@@ -366,9 +365,9 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             ConstantAssignment* ca = (ConstantAssignment*) stmt->stmt;
             ca->type = S_CONST_BYTE;
             ca->byte = t->chr;
-            ca->to = mkvar(func, proc_type("Byte", prog));
-            add_stmt_func(mkinit(ca->to), func);
-            add_stmt_func(stmt, func);
+            ca->to = mkvar(func, scope, proc_type("Byte", prog));
+            add_stmt_func(mkinit(ca->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return ca->to;
             break;
         case T_STRING:
@@ -377,9 +376,9 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             ConstantAssignment* ca1 = (ConstantAssignment*) stmt->stmt;
             ca1->type = S_CONST_STRING;
             ca1->string = clone(t->str);
-            ca1->to = mkvar(func, proc_type("Byte[]", prog));
-            add_stmt_func(mkinit(ca1->to), func);
-            add_stmt_func(stmt, func);
+            ca1->to = mkvar(func, scope, proc_type("Byte[]", prog));
+            add_stmt_func(mkinit(ca1->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return ca1->to;
             break;
         case T_INT:
@@ -388,9 +387,9 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             ConstantAssignment* ca2 = (ConstantAssignment*) stmt->stmt;
             ca2->type = S_CONST_INT;
             ca2->lnt = t->lnt;
-            ca2->to = mkvar(func, proc_type("Int", prog));
-            add_stmt_func(mkinit(ca2->to), func);
-            add_stmt_func(stmt, func);
+            ca2->to = mkvar(func, scope, proc_type("Int", prog));
+            add_stmt_func(mkinit(ca2->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return ca2->to;
             break;
         case T_FUNCALL:
@@ -398,12 +397,11 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             stmt->stmt = malloc(sizeof(struct FunctionCall));
             FunctionCall* fn = (FunctionCall*) stmt->stmt;
             fn->func = proc_func(t->str, prog);
-            fn->var_count = t->subtoken_count;
             fn->vars = NULL;
             int error = 0;
             VarList* comp = fn->func->params;
             for(int i = 0; i < t->subtoken_count; i++){
-                Variable* new = process_stmt(&t->subtokens[i], func, prog, state);
+                Variable* new = process_stmt(&t->subtokens[i], func, scope, prog, state);
                 if((!fn->func->native) && comp == NULL){
                     error = 1;
                 }
@@ -453,82 +451,82 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
                 add_error(state, INCOMPATTYPE, t->line, msg);
             }
             if(!fn->func->native){
-                fn->to = mkvar(func, fn->func->retval);
-                add_stmt_func(mkinit(fn->to), func);
+                fn->to = mkvar(func, scope, fn->func->retval);
+                add_stmt_func(mkinit(fn->to), func, scope);
             }
             else{
                 fn->to = NULL;
             }
-            add_stmt_func(stmt, func);
+            add_stmt_func(stmt, func, scope);
             return fn->to;
             break;
         case T_INDGET:
             stmt->type = S_INDEX;
             stmt->stmt = malloc(sizeof(struct Index));
             Index* in = (Index*) stmt->stmt;
-            in->arr = process_stmt(&t->subtokens[0], func, prog, state);
-            in->ind = process_stmt(&t->subtokens[1], func, prog, state);
-            in->to = mkvar(func, arr_subtype(in->arr->type, prog));
-            add_stmt_func(mkinit(in->to), func);
-            add_stmt_func(stmt, func);
+            in->arr = process_stmt(&t->subtokens[0], func, scope, prog, state);
+            in->ind = process_stmt(&t->subtokens[1], func, scope, prog, state);
+            in->to = mkvar(func, scope, arr_subtype(in->arr->type, prog));
+            add_stmt_func(mkinit(in->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return in->to;
             break;
         case T_INDSET:
             stmt->type = S_INDEXEQUALS;
             stmt->stmt = malloc(sizeof(struct IndexEquals));
             IndexEquals* ie = (IndexEquals*) stmt->stmt;
-            ie->arr = process_stmt(&t->subtokens[0].subtokens[0], func, prog, state);
-            ie->ind = process_stmt(&t->subtokens[0].subtokens[1], func, prog, state);
-            ie->eq = process_stmt(&t->subtokens[1], func, prog, state);
-            add_stmt_func(stmt, func);
+            ie->arr = process_stmt(&t->subtokens[0].subtokens[0], func, scope, prog, state);
+            ie->ind = process_stmt(&t->subtokens[0].subtokens[1], func, scope, prog, state);
+            ie->eq = process_stmt(&t->subtokens[1], func, scope, prog, state);
+            add_stmt_func(stmt, func, scope);
             break;
         case T_ADDEQ:
             stmt->type = S_ADDEQUALS;
             stmt->stmt = malloc(sizeof(struct AddEquals));
             AddEquals* ae = (AddEquals*) stmt->stmt;
-            ae->var = process_stmt(&t->subtokens[0], func, prog, state);
-            ae->delta = process_stmt(&t->subtokens[1], func, prog, state);
-            add_stmt_func(stmt, func);
+            ae->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
+            ae->delta = process_stmt(&t->subtokens[1], func, scope, prog, state);
+            add_stmt_func(stmt, func, scope);
             break;
         case T_CARDINALITY:
             stmt->type = S_CARDINALITY;
             stmt->stmt = malloc(sizeof(struct Cardinality));
             Cardinality* card = (Cardinality*) stmt->stmt;
-            card->from = process_stmt(t->subtokens, func, prog, state);
+            card->from = process_stmt(t->subtokens, func, scope, prog, state);
             // TODO un hardcode type here
-            card->to = mkvar(func, prog->types->type);
-            add_stmt_func(mkinit(card->to), func);
-            add_stmt_func(stmt, func);
+            card->to = mkvar(func, scope, prog->types->type);
+            add_stmt_func(mkinit(card->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return card->to;
         case T_NEWARR:
             stmt->type = S_NEWARRAY;
             stmt->stmt = malloc(sizeof(struct NewArray));
             NewArray* new = (NewArray*) stmt->stmt;
-            new->size = process_stmt(&t->subtokens[1], func, prog, state);
-            new->to = mkvar(func, proc_type(t->subtokens[0].str, prog));
-            add_stmt_func(mkinit(new->to), func);
-            add_stmt_func(stmt, func);
+            new->size = process_stmt(&t->subtokens[1], func, scope, prog, state);
+            new->to = mkvar(func, scope, proc_type(t->subtokens[0].str, prog));
+            add_stmt_func(mkinit(new->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return new->to;
         case T_ARITH:
             stmt->type = S_ARITHMETIC;
             stmt->stmt = malloc(sizeof(struct Arithmetic));
             Arithmetic* arith = (Arithmetic*) stmt->stmt;
-            arith->left = process_stmt(&t->subtokens[0], func, prog, state);
-            arith->right = process_stmt(&t->subtokens[1], func, prog, state);
+            arith->left = process_stmt(&t->subtokens[0], func, scope, prog, state);
+            arith->right = process_stmt(&t->subtokens[1], func, scope, prog, state);
             arith->operation = t->lnt;
             // TODO another hardcoded type.
-            arith->to = mkvar(func, prog->types->type); 
-            add_stmt_func(mkinit(arith->to), func);
-            add_stmt_func(stmt, func);
+            arith->to = mkvar(func, scope, prog->types->type); 
+            add_stmt_func(mkinit(arith->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             return arith->to;
         case T_CONSTRUCTOR:
             stmt->type = S_CONSTRUCTOR;
             stmt->stmt = malloc(sizeof(struct Constructor));
             Constructor* cons = (Constructor*) stmt->stmt;
             cons->type = proc_type(t->subtokens->str, prog);
-            cons->to = mkvar(func, cons->type);
-            add_stmt_func(mkinit(cons->to), func);
-            add_stmt_func(stmt, func);
+            cons->to = mkvar(func, scope, cons->type);
+            add_stmt_func(mkinit(cons->to), func, scope);
+            add_stmt_func(stmt, func, scope);
             // now set each member.
             for(int i6 = 1; i6 < t->subtoken_count; i6++){
                 Token* tsc = &t->subtokens[i6];
@@ -537,13 +535,13 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
                     // now iterate through each constructassign
                     Token* consassign = &tsc->subtokens[io];
                     Setmember* setm = malloc(sizeof(struct Setmember));
-                    setm->from = process_stmt(consassign->subtokens, func, prog, state);
+                    setm->from = process_stmt(consassign->subtokens, func, scope, prog, state);
                     setm->dest = cons->to;
                     setm->offsetptr = findoffset(cons->type, consassign->str);
                     Statement* stmt1 = malloc(sizeof(struct Statement));
                     stmt1->stmt = setm;
                     stmt1->type = S_SETMEMBER;
-                    add_stmt_func(stmt1, func);
+                    add_stmt_func(stmt1, func, scope);
                 }
                 if(tsc->str != NULL){
                     // have to set flag ("tag") yet
@@ -553,7 +551,7 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
                     Statement* stmt2 = malloc(sizeof(struct Statement));
                     stmt2->stmt = settag;
                     stmt2->type = S_SETTAG;
-                    add_stmt_func(stmt2, func);
+                    add_stmt_func(stmt2, func, scope);
                 }
             }
             return cons->to;
@@ -563,7 +561,7 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             int ind = 0;
             int init = 0;
             // proc first expr (ex "func(args)" then .something.something etc)
-            Variable* cur = process_stmt(t->subtokens, func, prog, state);
+            Variable* cur = process_stmt(t->subtokens, func, scope, prog, state);
             Variable* last;
             while(1){
                 if(t->str[ind] == '.' || t->str[ind] == 0){
@@ -577,10 +575,10 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
                     sta->stmt = malloc(sizeof(struct Accessor));
                     Accessor* typedacc = (Accessor*) sta->stmt;
                     typedacc->src = cur;
-                    typedacc->to = mkvar(func, findtype(cur->type, ident));
+                    typedacc->to = mkvar(func, scope, findtype(cur->type, ident));
                     typedacc->offsetptr = findoffset(cur->type, ident);
-                    add_stmt_func(mkinit(typedacc->to), func);
-                    add_stmt_func(sta, func);
+                    add_stmt_func(mkinit(typedacc->to), func, scope);
+                    add_stmt_func(sta, func, scope);
                     last = typedacc->to;
                     cur = typedacc->to;
                     init = ind+1;
@@ -595,15 +593,37 @@ void* process_stmt(Token* t, Function* func, Program* prog, State* state){
             stmt->stmt = malloc(sizeof(struct Setmember));
             Setmember* setm = (Setmember*) stmt->stmt;
             // dest = accessor
-            setm->dest = process_stmt(t->subtokens, func, prog, state);
-            setm->from = process_stmt(&t->subtokens[1], func, prog, state);
+            setm->dest = process_stmt(t->subtokens, func, scope, prog, state);
+            setm->from = process_stmt(&t->subtokens[1], func, scope, prog, state);
             setm->offsetptr = findoffset(setm->dest->type, t->subtokens[2].str);
-            add_stmt_func(stmt, func);
+            add_stmt_func(stmt, func, scope);
             break;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
-            Variable* v32 = proc_var(t->str, func);
+            Variable* v32 = proc_var(t->str, scope, func);
             return v32;
+            break;
+        case T_IF:
+            ;
+            stmt->type = S_IF;
+            stmt->stmt = malloc(sizeof(struct IfStmt));
+            IfStmt* ifs = (IfStmt*) stmt->stmt;
+            ifs->test = process_stmt(t->subtokens, func, scope, prog, state);
+            ifs->truelbl = malloc(33);
+            ifs->endlbl = malloc(33);
+            snprintf(ifs->truelbl, 32, "L%i", state->lblcount);
+            snprintf(ifs->endlbl, 32, "L%i", state->lblcount+1);
+            state->lblcount += 2;
+            Scope* newscope = malloc(sizeof(struct Scope));
+            newscope->parent = scope;
+            newscope->body = NULL;
+            newscope->offset = 0;
+            newscope->vars = NULL;
+            for(int i = 0; i < t->subtokens[1].subtoken_count; i ++){
+                process_stmt(&t->subtokens[1].subtokens[i], func, newscope, prog, state);
+            }
+            ifs->scope = newscope;
+            add_stmt_func(stmt, func, scope);
             break;
         default: exit(34);
             // error
@@ -781,7 +801,9 @@ void print_func(Function* func){
             p = p->next;
     }
     printf(")\n");
-    Body* cur = func->body;
+    print_body(func->body);
+}
+void print_body(Body* cur){
     while(cur != NULL){
         switch(cur->stmt->type){
             case S_ASSIGNMENT:
@@ -860,6 +882,13 @@ void print_func(Function* func){
                 Return* ret = (Return*) cur->stmt->stmt;
                 printf("    return %s\n", formatvar(ret->var));
                 break;
+            case S_IF:
+                ;
+                IfStmt* ifs = (IfStmt*) cur->stmt->stmt;
+                printf("    if %s\n", formatvar(ifs->test));
+                print_body(ifs->scope->body);
+                printf("    endif\n");
+                
         }
         cur = cur->next;
     }
@@ -960,11 +989,15 @@ Type* proc_type(char* ident, Program* prog){
 }
 
 // make temp var
-Variable* mkvar(Function* func, Type* t){
+Variable* mkvar(Function* func, Scope* scope, Type* t){
     Variable* var = malloc(sizeof(struct Variable));
+    var->inited = 0;
     var->identifier = NULL;
     var->type = t;
-    func->vars = add_varlist(func->vars, var);
+    if(scope == NULL)
+        func->vars = add_varlist(func->vars, var);
+    else
+        scope->vars = add_varlist(scope->vars, var);
     return var;
 }
 
@@ -978,16 +1011,31 @@ Statement* mkinit(Variable* var){
 }
 
 // make named var
-Variable* mknvar(Function* func, char* str, Type* t){
-    func->var_count += 1;
+Variable* mknvar(Function* func, Scope* scope, char* str, Type* t){
     Variable* data = malloc(sizeof (struct Variable));
-    func->vars = add_varlist(func->vars, data);
+    data->inited = 0;
     data->type = t;
     data->identifier = str;
+    if(scope != NULL){
+        scope->vars = add_varlist(func->vars, data);
+    }
+    else{
+        func->vars = add_varlist(func->vars, data);
+    }
     return data;
 }
 
-Variable* proc_var(char* str, Function* func){
+Variable* proc_var(char* str, Scope* scope, Function* func){
+    if(scope != NULL){
+        VarList* l = scope->vars;
+        while(l != NULL){
+            if((l->var->identifier != NULL) && strcmp(str, l->var->identifier) == 0){
+                return l->var;
+            }
+            l = l->next;
+        }
+        return proc_var(str, scope->parent, func);
+    }
     VarList* v = func->vars;
     while(v != NULL){
         if((v->var->identifier != NULL) && strcmp(str, v->var->identifier) == 0){
@@ -1026,7 +1074,22 @@ char* clone(char* str){
     return b;
 }
 
-void add_stmt_func(Statement* stmt, Function* func){
+void add_stmt_func(Statement* stmt, Function* func, Scope* scope){
+    if(scope != NULL){
+        if(scope->body == NULL){
+            scope->body = malloc(sizeof(struct Body));
+            scope->body->stmt = stmt;
+            scope->body->next = NULL;
+        }  
+        Body* b = scope->body;
+        while(b->next != NULL){
+            b = b->next;
+        }
+        b->next = malloc(sizeof (struct Body));
+        b->next->stmt = stmt;
+        b->next->next = NULL;
+        return;
+    }
     if(func->body == NULL){
         func->body = malloc(sizeof (struct Body));
         func->body->stmt = stmt;

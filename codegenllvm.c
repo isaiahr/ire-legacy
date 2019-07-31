@@ -28,9 +28,8 @@ void lwrite_varinit(Variable* var, State* state){
 
 void lwrite_funcreturn(Function* func, Variable* var, State* state){
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, var->type->llvm, var->type->llvm, var->num);
-    fprintf(state->fp, "ret %s %%%i\n}\n", var->type->llvm, state->tempnum);
-    state->tempnum += 1;
-    func->writ_return = 1;
+    fprintf(state->fp, "ret %s %%%i\n", var->type->llvm, state->tempnum);
+    state->tempnum += 2;
 }
 void lwrite_funcend(Function* func, State* state){
     if(!func->writ_return){
@@ -441,4 +440,18 @@ void lwrite_settag(Variable* var, int off, State* state){
     fprintf(state->fp, "%%%i = and i%i %%%i, %%%i\n", state->tempnum+3, var->type->internal_width, state->tempnum+2, state->tempnum);
     fprintf(state->fp, "store i%i %%%i, %s %%%i\n", var->type->internal_width, state->tempnum+3, var->type->llvm, state->tempnum-1);
     state->tempnum += 4;
+}
+
+void lwrite_conditional(Variable* test, char* truelbl, char* falselbl, State* state){
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, test->type->llvm, test->type->llvm, test->num);
+    fprintf(state->fp, "%%%i = trunc %s %%%i to i1\n", state->tempnum+1, test->type->llvm, state->tempnum);
+    fprintf(state->fp, "br i1 %%%i, label %%%s, label %%%s\n", state->tempnum+1, truelbl, falselbl);
+    state->tempnum += 2;
+}
+
+void lwrite_label(char* lbl, int uncond, State* state){
+    if(uncond){
+        fprintf(state->fp, "br label %%%s\n", lbl);
+    }
+    fprintf(state->fp, "%s:\n", lbl);
 }

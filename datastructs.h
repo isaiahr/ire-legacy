@@ -19,6 +19,7 @@ typedef struct State{
     int comp_llvm;
     int tempnum;
     int llvm;
+    int lblcount;
     char* outputfile;
     int verbose;
     int annotate;

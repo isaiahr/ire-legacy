@@ -19,6 +19,7 @@
 #define S_ACCESSOR 13
 #define S_SETMEMBER 14
 #define S_SETTAG 15
+#define S_IF 16
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -42,7 +43,6 @@ typedef struct Function {
     struct VarList* params;
     int param_count;
     struct VarList* vars;
-    int var_count;
     struct Body* body;
     int native;
     
@@ -74,6 +74,7 @@ typedef struct Variable {
     // compile time
     // asm loc
     int offset;
+    int inited;
     // llvm loc
     int num;
 } Variable; 
@@ -189,6 +190,20 @@ typedef struct SetTag{
     Variable* dest;
     int offsetptr;
 } SetTag;
+
+typedef struct Scope{
+    VarList* vars;
+    Body* body;
+    struct Scope* parent;
+    int offset;
+} Scope;
+
+typedef struct IfStmt{
+    Variable* test;
+    Scope* scope;
+    char* truelbl;
+    char* endlbl;
+} IfStmt;
 
 Program* process_program(Token* t, State* state);
 

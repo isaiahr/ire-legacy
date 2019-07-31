@@ -16,7 +16,8 @@
 
 
 void compile_func(Function* f, State* state);
-void compile_stmt(Statement* stmt, Function* f, State* state);
+void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* state);
+void increment_vars(Scope* scope, Function* func, State* state, int inc);
 
 Token* parsefile(State* state, char* data){
     Lextoken* l = lex(data, state);
@@ -78,13 +79,14 @@ void compile_func(Function* f, State* state){
     write_funcdef(f, state);
     Body* b = f->body;
     while(b != NULL){
-        compile_stmt(b->stmt, f, state);
+        compile_stmt(b->stmt, f, NULL, state);
         b = b->next;
     }
+    f->max_offset = f->vars->var->offset+8;
     write_funcend(f, state);
 }
 
-inline void compile_stmt(Statement* stmt, Function* f, State* state){
+inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* state){
     switch(stmt->type){
         case S_ASSIGNMENT:
             ;
@@ -116,13 +118,9 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
             if(vi->var->identifier != NULL){
                 annotate(state, "init var %s", vi->var->identifier);
             }
-            VarList* vl = f->vars;
-            while(vl->var != vi->var){
-                vl->var->offset += 8;
-                vl = vl->next;
-            }
-            vl->var->offset = 0;
-            f->max_offset = f->vars->var->offset+8; // + 8 ??
+            increment_vars(scope, f, state, 8);
+            vi->var->inited = 1;
+            vi->var->offset = 0;
             write_varinit(vi->var, state);
             break;
         case S_INDEX:
@@ -178,8 +176,52 @@ inline void compile_stmt(Statement* stmt, Function* f, State* state){
         case S_RETURN:
             ;
             Return* r = (Return*) stmt->stmt;
+            f->max_offset = f->vars->var->offset+8;
             write_funcreturn(f, r->var, state);
+            break;
+        case S_IF:
+            ;
+            IfStmt* ifs = (IfStmt*) stmt->stmt;
+            // write cond, then label, then label, and decrement vars.
+            write_conditional(ifs->test, ifs->truelbl, ifs->endlbl, state);
+            write_label(ifs->truelbl, 0, state);
+            Body* body = ifs->scope->body;
+            while(body != NULL){
+                compile_stmt(body->stmt, f, ifs->scope, state);
+                body = body->next;
+            }
+            // now sub from other vars.
+            int numdec = 0;
+            if(ifs->scope->vars != NULL && ifs->scope->vars->var != NULL){
+                numdec = -ifs->scope->vars->var->offset;
+                if(numdec != 0){
+                    increment_vars(ifs->scope->parent, f, state, numdec);
+                }
+            }
+            write_label(ifs->endlbl, 1, state);
             break;
     }
 }
 
+void increment_vars(Scope* scope, Function* func, State* state, int increment){
+    VarList* vl;
+    if(scope != NULL){
+        vl = scope->vars;
+    }
+    else{
+        vl = func->vars;
+    }
+    while(vl != NULL){
+        if(vl->var->inited){
+            vl->var->offset += increment;
+        }
+        else{
+            break;
+        }
+        vl = vl->next;
+    }
+    if(scope != NULL){
+        increment_vars(scope->parent, func, state, increment);
+    }
+    return;
+}

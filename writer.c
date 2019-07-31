@@ -226,3 +226,23 @@ void write_settag(Variable* var, int off, State* state){
         awrite_settag(var, off, state);
     }
 }
+
+void write_conditional(Variable* test, char* truelbl, char* falselbl, State* state){
+    if(state->llvm){
+        lwrite_conditional(test, truelbl, falselbl, state);
+    }
+    else{
+        awrite_conditional(test, truelbl, falselbl, state);
+    }
+}
+
+void write_label(char* lbl, int uncond, State* state){
+    if(state->llvm){
+        lwrite_label(lbl, uncond, state);
+    }
+    else{
+        awrite_label(lbl, uncond, state);
+    }
+}
+
+
