@@ -295,9 +295,13 @@ void awrite_settag(Variable* var, int off, State* state){
 }
 
 void awrite_conditional(Variable* test, char* truelbl, char* falselbl, State* state){
-    
+    // fprintf(state->fp, "movq %i(%%rsp), %%rax\n", test->num);
+    fprintf(state->fp, "cmp $0, %i(%%rsp)\n", test->num);
+    fprintf(state->fp, "jeq %s\n", falselbl);
+    // could just fallthrough instead.
+    fprintf(state->fp, "jmp %s\n", truelbl);
 }
 
 void awrite_label(char* lbl, int uncond, State* state){
-    
+    fprintf(state->fp, "%s:\n", lbl);
 }

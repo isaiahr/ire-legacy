@@ -70,6 +70,7 @@ void compile_func(Function* f, State* state){
             head = new;
         }
         prev = new;
+        cur->var->inited = 1;
         cur = cur->next;
     }
     if(head != NULL){
@@ -211,6 +212,7 @@ void increment_vars(Scope* scope, Function* func, State* state, int increment){
     else{
         vl = func->vars;
     }
+
     while(vl != NULL){
         if(vl->var->inited){
             vl->var->offset += increment;
