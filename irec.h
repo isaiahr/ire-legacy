@@ -2,6 +2,6 @@
 #define __IREC_H__
 
 // major.minor.patch
-#define VERSION_STRING "0.1.0"
+#define VERSION_STRING "0.2.0"
 
 #endif
