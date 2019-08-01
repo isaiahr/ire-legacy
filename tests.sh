@@ -51,6 +51,24 @@ then
     exit
 fi
 
+./irec -basm factorial.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile factorial.ire
+    echo Failed
+    exit
+fi
+
+./irec -basm fibonacci.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile fibonacci.ire
+    echo Failed
+    exit
+fi
+
 
 ./exit
 if [ "$?" -eq 33 ]
@@ -102,6 +120,25 @@ fail=$((fail+1))
 echo -n "E"
 fi
 
+./factorial
+if [ "$?" -eq 120 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
+
+./fibonacci
+if [ "$?" -eq 201 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
 
 # 
 # llvm backend
@@ -152,6 +189,24 @@ then
     exit
 fi
 
+./irec -bllvm factorial.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile factorial.ire
+    echo Failed
+    exit
+fi
+
+./irec -bllvm fibonacci.ire > /dev/null
+
+if [ "$?" -ne 0 ]
+then
+    echo Could not compile fibonacci.ire
+    echo Failed
+    exit
+fi
+
 
 ./exit
 if [ "$?" -eq 33 ]
@@ -203,7 +258,25 @@ fail=$((fail+1))
 echo -n "E"
 fi
 
+./factorial
+if [ "$?" -eq 120 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
 
+./fibonacci
+if [ "$?" -eq 201 ]
+then
+pass=$((pass+1))
+echo -n "."
+else
+fail=$((fail+1))
+echo -n "E"
+fi
 
 
 

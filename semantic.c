@@ -1017,7 +1017,7 @@ Variable* mknvar(Function* func, Scope* scope, char* str, Type* t){
     data->type = t;
     data->identifier = str;
     if(scope != NULL){
-        scope->vars = add_varlist(func->vars, data);
+        scope->vars = add_varlist(scope->vars, data);
     }
     else{
         func->vars = add_varlist(func->vars, data);
@@ -1080,6 +1080,7 @@ void add_stmt_func(Statement* stmt, Function* func, Scope* scope){
             scope->body = malloc(sizeof(struct Body));
             scope->body->stmt = stmt;
             scope->body->next = NULL;
+            return;
         }  
         Body* b = scope->body;
         while(b->next != NULL){

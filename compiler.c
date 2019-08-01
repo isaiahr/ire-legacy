@@ -194,12 +194,12 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
             // now sub from other vars.
             int numdec = 0;
             if(ifs->scope->vars != NULL && ifs->scope->vars->var != NULL){
-                numdec = -ifs->scope->vars->var->offset;
+                numdec = -ifs->scope->vars->var->offset - 8;
                 if(numdec != 0){
                     increment_vars(ifs->scope->parent, f, state, numdec);
                 }
             }
-            write_label(ifs->endlbl, 1, state);
+            write_label(ifs->endlbl, -numdec, state);
             break;
     }
 }
