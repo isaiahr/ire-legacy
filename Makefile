@@ -2,6 +2,7 @@ SRC = irec.c common/compiler.c codegen/writer.c precompiler/precompiler.c common
 
 
 compile:
+	@mkdir -p build
 	@cd runtime && \
 	xxd -i pre.s > ../build/pre_s.h && \
 	xxd -i pre.ll > ../build/pre_ll.h
