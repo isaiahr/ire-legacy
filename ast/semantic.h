@@ -1,8 +1,8 @@
 #ifndef __SEMANTIC_H__
 #define __SEMANTIC_H__
 
-#include"parser.h"
-#include"datastructs.h"
+#include"parser/parser.h"
+#include"common/common.h"
 
 #define S_ASSIGNMENT 1
 #define S_CONSTANTASSIGNMENT 2

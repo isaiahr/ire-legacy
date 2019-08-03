@@ -3,11 +3,11 @@
 #include<string.h>
 #include<sys/types.h>
 #include<sys/wait.h>
-#include"datastructs.h"
-#include"pre_ll.h"
+#include"common/common.h"
+#include"build/pre_ll.h"
 #include"irec.h"
-#include"commitid.h"
-#include"semantic.h"
+#include"build/commitid.h"
+#include"ast/semantic.h"
 
 
 void lwrite_header(State* state){

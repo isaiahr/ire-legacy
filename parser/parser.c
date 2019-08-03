@@ -2,10 +2,10 @@
 #include<stdlib.h>
 #include<string.h>
 #include<unistd.h>
-#include"common.h"
-#include"error.h"
-#include"lexer.h"
-#include"parser.h"
+#include"common/common.h"
+#include"common/error.h"
+#include"parser/lexer.h"
+#include"parser/parser.h"
 
 // flags for avoiding infinite left-recursion.
 

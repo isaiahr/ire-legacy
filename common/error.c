@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include"datastructs.h"
+#include"common/common.h"
 #include"error.h"
 
 char* geterrorstr(int type){

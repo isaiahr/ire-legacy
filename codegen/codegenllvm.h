@@ -1,8 +1,8 @@
 #ifndef __CODEGENLLVM_H__
 #define __CODEGENLLVM_H__
 
-#include"datastructs.h"
-#include"semantic.h"
+#include"common/common.h"
+#include"ast/semantic.h"
 
 void lwrite_header(State* state);
 void lwrite_footer(State* state);

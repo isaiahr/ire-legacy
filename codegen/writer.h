@@ -3,7 +3,6 @@
 #define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
 #define ISNUMERIC(x) (x > 47 && x < 58) 
 
-#include"datastructs.h"
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -14,8 +13,8 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include<stdarg.h>
-#include"semantic.h"
-#include"writer.h"
+#include"ast/semantic.h"
+
 
 void annotate(State* state, char* format, ...);
 void write_header(State* state);

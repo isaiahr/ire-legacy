@@ -1,8 +1,8 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
-#include"lexer.h"
-#include"datastructs.h"
+#include"parser/lexer.h"
+#include"common/common.h"
 
 //token types
 

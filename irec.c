@@ -6,14 +6,14 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include"irec.h"
-#include"datastructs.h"
-#include"lexer.h"
-#include"parser.h"
-#include"compiler.h"
-#include"writer.h"
-#include"precompiler.h"
-#include"error.h"
-#include"commitid.h"
+#include"common/common.h"
+#include"parser/lexer.h"
+#include"parser/parser.h"
+#include"common/compiler.h"
+#include"codegen/writer.h"
+#include"precompiler/precompiler.h"
+#include"common/error.h"
+#include"build/commitid.h"
 
 int main(int argc, char **argv)
 {

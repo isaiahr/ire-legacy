@@ -6,11 +6,11 @@
 #include<getopt.h>
 #include<sys/types.h>
 #include<sys/wait.h>
-#include"datastructs.h"
-#include"pre_s.h"
+#include"common/common.h"
+#include"build/pre_s.h"
 #include"irec.h"
-#include"commitid.h"
-#include"semantic.h"
+#include"build/commitid.h"
+#include"ast/semantic.h"
 
 /**
 CALLING CONVENTIONS.

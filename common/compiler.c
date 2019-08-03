@@ -3,16 +3,13 @@
 #include<string.h>
 #include<unistd.h>
 #include<sys/types.h>
-#include"datastructs.h"
-#include"lexer.h"
-#include"parser.h"
-#include"compiler.h"
-#include"writer.h"
-#include"common.h"
-#include"error.h"
-#include"parser.h"
-#include"semantic.h"
-
+#include"parser/lexer.h"
+#include"parser/parser.h"
+#include"common/compiler.h"
+#include"codegen/writer.h"
+#include"common/common.h"
+#include"common/error.h"
+#include"ast/semantic.h"
 
 
 void compile_func(Function* f, State* state);

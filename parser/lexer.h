@@ -1,7 +1,7 @@
 #ifndef __LEXER_H__
 #define __LEXER_H__
 
-#include"datastructs.h"
+#include"common/common.h"
 
 #define ISALPHA(x) ((x > 64 && x < 91) || (x > 96 && x < 123))
 #define ISNUMERIC(x) (x > 47 && x < 58)
@@ -26,7 +26,7 @@
 #define RETURN 16
 #define ADDEQ 17
 #define PIPE 18
-#include"operators.h" // MAKE SURE THESE MATCH UP ( no duplicates). compiler should warn if incorrect
+#include"common/operators.h" // MAKE SURE THESE MATCH UP ( no duplicates). compiler should warn if incorrect
 #define NEW 25
 #define VOID 26
 #define TYPE 27

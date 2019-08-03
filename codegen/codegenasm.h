@@ -1,8 +1,8 @@
 #ifndef __CODEGENASM_H__
 #define __CODEGENASM_H__
 
-#include"datastructs.h"
-#include"semantic.h"
+#include"common/common.h"
+#include"ast/semantic.h"
 
 void awrite_header(State* state);
 void awrite_footer(State* state);

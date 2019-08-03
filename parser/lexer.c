@@ -2,9 +2,9 @@
 #include<stdlib.h>
 #include<string.h>
 #include<stdio.h>
-#include"lexer.h"
-#include"common.h"
-#include"error.h"
+#include"parser/lexer.h"
+#include"common/common.h"
+#include"common/error.h"
 
 /**
  *

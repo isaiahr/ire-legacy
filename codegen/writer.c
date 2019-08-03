@@ -1,9 +1,6 @@
 #include<stdarg.h>
 #include<stdio.h>
 #include<stdlib.h>
-#include"datastructs.h"
-#include"codegenasm.h"
-#include"codegenllvm.h"
 #include<string.h>
 #include<errno.h>
 #include<unistd.h>
@@ -11,8 +8,13 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include<stdarg.h>
-#include"semantic.h"
+#include"common/common.h"
+#include"codegen/codegenasm.h"
+#include"codegen/codegenllvm.h"
+#include"ast/semantic.h"
 #include"writer.h"
+#include"codegenllvm.h"
+#include"codegenasm.h"
 
 /**
 *

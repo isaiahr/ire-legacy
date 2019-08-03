@@ -2,10 +2,10 @@
 #include<string.h>
 #include<stdio.h>
 
-#include"parser.h"
-#include"semantic.h"
-#include"error.h"
-#include"common.h"
+#include"parser/parser.h"
+#include"ast/semantic.h"
+#include"common/error.h"
+#include"common/common.h"
 
 /**
  * semantic.c -- does semantic analysis of the program.

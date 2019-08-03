@@ -6,7 +6,8 @@ echo "Running tests"
 pass=0
 fail=0
 
-./irec -basm exit.ire > /dev/null
+
+../irec -basm exit.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -15,7 +16,7 @@ then
     exit
 fi
 
-./irec -basm arrays.ire > /dev/null
+../irec -basm arrays.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -24,7 +25,7 @@ then
     exit
 fi
 
-./irec -basm hello.ire > /dev/null
+../irec -basm hello.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -33,7 +34,7 @@ then
     exit
 fi
 
-./irec -basm arith.ire > /dev/null
+../irec -basm arith.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -42,7 +43,7 @@ then
     exit
 fi
 
-./irec -basm types.ire > /dev/null
+../irec -basm types.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -51,7 +52,7 @@ then
     exit
 fi
 
-./irec -basm factorial.ire > /dev/null
+../irec -basm factorial.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -60,7 +61,7 @@ then
     exit
 fi
 
-./irec -basm fibonacci.ire > /dev/null
+../irec -basm fibonacci.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -144,7 +145,7 @@ fi
 # llvm backend
 #
 
-./irec -bllvm exit.ire > /dev/null
+../irec -bllvm exit.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -153,7 +154,7 @@ then
     exit
 fi
 
-./irec -bllvm arrays.ire > /dev/null
+../irec -bllvm arrays.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -162,7 +163,7 @@ then
     exit
 fi
 
-./irec -bllvm hello.ire > /dev/null
+../irec -bllvm hello.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -171,7 +172,7 @@ then
     exit
 fi
 
-./irec -bllvm arith.ire > /dev/null
+../irec -bllvm arith.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -180,7 +181,7 @@ then
     exit
 fi
 
-./irec -bllvm types.ire > /dev/null
+../irec -bllvm types.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -189,7 +190,7 @@ then
     exit
 fi
 
-./irec -bllvm factorial.ire > /dev/null
+../irec -bllvm factorial.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
@@ -198,7 +199,7 @@ then
     exit
 fi
 
-./irec -bllvm fibonacci.ire > /dev/null
+../irec -bllvm fibonacci.ire > /dev/null
 
 if [ "$?" -ne 0 ]
 then
