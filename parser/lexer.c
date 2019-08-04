@@ -6,9 +6,11 @@
 #include"common/common.h"
 #include"common/error.h"
 
+int keyword_match(char* keyword, char* str);
+
 /**
  *
- *  Lexer. Performs lexegraphical analysis on the input string
+ *  Lexer. Performs lexigraphical analysis on the input string
  * 
  * 
  */
@@ -171,7 +173,7 @@ Lextoken* lexone(char** i, int* line){
         }
         return l;
     }
-    if(beginswith("import ", input)){
+    if(keyword_match("import", input)){
         int z = 0;
         while(input[z] != 0 && input[z] != '\n' && input[z] != ';'){
             z += 1;
@@ -179,29 +181,28 @@ Lextoken* lexone(char** i, int* line){
         (*i) += z;
         return lexone(i, line);
     }
-    if(beginswith("return ", input)){
-        (*i) += strlen("return ");
+    if(keyword_match("return", input)){
+        (*i) += strlen("return");
         l->type = RETURN;
         return l;
     }
-    if(beginswith("new ", input)){
-        (*i) += strlen("new ");
+    if(keyword_match("new", input)){
+        (*i) += strlen("new");
         l->type = NEW;
         return l;
     }
-    if(beginswith("if ", input)){
-        (*i) += strlen("if ");
+    if(keyword_match("if", input)){
+        (*i) += strlen("if");
         l->type = IF;
         return l;
     }
-    if(beginswith("type ", input)){
-        (*i) += strlen("type ");
+    if(keyword_match("type", input)){
+        (*i) += strlen("type");
         l->type = TYPE;
         return l;
     }
-    // TODO: consider allowing certain chars directly after "void" (no space)  ?
-    if(beginswith("void ", input)){
-        (*i) += strlen("void ");
+    if(keyword_match("void", input)){
+        (*i) += strlen("void");
         l->type = VOID;
         return l;
     }
@@ -312,6 +313,22 @@ char* proc_str(char* data, char** adv){
         }
     }
     return NULL;
+}
+
+int keyword_match(char* begin, char* token){
+    int matches = 1;
+    int j = 0;
+    while(matches && token[j] != 0){
+        matches = matches && (begin[j] == token[j]);
+        j += 1;
+        if(begin[j] == 0){
+            if(!ISALPHA(token[j]) && !ISNUMERIC(token[j]) && (token[j] != '_')){
+                return 1;
+            }
+            return 0;
+        }
+    }
+    return 0;
 }
 
 int beginswith(char* begin, char* token){
