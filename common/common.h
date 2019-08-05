@@ -1,6 +1,7 @@
 #ifndef __IRE_COMMON_H__
 #define __IRE_COMMON_H__
 
+#include<stdio.h>
 #define ENTRYFUNC "main"
 
 typedef struct List{

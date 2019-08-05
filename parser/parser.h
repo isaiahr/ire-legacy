@@ -61,6 +61,8 @@ typedef struct Token{
 } Token;
 
 Token* parse_program(Lextoken* p, State* state);
-
+Lextoken* parse_body(Lextoken* p, Token* t, State* state);
+Lextoken* parse_funcdef(Lextoken* p, Token* t);
+Lextoken* parse_function(Lextoken* p, Token* t, State* state);
 
 #endif
