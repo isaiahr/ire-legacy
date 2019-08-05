@@ -1,4 +1,4 @@
-# TODO: restructure this file to group these test cases into functs
+#!/bin/sh
 
 
 echo "Running tests"
@@ -6,284 +6,83 @@ echo "Running tests"
 pass=0
 fail=0
 
+# runs a test on a specific backend.
+# params: llvm, filename, exitstatus
+runtest(){
+    if [ $1 -ne 0 ]
+    then
+        ../irec -bllvm "$2.ire" > /dev/null
+    else
+        ../irec -basm "$2.ire" > /dev/null
+    fi
+    # check if compilation succeeded
+    if [ "$?" -ne 0 ]
+    then
+        echo Could not compile $2
+        echo Failed
+        exit
+    fi
+    "./$2"
+    if [ "$?" -eq "$3" ]
+    then
+        pass=$((pass+1))
+        echo -n "."
+    else
+        fail=$((fail+1))
+        echo -n "E"
+    fi
+}
 
-../irec -basm exit.ire > /dev/null
+# runs a test with both backends
+runtestboth(){
+    # run with asm backend
+    runtest 0 $1 $2
+    # run with llvm backend
+    runtest 1 $1 $2
+}
 
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile exit.ire
-    echo Failed
-    exit
-fi
+# same as runtest except with output as param 4
+runtestoutput(){
+    if [ $1 -ne 0 ]
+    then
+        ../irec -bllvm "$2.ire" > /dev/null
+    else
+        ../irec -basm "$2.ire" > /dev/null
+    fi
+    # check if compilation succeeded
+    if [ "$?" -ne 0 ]
+    then
+        echo Could not compile $2
+        echo Failed
+        exit
+    fi
+    OUTPUT=$("./$2")
+    if [ "$?" -eq "$3" ] && [ "$OUTPUT" = "$4" ]
+    then
+        pass=$((pass+1))
+        echo -n "."
+    else
+        fail=$((fail+1))
+        echo -n "E"
+    fi
+}
 
-../irec -basm arrays.ire > /dev/null
+# see runtestboth
+runtestoutputboth(){
+    runtestoutput 0 $1 $2 "$3"
+    runtestoutput 1 $1 $2 "$3"
+}
 
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile arrays.ire
-    echo Failed
-    exit
-fi
-
-../irec -basm hello.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile hello.ire
-    echo Failed
-    exit
-fi
-
-../irec -basm arith.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile arith.ire
-    echo Failed
-    exit
-fi
-
-../irec -basm types.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile types.ire
-    echo Failed
-    exit
-fi
-
-../irec -basm factorial.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile factorial.ire
-    echo Failed
-    exit
-fi
-
-../irec -basm fibonacci.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile fibonacci.ire
-    echo Failed
-    exit
-fi
-
-
-./exit
-if [ "$?" -eq 33 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./arrays
-if [ "$?" -eq 10 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-OUTPUT=$(./hello)
-if [ "$OUTPUT" = $'Hello, World!' ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./arith
-if [ "$?" -eq 3 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-OUTPUT=$(./types)
-if [ "$?" -eq 5 ] && [ "$OUTPUT" = $'North America' ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./factorial
-if [ "$?" -eq 120 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./fibonacci
-if [ "$?" -eq 201 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-# 
-# llvm backend
-#
-
-../irec -bllvm exit.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile exit.ire
-    echo Failed
-    exit
-fi
-
-../irec -bllvm arrays.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile arrays.ire
-    echo Failed
-    exit
-fi
-
-../irec -bllvm hello.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile hello.ire
-    echo Failed
-    exit
-fi
-
-../irec -bllvm arith.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile arith.ire
-    echo Failed
-    exit
-fi
-
-../irec -bllvm types.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile types.ire
-    echo Failed
-    exit
-fi
-
-../irec -bllvm factorial.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile factorial.ire
-    echo Failed
-    exit
-fi
-
-../irec -bllvm fibonacci.ire > /dev/null
-
-if [ "$?" -ne 0 ]
-then
-    echo Could not compile fibonacci.ire
-    echo Failed
-    exit
-fi
-
-
-./exit
-if [ "$?" -eq 33 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./arrays
-if [ "$?" -eq 10 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-OUTPUT=$(./hello)
-if [ "$OUTPUT" = $'Hello, World!' ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./arith
-if [ "$?" -eq 3 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-OUTPUT=$(./types)
-if [ "$?" -eq 5 ] && [ "$OUTPUT" = $'North America' ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./factorial
-if [ "$?" -eq 120 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-./fibonacci
-if [ "$?" -eq 201 ]
-then
-pass=$((pass+1))
-echo -n "."
-else
-fail=$((fail+1))
-echo -n "E"
-fi
-
-
+runtestboth exit 33
+runtestboth arrays 10
+runtestboth arith 3
+runtestoutputboth hello 0 "Hello, World!"
+runtestoutputboth types 5 "North America"
+runtestboth factorial 120
+runtestboth fibonacci 201
 
 echo ""
 # end part
-
 
 if [ "$fail" -eq 0 ]
 then
@@ -291,3 +90,5 @@ echo All tests passed.
 else
 echo $fail tests failed.
 fi
+
+exit
