@@ -3,31 +3,13 @@
 #include<string.h>
 #include<errno.h>
 #include<unistd.h>
-#include<getopt.h>
 #include<sys/types.h>
 #include<sys/wait.h>
 #include"common/common.h"
 #include"build/pre_s.h"
 #include"irec.h"
 #include"build/commitid.h"
-#include"ast/semantic.h"
-
-/**
-CALLING CONVENTIONS.
-param is passed as rax
-ie
-mov (param), rax
-call func
-
-in a func, param is rbx.
-(aka)
-func:
-mov rax, rbx. 
-
-
-*/
-
-
+#include"ast/ast.h"
 
 void awrite_header(State* state){
     fprintf(state->fp, ".global _start\n.text\n");

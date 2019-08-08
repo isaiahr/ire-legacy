@@ -7,7 +7,7 @@
 #include"build/pre_ll.h"
 #include"irec.h"
 #include"build/commitid.h"
-#include"ast/semantic.h"
+#include"ast/ast.h"
 
 
 void lwrite_header(State* state){

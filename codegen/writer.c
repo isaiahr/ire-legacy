@@ -11,7 +11,7 @@
 #include"common/common.h"
 #include"codegen/codegenasm.h"
 #include"codegen/codegenllvm.h"
-#include"ast/semantic.h"
+#include"ast/ast.h"
 #include"writer.h"
 #include"codegenllvm.h"
 #include"codegenasm.h"

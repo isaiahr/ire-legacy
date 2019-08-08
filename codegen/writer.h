@@ -13,7 +13,7 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include<stdarg.h>
-#include"ast/semantic.h"
+#include"ast/ast.h"
 
 
 void annotate(State* state, char* format, ...);

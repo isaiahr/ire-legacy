@@ -9,7 +9,7 @@
 #include"codegen/writer.h"
 #include"common/common.h"
 #include"common/error.h"
-#include"ast/semantic.h"
+#include"ast/ast.h"
 
 
 void compile_func(Function* f, State* state);

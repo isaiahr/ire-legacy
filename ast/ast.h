@@ -1,5 +1,10 @@
-#ifndef __SEMANTIC_H__
-#define __SEMANTIC_H__
+/**
+ * ast.h
+ * 
+ **/
+
+#ifndef __AST_H__
+#define __AST_H__
 
 #include"parser/parser.h"
 #include"common/common.h"

@@ -2,7 +2,7 @@
 #define __CODEGENASM_H__
 
 #include"common/common.h"
-#include"ast/semantic.h"
+#include"ast/ast.h"
 
 void awrite_header(State* state);
 void awrite_footer(State* state);

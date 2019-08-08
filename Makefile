@@ -3,7 +3,7 @@ common/compiler.c common/common.c common/error.c \
 precompiler/precompiler.c \
 parser/parser.c parser/lexer.c parser/parser_arith.c parser/parser_expr.c \
 parser/parser_stmt.c parser/parser_type.c parser/parseutils.c \
-ast/semantic.c \
+ast/ast.c ast/ast_print.c \
 codegen/writer.c codegen/codegenasm.c codegen/codegenllvm.c
 
 
