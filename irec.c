@@ -139,6 +139,16 @@ int main(int argc, char **argv)
         }
         state->outputfile = outputfile;
     }
+    Compilationfile* cur = precompile(filename);
+    Token* all = NULL;
+    while(cur != NULL){
+        loadfile(cur);
+        printf("Compiling %s, %ld bytes\n", cur->path, cur->sz);
+        Token* t = parsefile(state, cur->data);
+        all = join(t, all);
+        unloadfile(cur);
+        cur = cur->next;
+    }
     FILE* fpo;
     char* compto;
     if(!((state->comp_asm && !state->llvm) || state->comp_llvm)){
@@ -154,17 +164,7 @@ int main(int argc, char **argv)
         return -1;
     }
     state->fp = fpo;
-    Compilationfile* cur = precompile(filename);
     write_header(state);
-    Token* all = NULL;
-    while(cur != NULL){
-        loadfile(cur);
-        printf("Compiling %s, %ld bytes\n", cur->path, cur->sz);
-        Token* t = parsefile(state, cur->data);
-        all = join(t, all);
-        unloadfile(cur);
-        cur = cur->next;
-    }
     compile(state, all);
     write_footer(state);
     fclose(state->fp);
