@@ -35,7 +35,12 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
             }
             else{
                 add_error(state, SYNTAXERROR, p->line, "failed to parse statement");
-                return NULL; // statement with no term
+                // statement with no term, trailing lextokens after stmt, etc
+                while((!match(o, TERM)) && (!match(o, LEOF))){
+                    o = next(o);
+                }
+                p = o;
+                continue;
             }
             
         }
@@ -45,7 +50,7 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
         else if(match(o, RIGHT_CRPAREN)){
             return o; // end of statements
         } else {
-            add_error(state, SYNTAXERROR, 0, "failed to parse statement");
+            add_error(state, SYNTAXERROR, o->line, "failed to parse statement");
         }
     }
 }
