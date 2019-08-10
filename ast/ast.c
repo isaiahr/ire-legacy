@@ -392,6 +392,13 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             fn->func = proc_func(t->str, prog);
             fn->vars = NULL;
             int error = 0;
+            if(fn->func == NULL){
+                char* msg = format("function %s undefined", t->str);
+                add_error(state, UNDEFFUNC, t->line, msg);
+                fn->to = NULL;
+                return fn->to;
+                break;
+            }
             VarList* comp = fn->func->params;
             for(int i = 0; i < t->subtoken_count; i++){
                 Variable* new = process_stmt(&t->subtokens[i], func, scope, prog, state);

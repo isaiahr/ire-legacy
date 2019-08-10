@@ -24,12 +24,14 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
     body->type = T_BODY;
     while(1){
         Lextoken* o = p;
+        body->subtokens[ind].line = p->line;
         p = parse_statement(p, &body->subtokens[ind], state);
         if(p != NULL){
             if(match(p, TERM)){
                 // good
                 ind += 1;
                 body->subtokens = realloc_token(body->subtokens, (ind+1));
+                
                 body->subtoken_count = ind;
                 p = next(p);
             }
@@ -67,9 +69,12 @@ Lextoken* parse_funcdef(Lextoken* p, Token* def){
         def->subtoken_count = 0;
         return NULL;
     }
+    if(!match(l, IDENTIFIER)){
+        return NULL;
+    }
     def->str = malloc(strlen(l->str)+1);
     memcpy(def->str, l->str, strlen(l->str)+1);
-    l = match(l, IDENTIFIER) ? next(l) : NULL;
+    l = next(l);
     if((!match(l, LEFT_PAREN)) || (l == NULL)){
         return NULL;
     }

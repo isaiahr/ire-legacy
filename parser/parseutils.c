@@ -7,9 +7,7 @@ int match(Lextoken* p, int m){
     if(p == NULL){
         return 0;
     }
-    int i = p->type == m;
-    p = p->next;
-    return i;
+    return p->type == m;
 }
 
 Lextoken* next(Lextoken* p){
