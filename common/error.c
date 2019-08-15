@@ -24,6 +24,10 @@ char* geterrorstr(int type){
             return "Duplicate definition of type";
         case INCOMPATTYPE:
             return "Incompatible types";
+        case MEMBERNOTFOUND:
+            return "Member not found";
+        case DUPMEMBERTYPE:
+            return "Duplicate member of type";
         default:
             break;
     }
@@ -45,6 +49,8 @@ int stage(int type){
         case DUPDEFVAR:
         case DUPDEFTYPE:
         case INCOMPATTYPE:
+        case MEMBERNOTFOUND:
+        case DUPMEMBERTYPE:
             return ERRORSEMANTIC;
     }
     fprintf(stderr, "Unknown error occurred.\n");
@@ -96,7 +102,7 @@ void mark(State* state){
     Error* head = state->errors;
     fprintf(stderr, "%i errors occurred %s\n", head->count, stagename(stage(head->type)));
     while(head != NULL){
-        fprintf(stderr, head->msg);
+        fprintf(stderr, "%s", head->msg);
         head = head->next;
     }
     exit(stage(state->errors->type));

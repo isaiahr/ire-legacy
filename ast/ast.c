@@ -36,6 +36,7 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
 int findoffset(Type* t, char* id);
 int findoffsettag(Type* t, char* id);
 Type* findtype(Type* t, char* id);
+char* duptypes(Type* t);
 int bytes(TypeStructure* t);
 
 
@@ -134,6 +135,11 @@ Program* process_program(Token* t, State* state){
         if(c12 >= t->subtoken_count)
             break;
         compile_type(&t->subtokens[c12], curt->type, po, state);
+        char* rp123 = duptypes(curt->type);
+        if(rp123){
+            char* msg = format("two members named %s in type %s", rp123, curt->type->identifier);
+            add_error(state, DUPMEMBERTYPE, t->subtokens[c12].line, msg);
+        }
         curt = curt->next;
         c12 += 1;
     }
@@ -402,6 +408,9 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             VarList* comp = fn->func->params;
             for(int i = 0; i < t->subtoken_count; i++){
                 Variable* new = process_stmt(&t->subtokens[i], func, scope, prog, state);
+                if(!new){
+                    error = 1;
+                }
                 if((!fn->func->native) && comp == NULL){
                     error = 1;
                 }
@@ -437,7 +446,12 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
                 VarList* comp3 = fn->vars;
                 char* defnd2 = format("%s", "(");
                 while(comp3 != NULL){
-                    char* o = defnd2;   
+                    char* o = defnd2;
+                    if(comp3->var == NULL){
+                        // possible.
+                        free(o);
+                        return fn->to;
+                    }
                     if(comp3 == fn->vars){
                         defnd2 = format("%s%s", defnd2, comp3->var->type->identifier);
                     }
@@ -575,7 +589,13 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
                     sta->stmt = malloc(sizeof(struct Accessor));
                     Accessor* typedacc = (Accessor*) sta->stmt;
                     typedacc->src = cur;
-                    typedacc->to = mkvar(func, scope, findtype(cur->type, ident));
+                    Type* ty01 = findtype(cur->type, ident);
+                    if(ty01 == NULL){
+                        char* msg = format("member %s of type %s not found", ident, cur->type->identifier);
+                        add_error(state, MEMBERNOTFOUND, t->line, msg);
+                        return NULL;
+                    }
+                    typedacc->to = mkvar(func, scope, ty01);
                     typedacc->offsetptr = findoffset(cur->type, ident);
                     add_stmt_func(mkinit(typedacc->to), func, scope);
                     add_stmt_func(sta, func, scope);
@@ -596,7 +616,19 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             setm->dest = process_stmt(t->subtokens, func, scope, prog, state);
             setm->from = process_stmt(&t->subtokens[1], func, scope, prog, state);
             setm->offsetptr = findoffset(setm->dest->type, t->subtokens[2].str);
-            add_stmt_func(stmt, func, scope);
+            if(setm->offsetptr == -1){
+                char* msg = format("member %s of type %s not found", t->subtokens[2].str, setm->dest->type->identifier);
+                add_error(state, MEMBERNOTFOUND, t->line, msg);
+                break;
+            }
+            Type* destty = findtype(setm->dest->type, t->subtokens[2].str);
+            if(destty != setm->from->type){
+                char* msg = format("incompatible types in member set %s = %s", destty->identifier, setm->from->type->identifier);
+                add_error(state, INCOMPATTYPE, t->line, msg);
+            }
+            else {
+                add_stmt_func(stmt, func, scope);
+            }
             break;
         case T_VARIABLE:
             ; // empty statement because compiler doesnt like declaration following case
@@ -701,6 +733,53 @@ Type* findtypehelper(TypeStructure* ts, char* ident){
 Type* findtype(Type* t, char* ident){
     TypeStructure* cur = t->ts;
     return findtypehelper(cur, ident);
+}
+
+char* duptypes_helper(TypeStructure* ts, List* l){
+    if(ts->sub == NULL){
+        while(l != NULL){
+            if(strcmp(l->data,ts->identifier) == 0){
+                return l->data; // dup found.
+            }
+            if(l->next == NULL){
+                l->next = malloc(sizeof (struct List));
+                l->next->next = NULL;
+                l->next->data = ts->identifier;
+                break;
+            }
+            l = l->next;
+        }
+        return NULL;
+    }
+    else{
+        TypeStructure* cur = ts->sub;
+        while(cur != NULL){
+            char* result = duptypes_helper(cur, l);
+            if(result != NULL){
+                return result;
+            }
+            cur = cur->next;
+        }
+        return NULL;
+    }
+}
+
+// recursizely cleans up list.
+void recclean(List* l){
+    if(l == NULL)
+        return;
+    recclean(l->next);
+    free(l);
+}
+
+// returns true iff t has 2+ types with same ident
+char* duptypes(Type* t){
+    List* l = malloc(sizeof(struct List));
+    l->data = "";
+    l->next = NULL;
+    char* ret = duptypes_helper(t->ts, l);
+    recclean(l);
+    return ret;
 }
 
 int findoffsethelper(TypeStructure* ts, char* ident){
