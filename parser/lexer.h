@@ -33,6 +33,8 @@
 #define COLON 28
 #define DOT 29
 #define IF 30
+#define TRUE 31
+#define FALSE 32
 
 typedef struct Lextoken{
     int line;

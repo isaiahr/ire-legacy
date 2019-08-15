@@ -306,21 +306,21 @@ void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
             state->tempnum += 1;
             break;
         case DOUBLEEQUALS:
-            fprintf(state->fp, "%%%i = icmp eq i64 %%%i, %%%i\n", state->tempnum, left_, right_);
+            fprintf(state->fp, "%%%i = icmp eq %s %%%i, %%%i\n", state->tempnum, left->type->llvm, left_, right_);
             result = state->tempnum + 1;
-            fprintf(state->fp, "%%%i = zext i1 %%%i to i64\n", result, state->tempnum);
+            fprintf(state->fp, "%%%i = zext i1 %%%i to i8\n", result, state->tempnum);
             state->tempnum += 2;
             break;
         case LESS:         
             fprintf(state->fp, "%%%i = icmp slt i64 %%%i, %%%i\n", state->tempnum, left_, right_);
             result = state->tempnum + 1;
-            fprintf(state->fp, "%%%i = zext i1 %%%i to i64\n", result, state->tempnum);
+            fprintf(state->fp, "%%%i = zext i1 %%%i to i8\n", result, state->tempnum);
             state->tempnum += 2;
             break;
         case GREATER:
             fprintf(state->fp, "%%%i = icmp sgt i64 %%%i, %%%i\n", state->tempnum, left_, right_);
             result = state->tempnum + 1;
-            fprintf(state->fp, "%%%i = zext i1 %%%i to i64\n", result, state->tempnum);
+            fprintf(state->fp, "%%%i = zext i1 %%%i to i8\n", result, state->tempnum);
             state->tempnum += 2;
             break;
         case SUBTRACT:
@@ -334,7 +334,7 @@ void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
             state->tempnum += 1;
             break;
     }
-    fprintf(state->fp, "store i64 %%%i, i64* %%%i\n", result, to->num);
+    fprintf(state->fp, "store %s %%%i, %s* %%%i\n", to->type->llvm, result, to->type->llvm, to->num);
 }
 
 void lwrite_constructor(Variable* dest, int width, State* state){

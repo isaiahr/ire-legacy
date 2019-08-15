@@ -7,8 +7,18 @@
 #include"parser_stmt.h"
 
 
-// constant = (["-"], int) | char
+// constant = (["-"], int) | char | ("true" | "false")
 Lextoken* parse_constant(Lextoken* p, Token* e){
+    if(match(p, TRUE)){
+        e->type = T_BOOLEAN;
+        e->lnt = 1;
+        return next(p);
+    }
+    if(match(p, FALSE)){
+        e->type = T_BOOLEAN;
+        e->lnt = 1;
+        return next(p);
+    }
     int i = match(p, SUBTRACT);
     i = i && match(next(p), INTEGER);
     if(!i){

@@ -1,6 +1,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<stdio.h>
+#include<stdarg.h>
 
 #include"parser/parser.h"
 #include"ast.h"
@@ -38,6 +39,7 @@ int findoffsettag(Type* t, char* id);
 Type* findtype(Type* t, char* id);
 char* duptypes(Type* t);
 int bytes(TypeStructure* t);
+int verify_types(Type* want, ...);
 
 
 VarList* add_varlist(VarList* vl, Variable* var){
@@ -60,7 +62,7 @@ VarList* add_varlist(VarList* vl, Variable* var){
 Program* process_program(Token* t, State* state){
     Program* po = malloc(sizeof(struct Program));
     int num_nativefuncs = 1;
-    int num_nativetypes = 2;
+    int num_nativetypes = 3;
     po->func_count = num_nativefuncs;
     po->type_count = num_nativetypes; // (num_nativetypes)
     for(int jk = 0; jk < t->subtoken_count; jk++){
@@ -78,6 +80,7 @@ Program* process_program(Token* t, State* state){
     po->types = malloc(sizeof(struct TypeList));
     Type* Int = malloc(sizeof(struct Type));
     Type* Byte = malloc(sizeof(struct Type));
+    Type* Boolean = malloc(sizeof(struct Type));
     Int->width = 64;
     Int->identifier = "Int";
     Int->llvm = "i64";
@@ -85,11 +88,17 @@ Program* process_program(Token* t, State* state){
     Byte->width = 8;
     Byte->identifier = "Byte";
     Byte->llvm = "i8";
-    Byte->ts = NULL; 
+    Byte->ts = NULL;
+    Boolean->width = 8;
+    Boolean->identifier = "Boolean";
+    Boolean->llvm = "i8";
+    Boolean->ts = NULL;
     po->types->type = Int;
     po->types->next = malloc(sizeof(struct TypeList));
     po->types->next->type = Byte;
-    po->types->next->next = NULL;
+    po->types->next->next = malloc(sizeof(struct TypeList));
+    po->types->next->next->type = Boolean;
+    po->types->next->next->next = NULL;
     po->funcs[0].name = "syscall";
     po->funcs[0].write_name = "syscall";
     po->funcs[0].retval = Int; // i64
@@ -101,7 +110,7 @@ Program* process_program(Token* t, State* state){
     
     // proc types first
     int c12 = 0;
-    TypeList* curt = po->types->next;
+    TypeList* curt = po->types->next->next;
     
     while(c12 < t->subtoken_count){
         while(t->subtokens[c12].type != T_TYPEDEF){
@@ -123,7 +132,7 @@ Program* process_program(Token* t, State* state){
         curt = new;
     }   
     c12 = 0;
-    curt = po->types->next->next;
+    curt = po->types->next->next->next;
     while(c12 < t->subtoken_count){
         while(t->subtokens[c12].type != T_TYPEDEF){
             c12 += 1;
@@ -358,6 +367,17 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             }
             add_stmt_func(stmt, func, scope);
             break;
+        case T_BOOLEAN:
+            stmt->type = S_CONSTANTASSIGNMENT;
+            stmt->stmt = malloc(sizeof(struct ConstantAssignment));
+            ConstantAssignment* ca00 = (ConstantAssignment*) stmt->stmt;
+            ca00->type = S_CONST_BOOLEAN;
+            ca00->byte = t->lnt;
+            ca00->to = mkvar(func, scope, proc_type("Boolean", prog));
+            add_stmt_func(mkinit(ca00->to), func, scope);
+            add_stmt_func(stmt, func, scope);
+            return ca00->to;
+            break;
         case T_CHAR:
             stmt->type = S_CONSTANTASSIGNMENT;
             stmt->stmt = malloc(sizeof(struct ConstantAssignment));
@@ -528,8 +548,52 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             arith->left = process_stmt(&t->subtokens[0], func, scope, prog, state);
             arith->right = process_stmt(&t->subtokens[1], func, scope, prog, state);
             arith->operation = t->lnt;
-            // TODO another hardcoded type.
-            arith->to = mkvar(func, scope, prog->types->type); 
+            int err = 0;
+            char* op;
+            Type* t_int = proc_type("Int", prog);
+            Type* t_bool = proc_type("Boolean", prog);
+            switch (arith->operation){
+                case PLUS:
+                    arith->to = mkvar(func, scope, t_int);
+                    op = "+";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
+                    break;
+                case SUBTRACT:
+                    arith->to = mkvar(func, scope, t_int);
+                    op = "-";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
+                    break;
+                case MULT:
+                    arith->to = mkvar(func, scope, t_int);
+                    op = "*";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
+                    break;
+                case DOUBLEEQUALS:
+                    arith->to = mkvar(func, scope, t_bool);
+                    op = "==";
+                    if(arith->left == NULL || arith->right == NULL)
+                        err = 1;
+                    else if(arith->left->type == NULL)
+                        err = 1;
+                    else if(arith->left->type != arith->right->type){
+                        err = 1;
+                    }
+                    break;
+                case GREATER:
+                    arith->to = mkvar(func, scope, t_bool);
+                    op = ">";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
+                    break;
+                case LESS:
+                    arith->to = mkvar(func, scope, t_bool);
+                    op = "<";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
+                    break;
+            }
+            if(err){
+                char* msg = format("in operation %s", op);
+                add_error(state, INCOMPATTYPE, t->line, msg);
+            }
             add_stmt_func(mkinit(arith->to), func, scope);
             add_stmt_func(stmt, func, scope);
             return arith->to;
@@ -641,6 +705,9 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             stmt->stmt = malloc(sizeof(struct IfStmt));
             IfStmt* ifs = (IfStmt*) stmt->stmt;
             ifs->test = process_stmt(t->subtokens, func, scope, prog, state);
+            if(ifs->test->type == NULL || ifs->test->type != proc_type("Boolean", prog)){
+                add_error(state, INCOMPATTYPE, t->subtokens->line, format("%s", "ifstmt needs Boolean"));
+            }
             ifs->truelbl = malloc(33);
             ifs->endlbl = malloc(33);
             snprintf(ifs->truelbl, 32, "L%i", state->lblcount);
@@ -662,6 +729,23 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
     }
     // does not resolve into variable (return, varinit, assignment, etc)
     return NULL;
+}
+
+int verify_types(Type* want, ...){
+    va_list args;
+    va_start(args, want);
+    va_end(args);
+    while(1){
+        Variable* t = va_arg(args, Variable*);
+        if(t == NULL)
+            break;
+        if(t->type == NULL || t->type != want){
+            va_end(args);
+            return 1;
+        }
+    }
+    va_end(args);
+    return 0;
 }
 
 // returns bits needed to store number

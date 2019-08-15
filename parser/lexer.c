@@ -73,6 +73,8 @@ Lextoken* lex(char* input, State* state){
             case TYPE: str = "TYPE"; break;
             case COLON: str = "COLON"; break;
             case IF: str = "IF"; break;
+            case TRUE: str = "TRUE"; break;
+            case FALSE: str = "FALSE"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -204,6 +206,16 @@ Lextoken* lexone(char** i, int* line){
     if(keyword_match("void", input)){
         (*i) += strlen("void");
         l->type = VOID;
+        return l;
+    }
+    if(keyword_match("true", input)){
+        (*i) += strlen("true");
+        l->type = TRUE;
+        return l;
+    }
+    if(keyword_match("false", input)){
+        (*i) += strlen("false");
+        l->type = FALSE;
         return l;
     }
     if(beginswith("//", input)){

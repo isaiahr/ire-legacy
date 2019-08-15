@@ -29,6 +29,7 @@
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
 #define S_CONST_INT 3
+#define S_CONST_BOOLEAN 4
 
 #define S_MODE_AND 1
 #define S_MODE_OR 2
