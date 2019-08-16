@@ -114,6 +114,7 @@ char* type(Token* p){
         case T_CONSTRUCTASSIGN: return "CONSTRUCTASSIGN";
         case T_MEMBERIDENT: return "MEMBERIDENT";
         case T_IF: return "IF";
+        case T_BOOLEAN: return "BOOLEAN";
         default: return "UNKNOWN";
     }
     

@@ -83,6 +83,14 @@ void awrite_byte(Variable* to, char byte, State* state){
     unsigned char b = byte;
     fprintf(state->fp, "movb $0x%x, %i(%%rsp)\n", b, to->offset);
 }
+void awrite_bool(Variable* to, int bool, State* state){
+    if(bool){
+        fprintf(state->fp, "movb $1, %i(%%rsp)\n", to->offset);
+    }
+    else{
+        fprintf(state->fp, "movb $0, %i(%%rsp)\n", to->offset);
+    }
+}
 
 void awrite_int(Variable* to, int immediate, State* state){
     fprintf(state->fp, "movq $%i, %i(%%rsp)\n", immediate, to->offset);
@@ -220,6 +228,13 @@ void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
             return;
         case MULT:
             fprintf(state->fp, "imul %%rax, %%rbx\n");
+            break;
+        case AMPERSAND:
+            fprintf(state->fp, "and %%rax, %%rbx\n");
+            break;
+        case PIPE:
+            fprintf(state->fp, "or %%rax, %%rbx\n");
+            break;
     }
     fprintf(state->fp, "movq %%rbx, %i(%%rsp)\n", to->offset);
 }

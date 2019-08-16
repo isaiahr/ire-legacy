@@ -25,7 +25,6 @@
 #define LEOF 15
 #define RETURN 16
 #define ADDEQ 17
-#define PIPE 18
 #include"common/operators.h" // MAKE SURE THESE MATCH UP ( no duplicates). compiler should warn if incorrect
 #define NEW 25
 #define VOID 26
@@ -35,6 +34,7 @@
 #define IF 30
 #define TRUE 31
 #define FALSE 32
+#define DOUBLEPIPE 33
 
 typedef struct Lextoken{
     int line;

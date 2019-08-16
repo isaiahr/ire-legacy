@@ -61,6 +61,7 @@ Lextoken* lex(char* input, State* state){
             case ADDEQ: str = "ADDEQ"; break;
             case NEW: str = "NEW"; break;
             case PIPE: str = "PIPE"; break;
+            case DOUBLEPIPE: str = "DOUBLEPIPE"; break;
             case PLUS: str = "PLUS"; break;
             case DOUBLEEQUALS: str = "DOUBLEEQUALS"; break;
             case LESS: str = "LESS"; break;
@@ -110,6 +111,11 @@ Lextoken* lexone(char** i, int* line){
     if(input[0] == '=' && input[1] == '='){
         (*i) += 2;
         l->type = DOUBLEEQUALS;
+        return l;
+    }
+    if(input[0] == '|' && input[1] == '|'){
+        (*i) += 2;
+        l->type = DOUBLEPIPE;
         return l;
     }
     int match = 1;
@@ -175,7 +181,7 @@ Lextoken* lexone(char** i, int* line){
         }
         return l;
     }
-    if(keyword_match("import", input)){
+    if(keyword_match(input, "import")){
         int z = 0;
         while(input[z] != 0 && input[z] != '\n' && input[z] != ';'){
             z += 1;
@@ -183,37 +189,37 @@ Lextoken* lexone(char** i, int* line){
         (*i) += z;
         return lexone(i, line);
     }
-    if(keyword_match("return", input)){
+    if(keyword_match(input, "return")){
         (*i) += strlen("return");
         l->type = RETURN;
         return l;
     }
-    if(keyword_match("new", input)){
+    if(keyword_match(input, "new")){
         (*i) += strlen("new");
         l->type = NEW;
         return l;
     }
-    if(keyword_match("if", input)){
+    if(keyword_match(input, "if")){
         (*i) += strlen("if");
         l->type = IF;
         return l;
     }
-    if(keyword_match("type", input)){
+    if(keyword_match(input, "type")){
         (*i) += strlen("type");
         l->type = TYPE;
         return l;
     }
-    if(keyword_match("void", input)){
+    if(keyword_match(input, "void")){
         (*i) += strlen("void");
         l->type = VOID;
         return l;
     }
-    if(keyword_match("true", input)){
+    if(keyword_match(input, "true")){
         (*i) += strlen("true");
         l->type = TRUE;
         return l;
     }
-    if(keyword_match("false", input)){
+    if(keyword_match(input, "false")){
         (*i) += strlen("false");
         l->type = FALSE;
         return l;
@@ -327,20 +333,22 @@ char* proc_str(char* data, char** adv){
     return NULL;
 }
 
-int keyword_match(char* begin, char* token){
-    int matches = 1;
-    int j = 0;
-    while(matches && token[j] != 0){
-        matches = matches && (begin[j] == token[j]);
-        j += 1;
-        if(begin[j] == 0){
-            if(!ISALPHA(token[j]) && !ISNUMERIC(token[j]) && (token[j] != '_')){
+int keyword_match(char* input, char* token){
+    int i = 0;
+    while(1){
+        if(input[i] == 0)
+            return 0;
+        if(token[i] == 0){
+            if(!ISALPHA(token[i]) && !ISNUMERIC(token[i]) && (token[i] != '_')){
                 return 1;
             }
             return 0;
         }
+        if(token[i] != input[i]){
+            return 0;
+        }
+        i += 1;
     }
-    return 0;
 }
 
 int beginswith(char* begin, char* token){

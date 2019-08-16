@@ -16,7 +16,7 @@ Lextoken* parse_constant(Lextoken* p, Token* e){
     }
     if(match(p, FALSE)){
         e->type = T_BOOLEAN;
-        e->lnt = 1;
+        e->lnt = 0;
         return next(p);
     }
     int i = match(p, SUBTRACT);
@@ -165,16 +165,16 @@ Lextoken* parse_arrind_flags(Lextoken* p, Token* e, int FLAGS){
     }
 }
 
-// card = "|",  expression,  "|"
+// card = "||",  expression,  "||"
 Lextoken* parse_card(Lextoken* p, Token* e){
-    if(!match(p, PIPE)){
+    if(!match(p, DOUBLEPIPE)){
         return NULL;
     }
     e->subtokens = init_token(p->line);
     e->type = T_CARDINALITY;
     e->subtoken_count = 1;
     Lextoken* a = parse_expression(next(p), e->subtokens);
-    if(a == NULL || !match(a, PIPE)){
+    if(a == NULL || !match(a, DOUBLEPIPE)){
         destroy_token(e);
         return NULL;
     }

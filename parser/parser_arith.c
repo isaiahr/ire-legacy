@@ -5,7 +5,7 @@
 #include"parser_arith.h"
 #include"parser_expr.h"
 
-#define LAST_ORDER 3
+#define LAST_ORDER 4
 
 
 // arith = exprnoarith ("<" | ">" | "=" | "+" | "-") exprnoarith ...
@@ -39,6 +39,8 @@ OpExpr* opexprhelper(Lextoken* p){
         case GREATER:
         case SUBTRACT:
         case MULT:
+        case PIPE:
+        case AMPERSAND:
             ; // nessecary
             OpExpr* o = malloc(sizeof(struct OpExpr));
             o->type = p->type;
@@ -72,6 +74,9 @@ int ordermatches (int order, int type){
             return order == 2;
         case DOUBLEEQUALS:
             return order == 3;
+        case AMPERSAND:
+        case PIPE:
+            return order == 4;
         default:
             return 0;
     }

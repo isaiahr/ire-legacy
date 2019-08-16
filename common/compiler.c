@@ -103,6 +103,9 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
             if(ca->type == S_CONST_STRING){
                 write_string(ca->to, ca->string, strlen(ca->string), state);
             }
+            if(ca->type == S_CONST_BOOLEAN){
+                write_bool(ca->to, ca->lnt, state);
+            }
             break;
         case S_FUNCTIONCALL:
             ;

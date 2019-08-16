@@ -124,6 +124,15 @@ void write_byte(Variable* to, char byte, State* state){
     }
 }
 
+void write_bool(Variable* to, int bool, State* state){
+    if(state->llvm){
+        lwrite_bool(to, bool, state);
+    }
+    else {
+        awrite_bool(to, bool, state);
+    }
+}
+
 void write_int(Variable* to, int immediate, State* state){
     if(state->llvm){
         lwrite_int(to, immediate, state);

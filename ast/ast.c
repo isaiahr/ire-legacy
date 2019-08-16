@@ -372,7 +372,7 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             stmt->stmt = malloc(sizeof(struct ConstantAssignment));
             ConstantAssignment* ca00 = (ConstantAssignment*) stmt->stmt;
             ca00->type = S_CONST_BOOLEAN;
-            ca00->byte = t->lnt;
+            ca00->lnt = t->lnt;
             ca00->to = mkvar(func, scope, proc_type("Boolean", prog));
             add_stmt_func(mkinit(ca00->to), func, scope);
             add_stmt_func(stmt, func, scope);
@@ -589,6 +589,18 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
                     op = "<";
                     err = verify_types(t_int, arith->left, arith->right, NULL);
                     break;
+                case AMPERSAND:
+                    // logical and
+                    arith->to = mkvar(func, scope, t_bool);
+                    op = "&";
+                    err = verify_types(t_bool, arith->left, arith->right, NULL);
+                    break;
+                case PIPE:
+                    // logical or
+                    arith->to = mkvar(func, scope, t_bool);
+                    op = "|";
+                    err = verify_types(t_bool, arith->left, arith->right, NULL);
+                    break;
             }
             if(err){
                 char* msg = format("in operation %s", op);
@@ -705,6 +717,9 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             stmt->stmt = malloc(sizeof(struct IfStmt));
             IfStmt* ifs = (IfStmt*) stmt->stmt;
             ifs->test = process_stmt(t->subtokens, func, scope, prog, state);
+            if(ifs->test == NULL){
+                break;
+            }
             if(ifs->test->type == NULL || ifs->test->type != proc_type("Boolean", prog)){
                 add_error(state, INCOMPATTYPE, t->subtokens->line, format("%s", "ifstmt needs Boolean"));
             }

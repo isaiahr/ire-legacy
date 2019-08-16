@@ -23,6 +23,9 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
     body->subtokens = init_token(p->line);
     body->type = T_BODY;
     while(1){
+        if(match(p, LEOF) || p == NULL){
+            return NULL;
+        }
         Lextoken* o = p;
         body->subtokens[ind].line = p->line;
         p = parse_statement(p, &body->subtokens[ind], state);
@@ -31,12 +34,14 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
                 // good
                 ind += 1;
                 body->subtokens = realloc_token(body->subtokens, (ind+1));
-                
                 body->subtoken_count = ind;
                 p = next(p);
             }
             else{
                 add_error(state, SYNTAXERROR, p->line, "failed to parse statement");
+                ind += 1;
+                body->subtokens = realloc_token(body->subtokens, (ind+1));
+                body->subtoken_count = ind;
                 // statement with no term, trailing lextokens after stmt, etc
                 while((!match(o, TERM)) && (!match(o, LEOF))){
                     o = next(o);
@@ -53,6 +58,9 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
             return o; // end of statements
         } else {
             add_error(state, SYNTAXERROR, o->line, "failed to parse statement");
+            ind += 1;
+            body->subtokens = realloc_token(body->subtokens, (ind+1));
+            body->subtoken_count = ind;
         }
     }
 }

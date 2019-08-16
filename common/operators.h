@@ -11,5 +11,6 @@
 #define MULT 1006
 #define AMPERSAND 1007
 #define CARET 1008
+#define PIPE 1009
 
 #endif

@@ -13,6 +13,7 @@ void awrite_funcdef(Function* func, State* state);
 void awrite_funcall(FunctionCall* func, State* state);
 void awrite_varassign(Variable* to, Variable* from, State* state);
 void awrite_byte(Variable* to, char byte, State* state);
+void awrite_bool(Variable* to, int bool, State* state);
 void awrite_int(Variable* to, int immediate, State* state);
 void awrite_indget(Variable* arr, Variable* ind, Variable* to, State* state);
 void awrite_indset(Variable* arr, Variable* ind, Variable* from, State* state);
