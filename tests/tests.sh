@@ -78,6 +78,7 @@ runtestboth arrays 10
 runtestboth arith 3
 runtestoutputboth hello 0 "Hello, World!"
 runtestoutputboth types 5 "North America"
+runtestoutputboth primes 0 "prime prime prime prime prime "
 runtestboth factorial 120
 runtestboth fibonacci 201
 

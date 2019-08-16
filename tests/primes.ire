@@ -1,0 +1,41 @@
+import essential.ire
+
+Int main(){
+    primesuntil(4533, 4590)
+}
+
+Int primesuntil(Int i, Int n){
+    if(i > n){
+        print("\n")
+        exit(0)
+    }
+    if(isprime(i)){
+        print("prime ")
+    }
+    primesuntil(i+1, n)
+}
+
+Boolean isprime(Int n){
+    return isprime_helper(n, 2)
+}
+
+Boolean isprime_helper(Int n, Int j){
+    if j * j > n {
+        return true
+    }
+    if isprime_helper2(n, j, 2){
+        return false
+    }
+    return isprime_helper(n, j+1)
+}
+
+Boolean isprime_helper2(Int n, Int j, Int i){
+    if i * j == n {
+        //composite
+        return true
+    }
+    if i * j > n {
+        return false
+    }
+    return isprime_helper2(n, j, i+1)
+}
