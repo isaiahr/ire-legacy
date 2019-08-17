@@ -15,7 +15,7 @@ Int main(){
     r4 = (2+4) < 6 * 6 - 30
     // 0
     Boolean r5
-    r5 = 30 > 30
+    r5 = !!(30 > 30) & true & false
     // 0
     Int sum
     if r1 {
@@ -34,5 +34,8 @@ Int main(){
     if r5{
         sum=sum+1
     }
-    exit(sum)
+    if (true & true) & !(true & false) & !(true & true & true & false) & (false | true) {
+        exit(sum)
+    }
+    exit(0)
 }

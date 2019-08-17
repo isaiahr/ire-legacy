@@ -149,6 +149,11 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
             NewArray* ne = (NewArray*) stmt->stmt;
             write_newarr(ne->to, ne->size, state);
             break;
+        case S_INVERT:
+            ;
+            Invert* inv = (Invert*) stmt->stmt;
+            write_invert(inv->to, inv->from, state);
+            break;
         case S_ARITHMETIC:
             ;
             Arithmetic* arith = (Arithmetic*) stmt->stmt;

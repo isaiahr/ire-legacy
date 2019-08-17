@@ -21,6 +21,7 @@ void awrite_addeq(Variable* arr, Variable* delta, State* state);
 void awrite_string(Variable* to, char* str, int len, State* state);
 void awrite_card(Variable* to, Variable* from, State* state);
 void awrite_newarr(Variable* to, Variable* len, State* state);
+void awrite_invert(Variable* to, Variable* from, State* state);
 void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state);
 void awrite_constructor(Variable* dest, int width, State* state);
 void awrite_accessor(Variable* dest, Variable* src, int off, State* state);

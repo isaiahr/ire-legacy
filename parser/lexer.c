@@ -76,6 +76,7 @@ Lextoken* lex(char* input, State* state){
             case IF: str = "IF"; break;
             case TRUE: str = "TRUE"; break;
             case FALSE: str = "FALSE"; break;
+            case EXCLAMATION: str = "EXCLAMATION"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -139,6 +140,7 @@ Lextoken* lexone(char** i, int* line){
         case '^': l->type = CARET; break;
         case ':': l->type = COLON; break;
         case '.': l->type = DOT; break;
+        case '!': l->type = EXCLAMATION; break;
         case ';': l->type = TERM; break;
         case '\n': l->type = TERM; (*line)++; break;
         default: match = 0; break;

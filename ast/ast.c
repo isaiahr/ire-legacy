@@ -541,6 +541,23 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
             add_stmt_func(mkinit(new->to), func, scope);
             add_stmt_func(stmt, func, scope);
             return new->to;
+        case T_INVERT:
+            stmt->type = S_INVERT;
+            stmt->stmt = malloc(sizeof(struct Invert));
+            Invert* inv = (Invert*) stmt->stmt;
+            inv->from = process_stmt(&t->subtokens[0], func, scope, prog, state);
+            inv->to = mkvar(func, scope, proc_type("Boolean", prog));
+            if(inv->from == NULL){
+                break;
+            }
+            if(inv->from->type == NULL || inv->from->type != inv->to->type){
+                // possibly segv? type == null shouldnt happen though i think. (tm)
+                char* msg = format("Operation ! wants boolean, but got %s", inv->from->type->identifier);
+                add_error(state, INCOMPATTYPE, t->line, msg);
+            }
+            add_stmt_func(mkinit(inv->to), func, scope);
+            add_stmt_func(stmt, func, scope);
+            return inv->to;
         case T_ARITH:
             stmt->type = S_ARITHMETIC;
             stmt->stmt = malloc(sizeof(struct Arithmetic));

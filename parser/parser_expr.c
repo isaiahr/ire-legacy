@@ -175,7 +175,7 @@ Lextoken* parse_card(Lextoken* p, Token* e){
     e->subtoken_count = 1;
     Lextoken* a = parse_expression(next(p), e->subtokens);
     if(a == NULL || !match(a, DOUBLEPIPE)){
-        destroy_token(e);
+        destroy_token(e->subtokens);
         return NULL;
     }
     return next(a);
@@ -206,6 +206,24 @@ Lextoken* parse_newarr(Lextoken* p, Token* e){
     // good
     e->type = T_NEWARR;
     return next(l2);
+}
+
+// inv = !expr
+Lextoken* parse_inv(Lextoken* p, Token* e){
+    if(!match(p, EXCLAMATION)){
+        return NULL;
+    }
+    e->subtokens = init_token(p->line);
+    e->subtokens = realloc_token(e->subtokens, 1);
+    Lextoken* l = parse_expression(next(p), e->subtokens);
+    if(l == NULL){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    e->subtoken_count = 1;
+    e->type = T_INVERT;
+    return l;
 }
 
 // brexpr = "(", expression, ")"
@@ -395,7 +413,9 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((l = parse_newarr(p, e))){
         return l;
     }
-
+    if((l = parse_inv(p, e))){
+        return l;
+    }
     if((!(FLAGS & FLAG_ARRIND)) && (l = parse_arrind_flags(p, e, FLAGS))){
         return l;
     }

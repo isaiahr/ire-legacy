@@ -301,6 +301,13 @@ void lwrite_newarr(Variable* to, Variable* size, State* state){
     }
 }
 
+void lwrite_invert(Variable* to, Variable* from, State* state){
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, from->type->llvm, from->type->llvm, from->num);
+    fprintf(state->fp, "%%%i = xor i8 1, %%%i\n", state->tempnum+1, state->tempnum);
+    fprintf(state->fp, "store i8 %%%i, i8* %%%i\n", state->tempnum+1, to->num);
+    state->tempnum += 2;
+}
+
 void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){ 
     int left_ = state->tempnum;
     int right_ = state->tempnum+1;

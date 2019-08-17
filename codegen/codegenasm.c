@@ -193,6 +193,12 @@ void awrite_newarr(Variable* to, Variable* len, State* state){
     fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
 }
 
+void awrite_invert(Variable* to, Variable* from, State* state){
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", from->offset);
+    fprintf(state->fp, "xorq $1, %%rax\n");
+    fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+}
+
 void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
     fprintf(state->fp, "movq %i(%%rsp), %%rax\n", left->offset);
     fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", right->offset);

@@ -115,6 +115,7 @@ char* type(Token* p){
         case T_MEMBERIDENT: return "MEMBERIDENT";
         case T_IF: return "IF";
         case T_BOOLEAN: return "BOOLEAN";
+        case T_INVERT: return "INVERT";
         default: return "UNKNOWN";
     }
     

@@ -196,6 +196,15 @@ void write_newarr(Variable* to, Variable* size, State* state){
     }
 }
 
+void write_invert(Variable* to, Variable* from, State* state){
+    if(state->llvm){
+        lwrite_invert(to, from, state);
+    }
+    else {
+        awrite_invert(to, from, state);
+    }
+}
+
 void write_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
     if(state->llvm){
         lwrite_arith(to, left, right, op, state);

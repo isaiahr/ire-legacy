@@ -25,6 +25,7 @@
 #define S_SETMEMBER 14
 #define S_SETTAG 15
 #define S_IF 16
+#define S_INVERT 17
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -155,6 +156,11 @@ typedef struct NewArray{
     Variable* size;
     Variable* to;
 } NewArray;
+
+typedef struct Invert{
+    Variable* from;
+    Variable* to;
+} Invert;
 
 typedef struct Arithmetic{
     Variable* left;

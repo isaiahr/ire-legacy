@@ -21,6 +21,7 @@ void lwrite_addeq(Variable* arr, Variable* delta, State* state);
 void lwrite_string(Variable* to, char* str, int len, State* state);
 void lwrite_card(Variable* to, Variable* from, State* state);
 void lwrite_newarr(Variable* to, Variable* len, State* state);
+void lwrite_invert(Variable* to, Variable* from, State* state);
 void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state);
 void lwrite_constructor(Variable* dest, int width, State* state);
 void lwrite_accessor(Variable* dest, Variable* src, int off, State* state);
