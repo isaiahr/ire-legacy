@@ -618,6 +618,15 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
                     op = "|";
                     err = verify_types(t_bool, arith->left, arith->right, NULL);
                     break;
+                case PERCENT:
+                    arith->to = mkvar(func, scope, t_int);
+                    op = "%";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
+                    break;
+                case FSLASH:
+                    arith->to = mkvar(func, scope, t_int);
+                    op = "/";
+                    err = verify_types(t_int, arith->left, arith->right, NULL);
             }
             if(err){
                 char* msg = format("in operation %s", op);

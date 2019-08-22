@@ -54,7 +54,6 @@ Lextoken* lex(char* input, State* state){
             case IDENTIFIER: str = "IDENTIFIER"; break;
             case RETURN: str = "RETURN"; break;
             case TERM: str = "TERM"; break;
-            case MINUS_SYM: str = "MINUS_SYM"; break;
             case COMMA: str = "COMMA"; break;
             case EQUALS: str = "EQUALS"; break;
             case LEOF: str = "LEOF"; break;
@@ -77,6 +76,8 @@ Lextoken* lex(char* input, State* state){
             case TRUE: str = "TRUE"; break;
             case FALSE: str = "FALSE"; break;
             case EXCLAMATION: str = "EXCLAMATION"; break;
+            case PERCENT: str = "PERCENT"; break;
+            case FSLASH: str = "FSLASH"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -119,6 +120,14 @@ Lextoken* lexone(char** i, int* line){
         l->type = DOUBLEPIPE;
         return l;
     }
+    if(beginswith("//", input)){
+        int z = 0;
+        while(input[z] != 0 && input[z] != '\n'){
+            z += 1;
+        }
+        (*i) += z;
+        return lexone(i, line);
+    }
     int match = 1;
     switch(input[0]){
         case '(': l->type = LEFT_PAREN; break;
@@ -127,7 +136,6 @@ Lextoken* lexone(char** i, int* line){
         case ']': l->type = RIGHT_SQPAREN; break;
         case '{': l->type = LEFT_CRPAREN; break;
         case '}': l->type = RIGHT_CRPAREN; break;
-        // case '-': l->type = MINUS_SYM; break;
         case ',': l->type = COMMA; break;
         case '=': l->type = EQUALS; break;
         case '+': l->type = PLUS; break;
@@ -142,6 +150,8 @@ Lextoken* lexone(char** i, int* line){
         case '.': l->type = DOT; break;
         case '!': l->type = EXCLAMATION; break;
         case ';': l->type = TERM; break;
+        case '/': l->type = FSLASH; break;
+        case '%': l->type = PERCENT; break;
         case '\n': l->type = TERM; (*line)++; break;
         default: match = 0; break;
     }
@@ -226,14 +236,7 @@ Lextoken* lexone(char** i, int* line){
         l->type = FALSE;
         return l;
     }
-    if(beginswith("//", input)){
-        int z = 0;
-        while(input[z] != 0 && input[z] != '\n'){
-            z += 1;
-        }
-        (*i) += z;
-        return lexone(i, line);
-    }
+
     if(ISALPHA(input[0]) || input[0] == '_'){
         l->type = IDENTIFIER;
         int j = 1;

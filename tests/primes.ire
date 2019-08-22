@@ -1,7 +1,18 @@
+import conv.ire
 import essential.ire
 
+
 Int main(){
-    primesuntil(4533, 4590)
+    Int start
+    Int end
+    start = 7855
+    end = 8000
+    print("The prime numbers between ")
+    print(String(start))
+    print(" and ")
+    print(String(end))
+    print(" are: ")
+    primesuntil(start, end)
 }
 
 Int primesuntil(Int i, Int n){
@@ -10,7 +21,8 @@ Int primesuntil(Int i, Int n){
         exit(0)
     }
     if(isprime(i)){
-        print("prime ")
+        print(String(i))
+        print(", ")
     }
     primesuntil(i+1, n)
 }

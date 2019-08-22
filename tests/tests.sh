@@ -78,7 +78,7 @@ runtestboth arrays 10
 runtestboth arith 3
 runtestoutputboth hello 0 "Hello, World!"
 runtestoutputboth types 5 "North America"
-runtestoutputboth primes 0 "prime prime prime prime prime "
+runtestoutputboth primes 0 "The prime numbers between 7855 and 8000 are: 7867, 7873, 7877, 7879, 7883, 7901, 7907, 7919, 7927, 7933, 7937, 7949, 7951, 7963, 7993, "
 runtestboth factorial 120
 runtestboth fibonacci 201
 

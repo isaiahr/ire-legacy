@@ -19,7 +19,7 @@
 #define LSTRING 9
 #define IDENTIFIER 10
 #define TERM 11
-#define MINUS_SYM 12
+// 12 = ??
 #define COMMA 13
 #define EQUALS 14
 #define LEOF 15

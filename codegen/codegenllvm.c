@@ -30,10 +30,11 @@ void lwrite_funcreturn(Function* func, Variable* var, State* state){
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, var->type->llvm, var->type->llvm, var->num);
     fprintf(state->fp, "ret %s %%%i\n", var->type->llvm, state->tempnum);
     state->tempnum += 2;
+    // 2 to allow for basic block after.
 }
 void lwrite_funcend(Function* func, State* state){
     if(!func->writ_return){
-        fprintf(state->fp, "ret %s 0\n}\n", func->retval->llvm);
+        fprintf(state->fp, "ret %s zeroinitializer\n}\n", func->retval->llvm);
     }
 }
 void lwrite_funcdef(Function* func, State* state){
@@ -157,7 +158,7 @@ void lwrite_varassign(Variable* to, Variable* from, State* state){
 
 void lwrite_byte(Variable* to, char byte, State* state){
     unsigned char b = byte;
-    fprintf(state->fp, "store i8 0x%x, i8* %%%i\n", b, to->num);
+    fprintf(state->fp, "store i8 %d, i8* %%%i\n", b, to->num);
 }
 
 void lwrite_bool(Variable* to, int bool, State* state){
@@ -359,6 +360,16 @@ void lwrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
             result = state->tempnum;
             state->tempnum += 1;
             break;
+        case FSLASH:
+            fprintf(state->fp, "%%%i = sdiv %s %%%i, %%%i\n", state->tempnum, to->type->llvm, left_, right_);
+            result = state->tempnum;
+            state->tempnum += 1;
+            break;
+        case PERCENT:
+            fprintf(state->fp, "%%%i = srem %s %%%i, %%%i\n", state->tempnum, to->type->llvm, left_, right_);
+            result = state->tempnum;
+            state->tempnum += 1;
+            break;
     }
     fprintf(state->fp, "store %s %%%i, %s* %%%i\n", to->type->llvm, result, to->type->llvm, to->num);
 }
@@ -424,7 +435,7 @@ void lwrite_conditional(Variable* test, char* truelbl, char* falselbl, State* st
 
 void lwrite_label(char* lbl, int uncond, State* state){
     if(uncond){
-        fprintf(state->fp, "br label %%%s\n", lbl);
+         fprintf(state->fp, "br label %%%s\n", lbl);
     }
     fprintf(state->fp, "%s:\n", lbl);
 }

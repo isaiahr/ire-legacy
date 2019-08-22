@@ -194,6 +194,12 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
             Body* body = ifs->scope->body;
             while(body != NULL){
                 compile_stmt(body->stmt, f, ifs->scope, state);
+                if(body->next == NULL){
+                    if(body->stmt->type == S_RETURN){
+                        // hack for llvm numbering restrictions.
+                        // state->tempnum -= 1;
+                    }
+                }
                 body = body->next;
             }
             // now sub from other vars.
@@ -204,7 +210,10 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
                     increment_vars(ifs->scope->parent, f, state, numdec);
                 }
             }
-            write_label(ifs->endlbl, -numdec, state);
+            if(state->llvm)
+                write_label(ifs->endlbl, 1, state);
+            else
+                write_label(ifs->endlbl, -numdec, state);
             break;
     }
 }

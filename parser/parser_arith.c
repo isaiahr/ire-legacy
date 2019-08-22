@@ -5,6 +5,7 @@
 #include"parser_arith.h"
 #include"parser_expr.h"
 
+// inclusive
 #define LAST_ORDER 4
 
 
@@ -39,6 +40,8 @@ OpExpr* opexprhelper(Lextoken* p){
         case GREATER:
         case SUBTRACT:
         case MULT:
+        case PERCENT:
+        case FSLASH:
         case PIPE:
         case AMPERSAND:
             ; // nessecary
@@ -65,6 +68,8 @@ OpExpr* opexprhelper(Lextoken* p){
 int ordermatches (int order, int type){
     switch(type){
         case MULT:
+        case PERCENT:
+        case FSLASH:
             return order == 0;
         case PLUS:
         case SUBTRACT:

@@ -12,5 +12,7 @@
 #define AMPERSAND 1007
 #define CARET 1008
 #define PIPE 1009
+#define FSLASH 1010
+#define PERCENT 1011
 
 #endif

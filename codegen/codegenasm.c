@@ -113,7 +113,20 @@ void awrite_indget(Variable* arr, Variable* ind, Variable* to, State* state){
             break;
     }
     fprintf(state->fp, "addq %%rax, %%r15\n");
-    fprintf(state->fp, "movq (%%r15), %%rax\n");
+    switch(arr->type->array_subtype->width){
+        case 64:
+            fprintf(state->fp, "movq (%%r15), %%rax\n");
+            break;
+        case 32:
+            fprintf(state->fp, "movq (%%r15), %%eax\n");
+            break;
+        case 16:
+            fprintf(state->fp, "movq (%%r15), %%ax\n");
+            break;
+        case 8:
+            fprintf(state->fp, "movq (%%r15), %%al\n");
+            break;
+    }
     fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
 }
 
@@ -135,7 +148,19 @@ void awrite_indset(Variable* arr, Variable* ind, Variable* from, State* state){
             break;
     }
     fprintf(state->fp, "addq %%rax, %%r15\n");
-    fprintf(state->fp, "movq %%r14, (%%r15)\n");
+    switch(arr->type->array_subtype->width){
+        case 64:
+            fprintf(state->fp, "movq %%r14, (%%r15)\n");
+            break;
+        case 32:
+            fprintf(state->fp, "movl %%r14d, (%%r15)\n");
+            break;
+        case 16:
+            fprintf(state->fp, "movw %%r14w, (%%r15)\n");
+        case 8:
+            fprintf(state->fp, "movb %%r14b, (%%r15)\n");
+            break;
+    }
 }
 
 void awrite_addeq(Variable* arr, Variable* delta, State* state){
@@ -202,6 +227,17 @@ void awrite_invert(Variable* to, Variable* from, State* state){
 void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* state){
     fprintf(state->fp, "movq %i(%%rsp), %%rax\n", left->offset);
     fprintf(state->fp, "movq %i(%%rsp), %%rbx\n", right->offset);
+    if(op == FSLASH || op == PERCENT){
+        fprintf(state->fp, "cqto\n");
+        fprintf(state->fp, "idivq %%rbx\n");
+        if(op == FSLASH){
+            fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", to->offset);
+        }
+        else{
+            fprintf(state->fp, "movq %%rdx, %i(%%rsp)\n", to->offset);
+        }
+        return;
+    }
     switch(op){
         case PLUS:
             fprintf(state->fp, "addq %%rax, %%rbx\n");
@@ -237,9 +273,6 @@ void awrite_arith(Variable* to, Variable* left, Variable* right, int op, State* 
             break;
         case AMPERSAND:
             fprintf(state->fp, "and %%rax, %%rbx\n");
-            break;
-        case PIPE:
-            fprintf(state->fp, "or %%rax, %%rbx\n");
             break;
     }
     fprintf(state->fp, "movq %%rbx, %i(%%rsp)\n", to->offset);

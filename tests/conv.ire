@@ -1,0 +1,71 @@
+import essential.ire
+
+
+// only works with positive, nonzero integers.
+Byte[] String(Int c){
+    Int digs
+    digs = log10(c, 0, 1)
+    return StringDig(c, digs)
+}
+
+Int log10(Int a, Int b, Int c){
+    if a < c {
+        return b
+    }
+    return log10(a, b+1, c*10)
+}
+
+
+// prints digits number of digits of c
+Byte[] StringDig(Int c, Int digits){
+    Byte[] b
+    b = new Byte[] [digits]
+    recwrite(b, 1, 0, c)
+    return b
+}
+
+Int recwrite(Byte[] w, Int i, Int n, Int conv){
+    if n+1 > ||w|| {
+        return 0
+    }
+    Byte b
+    b = chrat(conv, i)
+    w[||w|| - n - 1] = b
+    recwrite(w, i*10, n+1, conv)
+    return 0
+}
+
+Byte chrat(Int i, Int p){
+    return repr((i / p) % 10)
+}
+
+Byte repr(Int c){
+    if c == 0{
+        return '0'
+    }
+    if c == 1{
+        return '1'
+    }
+    if c == 2{
+        return '2'
+    }
+    if c == 3{
+        return '3'
+    }
+    if c == 4{
+        return '4'
+    }
+    if c == 5{
+        return '5'
+    }
+    if c == 6{
+        return '6'
+    }
+    if c == 7{
+        return '7'
+    }
+    if c == 8{
+        return '8'
+    }
+    return '9'
+}
