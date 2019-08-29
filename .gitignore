@@ -9,3 +9,4 @@ tests/factorial
 tests/fibonacci
 tests/hello
 tests/types
+tests/primes
