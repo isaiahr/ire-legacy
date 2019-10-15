@@ -256,6 +256,15 @@ void write_conditional(Variable* test, char* truelbl, char* falselbl, State* sta
     }
 }
 
+void write_unconditional(char* lbl, State* state){
+    if(state->llvm){
+        lwrite_unconditional(lbl, state);
+    }
+    else{
+        awrite_unconditional(lbl, state);
+    }
+}
+
 void write_label(char* lbl, int uncond, State* state){
     if(state->llvm){
         lwrite_label(lbl, uncond, state);

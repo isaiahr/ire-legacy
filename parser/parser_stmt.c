@@ -184,6 +184,91 @@ Lextoken* parse_if(Lextoken* p, Token* e, State* state){
     return next(b);
 }
 
+// elseif = else, if, expr, "{", body, "}"
+Lextoken* parse_elseif(Lextoken* p, Token* e, State* state){
+    if(!match(p, ELSE) || !match(next(p), IF)){
+        return NULL;
+    }
+    p = next(p);
+    e->subtokens = init_token(p->line);
+    Lextoken* a = parse_expression(next(p), &e->subtokens[0]);
+    if(a == NULL || !match(a, LEFT_CRPAREN)){
+        destroy_token(e->subtokens);
+        return NULL;
+    }
+    e->subtokens = realloc_token(e->subtokens, 2);
+    Lextoken* b = parse_body(next(a), &e->subtokens[1], state);
+    if(!match(b, RIGHT_CRPAREN)){
+        destroy_token(e->subtokens);
+        return NULL;
+    }
+    e->type = T_ELSEIF;
+    e->subtoken_count = 2;
+    return next(b);
+}
+
+// else = else, "{", body, "}"
+Lextoken* parse_else(Lextoken* p, Token* e, State* state){
+    if(!match(p, ELSE)){
+        return NULL;
+    }
+    if(!match(next(p), LEFT_CRPAREN)){
+        return NULL;
+    }
+    e->subtokens = init_token(p->line);
+    Lextoken* b = parse_body(next(next(p)), &e->subtokens[0], state);
+    if(!match(b, RIGHT_CRPAREN)){
+        destroy_token(e->subtokens);
+        return NULL;
+    }
+    e->type = T_ELSE;
+    e->subtoken_count = 1;
+    return next(b);
+}
+
+// ifblk = if, { elseif, }, [else]
+Lextoken* parse_ifblk(Lextoken* p, Token* t, State* state){
+    t->subtokens = init_token(p->line);
+    Lextoken* l = parse_if(p, t->subtokens, state);
+    Lextoken* o_l = l;
+    if(l == NULL){
+        destroy_token(t->subtokens);
+        return NULL;
+    }
+    while(match(l, TERM)){
+        l = l->next;
+    }
+    t->subtokens = realloc_token(t->subtokens, 2);
+    Lextoken* l1 = parse_elseif(l, &t->subtokens[1], state);
+    Lextoken* o_l1 = l1;
+    while(match(l1, TERM)){
+        l1 = l1->next;
+    }
+    int i = 2;
+    while(l1 != NULL){
+        l = l1;
+        t->subtokens = realloc_token(t->subtokens, i+1);
+        l1 = parse_elseif(l, &t->subtokens[i], state);
+        o_l1 = l1;
+        while(match(l1, TERM)){
+            l1 = l1->next;
+        }
+        i = i + 1;
+    }
+    Lextoken* l2 = parse_else(l, &t->subtokens[i-1], state);
+    t->type = T_IFBLK;
+    if(l2 == NULL){
+        t->subtoken_count = i-1;
+        if(l1 == NULL)
+            return o_l;
+        return o_l1;
+    }
+    else {
+        t->subtoken_count = i;
+        return l2;
+    }
+}
+
 // statement = varinit | expression | assignment | return | arrset | setmember
 Lextoken* parse_statement(Lextoken* p, Token* t, State* state){
     Lextoken* l = parse_varinit(p, t);
@@ -210,7 +295,7 @@ Lextoken* parse_statement(Lextoken* p, Token* t, State* state){
     if(l != NULL){
         return l;
     }
-    l = parse_if(p, t, state);
+    l = parse_ifblk(p, t, state);
     if(l != NULL){
         return l;
     }

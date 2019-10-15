@@ -337,9 +337,16 @@ void awrite_conditional(Variable* test, char* truelbl, char* falselbl, State* st
     fprintf(state->fp, "jmp %s\n", truelbl);
 }
 
+void awrite_unconditional(char* lbl, State* state){
+    fprintf(state->fp, "jmp %s\n", lbl);
+}
+
+// multipurpose hack
 void awrite_label(char* lbl, int numdec, State* state){
     if(numdec != 0){
         fprintf(state->fp, "add $%i, %%rsp\n", numdec);
     }
-    fprintf(state->fp, "%s:\n", lbl);
+    if(lbl != NULL){
+        fprintf(state->fp, "%s:\n", lbl);
+    }
 }

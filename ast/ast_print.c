@@ -123,6 +123,18 @@ void print_body(Body* cur){
                 IfStmt* ifs = (IfStmt*) cur->stmt->stmt;
                 printf("    if %s\n", formatvar(ifs->test));
                 print_body(ifs->scope->body);
+                ifs = ifs->elsestmt;
+                while(ifs != NULL){
+                    printf("    endif\n");
+                    if(ifs->test == NULL){
+                        printf("    else\n");
+                    }
+                    else {
+                        printf("    elseif %s\n", formatvar(ifs->test));
+                    }
+                    print_body(ifs->scope->body);
+                    ifs = ifs->elsestmt;
+                }
                 printf("    endif\n");
                 
         }

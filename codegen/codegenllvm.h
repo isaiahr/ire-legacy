@@ -29,5 +29,6 @@ void lwrite_setmember(Variable* dest, Variable* src, int off, State* state);
 void lwrite_settag(Variable* var, int off, State* state);
 void lwrite_conditional(Variable* test, char* truelbl, char* falselbl, State* state);
 void lwrite_label(char* lbl, int uncond, State* state);
+void lwrite_unconditional(char* lbl, State* state);
 
 #endif

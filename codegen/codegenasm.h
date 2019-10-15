@@ -29,5 +29,6 @@ void awrite_setmember(Variable* dest, Variable* src, int off, State* state);
 void awrite_settag(Variable* var, int off, State* state);
 void awrite_conditional(Variable* test, char* truelbl, char* falselbl, State* state);
 void awrite_label(char* lbl, int uncond, State* state);
+void awrite_unconditional(char* lbl, State* state);
 
 #endif

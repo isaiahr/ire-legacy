@@ -42,6 +42,9 @@
 #define T_MEMBERIDENT 33
 #define T_IF 34
 #define T_INVERT 35
+#define T_IFBLK 36
+#define T_ELSEIF 37
+#define T_ELSE 38
 
 /**
  *

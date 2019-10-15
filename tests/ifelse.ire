@@ -1,0 +1,22 @@
+import essential.ire
+
+Int func(Int a){
+    Int res
+    res = 0
+    if a == 1 {
+        res = res + 1
+    }
+    else if a == 2 {
+        res = res + 2
+    }
+    else {
+        res = res + 4
+    }
+    return res
+}
+
+Int main(){
+    Int r
+    r = func(1) * 100 + func(2) * 10 + func(3)
+    exit(r)
+}

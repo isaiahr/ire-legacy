@@ -433,6 +433,10 @@ void lwrite_conditional(Variable* test, char* truelbl, char* falselbl, State* st
     state->tempnum += 2;
 }
 
+void lwrite_unconditional(char* lbl, State* state){
+    fprintf(state->fp, "br label %%%s\n", lbl);
+}
+
 void lwrite_label(char* lbl, int uncond, State* state){
     if(uncond){
          fprintf(state->fp, "br label %%%s\n", lbl);

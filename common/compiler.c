@@ -189,32 +189,67 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
             ;
             IfStmt* ifs = (IfStmt*) stmt->stmt;
             // write cond, then label, then label, and decrement vars.
-            write_conditional(ifs->test, ifs->truelbl, ifs->endlbl, state);
-            write_label(ifs->truelbl, 0, state);
-            Body* body = ifs->scope->body;
-            while(body != NULL){
-                compile_stmt(body->stmt, f, ifs->scope, state);
-                if(body->next == NULL){
-                    if(body->stmt->type == S_RETURN){
-                        // hack for llvm numbering restrictions.
-                        // state->tempnum -= 1;
+            int _IF = 0;
+            int _ELSEIF = 1;
+            int _ELSE = 2;
+            int _type = _IF;
+            char* endlbl = NULL;
+            IfStmt* estmt = ifs;
+            while(estmt->endlbl == NULL)
+                estmt = estmt->elsestmt;
+            endlbl = estmt->endlbl;
+            while(ifs != NULL){
+                if(_type == _ELSEIF){
+                    // initlbl only needed for elseif.
+                    write_label(ifs->initlbl, 0, state);
+                }
+                if(_type != _ELSE){
+                    if(ifs->elsestmt == NULL){
+                        // no else after -> elsecond jumps to end.
+                        write_conditional(ifs->test, ifs->truelbl, ifs->endlbl, state);
+                    }
+                    else if (ifs->elsestmt->initlbl == NULL){
+                        // else after -> elsecond jumps to else.
+                        write_conditional(ifs->test, ifs->truelbl, ifs->elsestmt->truelbl, state);
+                    }
+                    else{
+                        write_conditional(ifs->test, ifs->truelbl, ifs->elsestmt->initlbl, state);
                     }
                 }
-                body = body->next;
-            }
-            // now sub from other vars.
-            int numdec = 0;
-            if(ifs->scope->vars != NULL && ifs->scope->vars->var != NULL){
-                numdec = -ifs->scope->vars->var->offset - 8;
-                if(numdec != 0){
-                    increment_vars(ifs->scope->parent, f, state, numdec);
+                write_label(ifs->truelbl, 0, state);
+                Body* body = ifs->scope->body;
+                while(body != NULL){
+                    compile_stmt(body->stmt, f, ifs->scope, state);
+                    body = body->next;
+                }
+                // now sub from other vars.
+                int numdec = 0;
+                if(ifs->scope->vars != NULL && ifs->scope->vars->var != NULL){
+                    numdec = -ifs->scope->vars->var->offset - 8;
+                    if(numdec != 0){
+                        increment_vars(ifs->scope->parent, f, state, numdec);
+                    }
+                    
+                    // should writelbl with numdec prob.
+                }
+                if(!state->llvm){
+                    write_label(NULL, -numdec, state);
+                }
+                // branch to end after if stmt.
+                write_unconditional(endlbl, state);
+                ifs = ifs->elsestmt;
+                _type = _ELSEIF;
+                if(ifs != NULL && ifs->test == NULL){
+                    _type = _ELSE;
                 }
             }
+            
             if(state->llvm)
-                write_label(ifs->endlbl, 1, state);
-            else
-                write_label(ifs->endlbl, -numdec, state);
+                write_label(endlbl, 0, state);
+            else // -numdec ? 
+                write_label(endlbl, 0, state);
             break;
+            
     }
 }
 

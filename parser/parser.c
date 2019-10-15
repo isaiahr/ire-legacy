@@ -37,6 +37,12 @@ Lextoken* parse_body(Lextoken* p, Token* body, State* state){
                 body->subtoken_count = ind;
                 p = next(p);
             }
+            else if(match(p, RIGHT_CRPAREN)){
+                // stmt without term allowed iff its last stmt in block.
+                ind += 1;
+                body->subtoken_count = ind;
+                return p;
+            }
             else{
                 add_error(state, SYNTAXERROR, p->line, "failed to parse statement");
                 ind += 1;

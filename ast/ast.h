@@ -211,10 +211,15 @@ typedef struct Scope{
 } Scope;
 
 typedef struct IfStmt{
+    // head = if, test nonnull = elseif, test null = else
     Variable* test;
     Scope* scope;
-    char* truelbl;
-    char* endlbl;
+    char* initlbl; // pre-condition test
+    char* truelbl; // true cond -> branch here, code -> branch end.
+    char* endlbl; // false cond -> branch elsestmt.initcond 
+    // either elsestmt or endlbl exists.
+    // if elsestmt exists, then endlbl = endlbl(elsestmt) (recursive)
+    struct IfStmt* elsestmt;
 } IfStmt;
 
 Program* process_program(Token* t, State* state);

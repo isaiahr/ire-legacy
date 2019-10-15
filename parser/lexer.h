@@ -36,6 +36,8 @@
 #define FALSE 32
 #define DOUBLEPIPE 33
 #define EXCLAMATION 34
+#define ELSE 35
+
 
 typedef struct Lextoken{
     int line;

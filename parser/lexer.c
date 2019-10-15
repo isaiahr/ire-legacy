@@ -78,6 +78,7 @@ Lextoken* lex(char* input, State* state){
             case EXCLAMATION: str = "EXCLAMATION"; break;
             case PERCENT: str = "PERCENT"; break;
             case FSLASH: str = "FSLASH"; break;
+            case ELSE: str = "ELSE"; break;
             default: str = "???"; break;
         }
         if(cur->str){
@@ -214,6 +215,11 @@ Lextoken* lexone(char** i, int* line){
     if(keyword_match(input, "if")){
         (*i) += strlen("if");
         l->type = IF;
+        return l;
+    }
+    if(keyword_match(input, "else")){
+        (*i) += strlen("else");
+        l->type = ELSE;
         return l;
     }
     if(keyword_match(input, "type")){

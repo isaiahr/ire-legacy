@@ -20,7 +20,7 @@ void p_return(Token* t, Function* func, Scope* scope, Program* prog, State* stat
 void p_indset(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 void p_addeq(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 void p_setmember(Token* t, Function* func, Scope* scope, Program* prog, State* state);
-void p_if(Token* t, Function* func, Scope* scope, Program* prog, State* state);
+void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 Variable* p_boolean(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 Variable* p_variable(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 Variable* p_char(Token* t, Function* func, Scope* scope, Program* prog, State* state);
@@ -41,7 +41,7 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
     HANDLEV(T_ASSIGNMENT, p_assignment)
     HANDLEV(T_INDSET, p_indset)
     HANDLEV(T_ADDEQ, p_addeq)
-    HANDLEV(T_IF, p_if)
+    HANDLEV(T_IFBLK, p_ifblk)
     HANDLEV(T_SETMEMBER, p_setmember)
     HANDLEV(T_VARINIT, p_varinit)
     HANDLEV(T_RETURN, p_return)
@@ -459,28 +459,61 @@ Variable* p_variable(Token* t, Function* func, Scope* scope, Program* prog, Stat
     return proc_var(t->str, scope, func);
 }
 
-void p_if(Token* t, Function* func, Scope* scope, Program* prog, State* state){
-    SETUP_VARS(IfStmt, ifs, S_IF);
-    ifs->test = process_stmt(t->subtokens, func, scope, prog, state);
-    if(ifs->test == NULL){
-        return;
+char* gen_lbl(State* state){
+    char* result = malloc(33); // VERY conservative upper bound
+    snprintf(result, 32, "L%i", state->lblcount);
+    state->lblcount += 1;
+    return result;
+}
+
+void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state){
+    Statement* stmt = malloc(sizeof(struct Statement));
+    stmt->type = S_IF;
+    IfStmt* prev = NULL;
+    for(int i = 0; i < t->subtoken_count; i++){
+        Token* if0 = &t->subtokens[i];
+        IfStmt* ifs = malloc(sizeof(struct IfStmt)); 
+        if(i == 0){
+            stmt->stmt = ifs;
+        }
+        if(if0->type != T_ELSE){ 
+            ifs->test = process_stmt(if0->subtokens, func, scope, prog, state);
+            if(ifs->test == NULL){
+                return;// error on expr, should be outputted by other func.
+            }
+            if(ifs->test->type == NULL || ifs->test->type != proc_type("Boolean", prog)){
+                char* msg = format("%s", "ifstmt needs Boolean");
+                add_error(state, INCOMPATTYPE, if0->subtokens->line, msg);
+            }
+            ifs->initlbl = gen_lbl(state);
+        }
+        ifs->truelbl = gen_lbl(state);
+        ifs->endlbl = NULL;
+        if(i+1 == t->subtoken_count){
+            // else.
+            ifs->endlbl = gen_lbl(state);
+            ifs->elsestmt = NULL;
+        }
+        if(prev != NULL){
+            prev->elsestmt = ifs;
+        }
+        Scope* newscope = malloc(sizeof(struct Scope));
+        newscope->parent = scope;
+        newscope->body = NULL;
+        newscope->offset = 0;
+        newscope->vars = NULL;
+        Token* body = NULL;
+        if(if0->type == T_ELSE){
+            body = &if0->subtokens[0];
+        }
+        else{
+            body = &if0->subtokens[1];
+        }
+        for(int j = 0; j < body->subtoken_count; j++){
+            process_stmt(&body->subtokens[j], func, newscope, prog, state);
+        }
+        ifs->scope = newscope;
+        prev = ifs;
     }
-    if(ifs->test->type == NULL || ifs->test->type != proc_type("Boolean", prog)){
-        add_error(state, INCOMPATTYPE, t->subtokens->line, format("%s", "ifstmt needs Boolean"));
-    }
-    ifs->truelbl = malloc(33);
-    ifs->endlbl = malloc(33);
-    snprintf(ifs->truelbl, 32, "L%i", state->lblcount);
-    snprintf(ifs->endlbl, 32, "L%i", state->lblcount+1);
-    state->lblcount += 2;
-    Scope* newscope = malloc(sizeof(struct Scope));
-    newscope->parent = scope;
-    newscope->body = NULL;
-    newscope->offset = 0;
-    newscope->vars = NULL;
-    for(int i = 0; i < t->subtokens[1].subtoken_count; i ++){
-        process_stmt(&t->subtokens[1].subtokens[i], func, newscope, prog, state);
-    }
-    ifs->scope = newscope;
     add_stmt_func(stmt, func, scope);
 }
