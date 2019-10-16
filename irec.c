@@ -20,7 +20,8 @@ int main(int argc, char **argv)
     struct option options[] = {
     {"asm", 0, NULL, 'a'},
     {"output", 0, NULL, 'o'},
-    {"verbose", 0, NULL, 'v'},
+    {"version", 0, NULL, 'v'},
+    {"dumptrees", 0, NULL, 'd'},
     {"annotate", 0, NULL, 'n'},
     {"help", 0, NULL , 'h'},
     {"backend", 0, NULL, 'b'},
@@ -37,7 +38,7 @@ int main(int argc, char **argv)
     state->errors = NULL;
     char c = 0;
     int ind = 0;
-    while((c = getopt_long(argc, argv, "ao:vnb:hl", options, &ind)) != -1){
+    while((c = getopt_long(argc, argv, "ao:vdnb:hl", options, &ind)) != -1){
         switch(c){
             case 'a':
                 state->comp_asm = 1;
@@ -46,6 +47,9 @@ int main(int argc, char **argv)
                 state->outputfile = optarg;
                 break;
             case 'v':
+                printf("irec version %s, build %s\n", VERSION_STRING, COMMIT_ID);
+                return 0;
+            case 'd':
                 state->verbose = 1;
                 break;
             case 'n':
@@ -73,10 +77,11 @@ int main(int argc, char **argv)
                 printf("Options:\n");
                 printf("-a, --asm,                Compile, but do not assemble & link\n");
                 printf("-o, --output=<outfile>    Compile to file outfile\n");
-                printf("-v, --verbose             Print more info on what irec is doing\n");
+                printf("-d, --dumptrees           Print lexer token stream, parse tree, and abstract syntax tree\n");
                 printf("-b, --backend=<llvm/asm>  Use the specified backend for compilation (default:llvm)\n");             
                 printf("-n, --annotate            Annotate generated output\n");
                 printf("-h, --help                Display this information\n");
+                printf("-v, --version             Display compiler version\n");
                 printf("-l, --llvm                Output llvm IR and stop\n");
                 printf("irec is distributed under the LGPL v3 License.\n");
                 printf("See LICENSE for details. If you do not have the source code\n");
