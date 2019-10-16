@@ -1,7 +1,7 @@
 #ifndef __ERROR_H__
 #define __ERROR_H__
 
-#include"common/common.h"
+#include"common.h"
 
 #define LEXERROR 0
 #define SYNTAXERROR 1

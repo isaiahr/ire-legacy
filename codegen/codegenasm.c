@@ -5,7 +5,7 @@
 #include<unistd.h>
 #include<sys/types.h>
 #include<sys/wait.h>
-#include"common/common.h"
+#include"core/common.h"
 #include"build/pre_s.h"
 #include"irec.h"
 #include"build/commitid.h"

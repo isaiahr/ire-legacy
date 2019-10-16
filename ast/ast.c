@@ -9,8 +9,8 @@
 #include"ast_stmt.h"
 #include"ast_manip.h"
 #include"ast_types.h"
-#include"common/error.h"
-#include"common/common.h"
+#include"core/error.h"
+#include"core/common.h"
 
 /**
  * ast.c -- converts the parse tree produced by the parser to the

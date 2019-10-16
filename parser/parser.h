@@ -2,7 +2,7 @@
 #define __PARSER_H__
 
 #include"parser/lexer.h"
-#include"common/common.h"
+#include"core/common.h"
 
 //token types
 

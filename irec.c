@@ -6,13 +6,13 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include"irec.h"
-#include"common/common.h"
+#include"core/common.h"
 #include"parser/lexer.h"
 #include"parser/parser.h"
-#include"common/compiler.h"
+#include"core/compiler.h"
 #include"codegen/writer.h"
 #include"precompiler/precompiler.h"
-#include"common/error.h"
+#include"core/error.h"
 #include"build/commitid.h"
 
 int main(int argc, char **argv)

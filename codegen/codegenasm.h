@@ -1,7 +1,7 @@
 #ifndef __CODEGENASM_H__
 #define __CODEGENASM_H__
 
-#include"common/common.h"
+#include"core/common.h"
 #include"ast/ast.h"
 
 void awrite_header(State* state);

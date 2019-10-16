@@ -3,8 +3,8 @@
 #include<string.h>
 #include<stdio.h>
 #include"parser/lexer.h"
-#include"common/common.h"
-#include"common/error.h"
+#include"core/common.h"
+#include"core/error.h"
 
 int keyword_match(char* keyword, char* str);
 

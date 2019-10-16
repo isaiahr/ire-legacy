@@ -5,10 +5,10 @@
 #include<sys/types.h>
 #include"parser/lexer.h"
 #include"parser/parser.h"
-#include"common/compiler.h"
+#include"compiler.h"
 #include"codegen/writer.h"
-#include"common/common.h"
-#include"common/error.h"
+#include"common.h"
+#include"error.h"
 #include"ast/ast.h"
 
 

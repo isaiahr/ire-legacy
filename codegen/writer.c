@@ -8,7 +8,7 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include<stdarg.h>
-#include"common/common.h"
+#include"core/common.h"
 #include"codegen/codegenasm.h"
 #include"codegen/codegenllvm.h"
 #include"ast/ast.h"

@@ -6,8 +6,8 @@
 
 #include<stdlib.h>
 #include<string.h>
-#include"common/common.h"
-#include"common/error.h"
+#include"core/common.h"
+#include"core/error.h"
 #include"ast_manip.h"
 #include"ast_types.h"
 

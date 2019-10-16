@@ -10,7 +10,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include"ast_stmt.h"
-#include"common/error.h"
+#include"core/error.h"
 #include"ast_manip.h"
 #include"ast_types.h"
 

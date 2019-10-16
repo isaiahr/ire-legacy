@@ -2,8 +2,8 @@
 #include<stdlib.h>
 #include<string.h>
 #include<unistd.h>
-#include"common/common.h"
-#include"common/error.h"
+#include"core/common.h"
+#include"core/error.h"
 #include"lexer.h"
 #include"parser.h"
 #include"parseutils.h"

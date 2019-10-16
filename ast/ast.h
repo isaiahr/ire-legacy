@@ -7,7 +7,7 @@
 #define __AST_H__
 
 #include"parser/parser.h"
-#include"common/common.h"
+#include"core/common.h"
 
 #define S_ASSIGNMENT 1
 #define S_CONSTANTASSIGNMENT 2

@@ -2,7 +2,7 @@
 #define __AST_TYPES__H_
 
 #include"ast.h"
-#include"common/common.h"
+#include"core/common.h"
 
 void write_structure(TypeStructure* write, Token* src, Program* prog, State* state);
 int bytes(TypeStructure* ts);

@@ -2,7 +2,7 @@
 #define __AST_MANIP_H__
 
 #include"ast.h"
-#include"common/common.h"
+#include"core/common.h"
 
 VarList* add_varlist(VarList* vl, Variable* var);
 Type* proc_type(char* ident, Program* prog);

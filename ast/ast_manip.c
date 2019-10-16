@@ -8,7 +8,7 @@
 #include<stdlib.h>
 #include<string.h>
 
-#include"common/common.h"
+#include"core/common.h"
 #include"ast_manip.h"
 
 VarList* add_varlist(VarList* vl, Variable* var){
