@@ -213,7 +213,11 @@ typedef struct Scope{
 typedef struct IfStmt{
     // head = if, test nonnull = elseif, test null = else
     Variable* test;
+    // scope for body of if
     Scope* scope;
+    // scope for cond. this is nessecary to have a new scope to avoid sideeffects of
+    // conditions. (short circuiting)
+    Scope* cond;
     char* initlbl; // pre-condition test
     char* truelbl; // true cond -> branch here, code -> branch end.
     char* endlbl; // false cond -> branch elsestmt.initcond 

@@ -1,0 +1,21 @@
+import essential.ire
+
+Int main(){
+    Int[] a
+    a = new Int[] [1]
+    if func(a) {
+        
+    }
+    else if func(a) {
+        
+    }
+    else if func(a) {
+        
+    }
+    exit(a[0])
+}
+
+Boolean func(Int[] param){
+    param[0] = param[0] + 1
+    return true
+}

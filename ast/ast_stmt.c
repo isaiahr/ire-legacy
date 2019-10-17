@@ -476,8 +476,13 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
         if(i == 0){
             stmt->stmt = ifs;
         }
-        if(if0->type != T_ELSE){ 
-            ifs->test = process_stmt(if0->subtokens, func, scope, prog, state);
+        if(if0->type != T_ELSE){
+            ifs->cond = malloc(sizeof(struct Scope));
+            ifs->cond->parent = scope;
+            ifs->cond->body = NULL;
+            ifs->cond->offset = 0;
+            ifs->cond->vars = NULL;
+            ifs->test = process_stmt(if0->subtokens, func, ifs->cond, prog, state);
             if(ifs->test == NULL){
                 return;// error on expr, should be outputted by other func.
             }

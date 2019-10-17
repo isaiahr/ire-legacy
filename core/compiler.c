@@ -204,6 +204,25 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
                     write_label(ifs->initlbl, 0, state);
                 }
                 if(_type != _ELSE){
+                    // write condscope.
+                    annotate(state, "begin cond");
+                    Body* body = ifs->cond->body;
+                    while(body != NULL){
+                        compile_stmt(body->stmt, f, ifs->cond, state);
+                        body = body->next;
+                    }
+                    int numdec = 0;
+                    if(ifs->cond->vars != NULL && ifs->cond->vars->var != NULL){
+                        numdec = -ifs->cond->vars->var->offset - 8;
+                        if(numdec != 0){
+                            increment_vars(ifs->cond->parent, f, state, numdec);
+                        }
+                    }
+                    if(!state->llvm){
+                        write_label(NULL, -numdec, state);
+                        ifs->test->offset += numdec;
+                    }
+                    annotate(state, "end cond");
                     if(ifs->elsestmt == NULL){
                         // no else after -> elsecond jumps to end.
                         write_conditional(ifs->test, ifs->truelbl, ifs->endlbl, state);
@@ -229,8 +248,6 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
                     if(numdec != 0){
                         increment_vars(ifs->scope->parent, f, state, numdec);
                     }
-                    
-                    // should writelbl with numdec prob.
                 }
                 if(!state->llvm){
                     write_label(NULL, -numdec, state);

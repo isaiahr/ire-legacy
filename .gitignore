@@ -10,3 +10,5 @@ tests/fibonacci
 tests/hello
 tests/types
 tests/primes
+tests/ifelse
+tests/sideeffect

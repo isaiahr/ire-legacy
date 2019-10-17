@@ -240,14 +240,18 @@ Lextoken* parse_ifblk(Lextoken* p, Token* t, State* state){
     }
     t->subtokens = realloc_token(t->subtokens, 2);
     Lextoken* l1 = parse_elseif(l, &t->subtokens[1], state);
+    // old l1
     Lextoken* o_l1 = l1;
     while(match(l1, TERM)){
         l1 = l1->next;
     }
     int i = 2;
+    // "old old l1"
+    Lextoken* o_o_l1;
     while(l1 != NULL){
         l = l1;
         t->subtokens = realloc_token(t->subtokens, i+1);
+        o_o_l1 = o_l1;
         l1 = parse_elseif(l, &t->subtokens[i], state);
         o_l1 = l1;
         while(match(l1, TERM)){
@@ -259,9 +263,10 @@ Lextoken* parse_ifblk(Lextoken* p, Token* t, State* state){
     t->type = T_IFBLK;
     if(l2 == NULL){
         t->subtoken_count = i-1;
-        if(l1 == NULL)
+        if(i == 2)// if
             return o_l;
-        return o_l1;
+        // elseif.
+        return o_o_l1;
     }
     else {
         t->subtoken_count = i;

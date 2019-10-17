@@ -82,6 +82,7 @@ runtestoutputboth primes 0 "The prime numbers between 7855 and 8000 are: 7867, 7
 runtestboth factorial 120
 runtestboth fibonacci 201
 runtestboth ifelse 124
+runtestboth sideeffect 1
 
 echo ""
 # end part
