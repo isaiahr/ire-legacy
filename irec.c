@@ -23,6 +23,7 @@ int main(int argc, char **argv)
     {"version", 0, NULL, 'v'},
     {"dumptrees", 0, NULL, 'd'},
     {"annotate", 0, NULL, 'n'},
+    {"Optimize", 0, NULL, 'O'},
     {"help", 0, NULL , 'h'},
     {"backend", 0, NULL, 'b'},
     };
@@ -32,13 +33,14 @@ int main(int argc, char **argv)
     state->verbose = 0;
     state->annotate = 0;
     state->llvm = 1;
+    state->optimization = 0;
     state->comp_llvm = 0;
     state->lblcount = 0;
     state->writ_return = 0;
     state->errors = NULL;
     char c = 0;
     int ind = 0;
-    while((c = getopt_long(argc, argv, "ao:vdnb:hl", options, &ind)) != -1){
+    while((c = getopt_long(argc, argv, "ao:vdnb:O:hl", options, &ind)) != -1){
         switch(c){
             case 'a':
                 state->comp_asm = 1;
@@ -54,6 +56,24 @@ int main(int argc, char **argv)
                 break;
             case 'n':
                 state->annotate = 1;
+                break;
+            case 'O':
+                if(strcmp(optarg, "0") == 0){
+                    state->optimization = 0;
+                }
+                else if(strcmp(optarg, "1") == 0){
+                    state->optimization = 1;
+                }
+                else if(strcmp(optarg, "2") == 0){
+                    state->optimization = 2;
+                }
+                else if(strcmp(optarg, "3") == 0){
+                    state->optimization = 3;
+                }
+                else{
+                    printf("Invalid optimization level \"%s\". Possible choices are 0, 1, 2, 3\n", optarg);
+                    return 1;
+                }
                 break;
             case 'l':
                 state->comp_llvm = 1;
@@ -83,6 +103,7 @@ int main(int argc, char **argv)
                 printf("-h, --help                Display this information\n");
                 printf("-v, --version             Display compiler version\n");
                 printf("-l, --llvm                Output llvm IR and stop\n");
+                printf("-O, --Optimize=<0,1,2,3>  Use optimization level (default:0)\n");
                 printf("irec is distributed under the LGPL v3 License.\n");
                 printf("See LICENSE for details. If you do not have the source code\n");
                 printf("for this application, you may acquire it at github.com/isaiahr/ire\n");
@@ -95,6 +116,10 @@ int main(int argc, char **argv)
     // check options are ok
     if(state->comp_llvm && state->comp_asm){
         printf("Incompatible options -l, -a\n");
+        return 1;
+    }
+    if(state->optimization != 0 && state->llvm == 0){
+        printf("Optimization only supported when using llvm backend.\n");
         return 1;
     }
     if(state->comp_llvm && state->llvm == 0){
@@ -181,6 +206,28 @@ int main(int argc, char **argv)
         printf("Done compilation.\n");
     }
     if(state->llvm){
+        if(state->optimization != 0){
+            //invoke opt
+            printf("Running optimization passes\n");
+            char* t5 = tempnam(NULL, "ireco");
+            char* ou3;
+            if(state->optimization == 0)
+                ou3 = "-O0";
+            else if(state->optimization == 1)
+                ou3 = "-O1";
+            else if(state->optimization == 2)
+                ou3 = "-O2";
+            else if(state->optimization == 3)
+                ou3 = "-O3";
+            int i23 = fork();
+            if(i23 == 0){
+                execl("/usr/bin/opt", "/usr/bin/opt", compto, ou3, "-o", t5, (char*) NULL);
+                return 0;
+            }
+            int st5;
+            wait(&st5);
+            compto = t5;
+        }
         //invoke llc
         printf("Done compilation. Generating asm...\n");
         char* t = NULL;

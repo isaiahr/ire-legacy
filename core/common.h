@@ -19,6 +19,7 @@ typedef struct State{
     char* outputfile;
     int verbose;
     int annotate;
+    int optimization;
     int writ_return;
     struct Error* errors;
     FILE* fp;
