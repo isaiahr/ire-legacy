@@ -28,16 +28,24 @@ Lextoken* parse_type(Lextoken* p, Token* e){
     return next(p);
 }
 
-// varinit = type, identifier
+// varinit = type, identifier, "=", expression
 Lextoken* parse_varinit(Lextoken* p, Token* e){
     e->subtokens = init_token(p->line);
-    e->subtoken_count = 1;
+    e->subtokens = realloc_token(e->subtokens, 2);
+    e->subtoken_count = 2;
     Lextoken* l = parse_type(p, e->subtokens);
-    if(match(l, IDENTIFIER)){
+    if(match(l, IDENTIFIER) && match(next(l), EQUALS)){
+        Lextoken* l2 = parse_expression(next(next(l)), &e->subtokens[1]);
+        if(l2 == NULL){
+            destroy_token(e->subtokens);
+            e->subtoken_count = 0;
+            e->subtokens = NULL;
+            return NULL;
+        }
         e->str = malloc(strlen(l->str)+1);
         memcpy(e->str, l->str, strlen(l->str)+1);
         e->type = T_VARINIT;
-        return next(l);
+        return l2;
     }
     e->subtoken_count = 0;
     destroy_token(e->subtokens);

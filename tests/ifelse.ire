@@ -1,8 +1,7 @@
 import essential.ire
 
 Int func(Int a){
-    Int res
-    res = 0
+    Int res = 0
     if a == 1 {
         res = res + 1
     }
@@ -16,7 +15,6 @@ Int func(Int a){
 }
 
 Int main(){
-    Int r
-    r = func(1) * 100 + func(2) * 10 + func(3)
+    Int r = func(1) * 100 + func(2) * 10 + func(3)
     exit(r)
 }

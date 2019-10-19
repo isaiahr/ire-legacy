@@ -5,8 +5,7 @@ Int get33(Int y) {
 }
 
 Int main(){
-    Int x
-    x = 2
+    Int x = 2
     exit(get33(x));
 }
 

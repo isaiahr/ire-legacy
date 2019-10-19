@@ -3,8 +3,7 @@ import essential.ire
 
 // only works with positive, nonzero integers.
 Byte[] String(Int c){
-    Int digs
-    digs = log10(c, 0, 1)
+    Int digs = log10(c, 0, 1)
     return StringDig(c, digs)
 }
 
@@ -18,8 +17,7 @@ Int log10(Int a, Int b, Int c){
 
 // prints digits number of digits of c
 Byte[] StringDig(Int c, Int digits){
-    Byte[] b
-    b = new Byte[] [digits]
+    Byte[] b = new Byte[] [digits]
     recwrite(b, 1, 0, c)
     return b
 }
@@ -28,8 +26,7 @@ Int recwrite(Byte[] w, Int i, Int n, Int conv){
     if n+1 > ||w|| {
         return 0
     }
-    Byte b
-    b = chrat(conv, i)
+    Byte b = chrat(conv, i)
     w[||w|| - n - 1] = b
     recwrite(w, i*10, n+1, conv)
     return 0

@@ -1,13 +1,10 @@
 import essential.ire
 
 Int main (){
-    Int j
-    Int[] thearray
-    thearray = new Int[] [10]
+    Int j = 0
+    Int[] thearray = new Int[] [10]
     thearray[0] = 41
-    j = 0
-    Int[] another
-    another = thearray
+    Int[] another = thearray
     another[0] = 10
     exit(thearray[j])
 }

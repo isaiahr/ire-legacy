@@ -89,6 +89,25 @@ void p_varinit(Token* t, Function* func, Scope* scope, Program* prog, State* sta
     SETUP_VARS(VarInit, v, S_VARINIT);
     v->var = mknvar(func, scope, t->str, proc_type(t->subtokens[0].str, prog));
     add_stmt_func(stmt, func, scope);
+    Assignment* an = malloc(sizeof(struct Assignment));
+    Statement* stmt2 = malloc(sizeof(struct Statement));
+    stmt2->stmt = an;
+    stmt2->type = S_ASSIGNMENT;
+    an->to = v->var;
+    an->from = process_stmt(&t->subtokens[1], func, scope, prog, state);
+    if(an->from == NULL){
+        // probably be silent because it already errored out ???
+        // keep for now to be consistent with p_assignment
+        add_error(state, UNDEFVAR, t->line, "reference of undeclared variable");
+        return;
+    }
+    if(an->to->type != an->from->type){
+        char* to_tyname = an->to->type->identifier;
+        char* from_tyname = an->from->type->identifier;
+        char* msg = format("assigning %s to declared variable of type %s", from_tyname, to_tyname);
+        add_error(state, INCOMPATTYPE, t->line, msg);
+    }
+    add_stmt_func(stmt2, func, scope);
 }
 
 void p_return(Token* t, Function* func, Scope* scope, Program* prog, State* state){

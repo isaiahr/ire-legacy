@@ -9,8 +9,7 @@ type P2d { Int x & Int y }
 
 
 Int main(){
-    Point p
-    p = new Point HasY(y=3) & (time=2) & Country(country="Canada") & Continent(continent="North America")
+    Point p = new Point HasY(y=3) & (time=2) & Country(country="Canada") & Continent(continent="North America")
     print(p.continent)
     print("\n")
     exit(p.y + p.time)
