@@ -27,6 +27,10 @@ void lwrite_varinit(Variable* var, State* state){
 }
 
 void lwrite_funcreturn(Function* func, Variable* var, State* state){
+    if(strcmp(func->retval->llvm, "void") == 0){
+        fprintf(state->fp, "ret void\n");
+        return;
+    }
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, var->type->llvm, var->type->llvm, var->num);
     fprintf(state->fp, "ret %s %%%i\n", var->type->llvm, state->tempnum);
     state->tempnum += 2;
@@ -34,7 +38,12 @@ void lwrite_funcreturn(Function* func, Variable* var, State* state){
 }
 void lwrite_funcend(Function* func, State* state){
     if(!func->writ_return){
-        fprintf(state->fp, "ret %s zeroinitializer\n}\n", func->retval->llvm);
+        if(strcmp(func->retval->llvm, "void") == 0){
+            fprintf(state->fp, "ret void\n}\n");
+        }
+        else{
+            fprintf(state->fp, "ret %s zeroinitializer\n}\n", func->retval->llvm);
+        }
     }
 }
 void lwrite_funcdef(Function* func, State* state){
@@ -107,8 +116,13 @@ void lwrite_funcall(FunctionCall* func, State* state){
     }
     if(func->to != NULL){
         func->to->num = state->tempnum;
-        state->tempnum += 1;
-        fprintf(state->fp, "%%%i = call %s @%s(", func->to->num, func->func->retval->llvm, func->func->write_name);
+        if(strcmp(func->to->type->llvm, "void") == 0){
+            fprintf(state->fp, "call void @%s(", func->func->write_name);
+        }
+        else{
+            state->tempnum += 1;
+            fprintf(state->fp, "%%%i = call %s @%s(", func->to->num, func->func->retval->llvm, func->func->write_name);
+        }
     }
     else{
         state->tempnum += 1;
@@ -144,8 +158,10 @@ void lwrite_funcall(FunctionCall* func, State* state){
     }
     fprintf(state->fp, ")\n");
     if(func->to != NULL){
-        fprintf(state->fp, "store %s %%%i, %s* %%%i\n", func->to->type->llvm, func->to->num, func->to->type->llvm, onum);
-        func->to->num = onum;
+        if(strcmp(func->to->type->llvm, "void") != 0){
+            fprintf(state->fp, "store %s %%%i, %s* %%%i\n", func->to->type->llvm, func->to->num, func->to->type->llvm, onum);
+            func->to->num = onum;
+        }
     }
 }
 

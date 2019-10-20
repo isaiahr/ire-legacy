@@ -8,7 +8,7 @@ type Point { (HasX: Int x ^ HasY: Int y) & Int time & (Country: Byte[] country |
 type P2d { Int x & Int y }
 
 
-Int main(){
+void main(){
     Point p = new Point HasY(y=3) & (time=2) & Country(country="Canada") & Continent(continent="North America")
     print(p.continent)
     print("\n")

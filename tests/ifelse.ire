@@ -14,7 +14,9 @@ Int func(Int a){
     return res
 }
 
-Int main(){
+void main(){
     Int r = func(1) * 100 + func(2) * 10 + func(3)
     exit(r)
+    // test empty return
+    return
 }

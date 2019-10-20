@@ -48,6 +48,7 @@ Program* process_program(Token* t, State* state){
     Type* Int = malloc(sizeof(struct Type));
     Type* Byte = malloc(sizeof(struct Type));
     Type* Boolean = malloc(sizeof(struct Type));
+    Type* Void = malloc(sizeof(struct Type));
     Int->width = 64;
     Int->identifier = "Int";
     Int->llvm = "i64";
@@ -60,12 +61,18 @@ Program* process_program(Token* t, State* state){
     Boolean->identifier = "Boolean";
     Boolean->llvm = "i8";
     Boolean->ts = NULL;
+    Void->width = 0;
+    Void->identifier = "void";
+    Void->llvm = "void";
+    Void->ts = NULL;
     po->types->type = Int;
     po->types->next = malloc(sizeof(struct TypeList));
     po->types->next->type = Byte;
     po->types->next->next = malloc(sizeof(struct TypeList));
     po->types->next->next->type = Boolean;
-    po->types->next->next->next = NULL;
+    po->types->next->next->next = malloc(sizeof(struct TypeList));
+    po->types->next->next->next->type = Void;
+    po->types->next->next->next->next = NULL;
     po->funcs[0].name = "syscall";
     po->funcs[0].write_name = "syscall";
     po->funcs[0].retval = Int; // i64
@@ -77,7 +84,8 @@ Program* process_program(Token* t, State* state){
     
     // proc types first
     int c12 = 0;
-    TypeList* curt = po->types->next->next;
+    // latest type, curt links in new types.
+    TypeList* curt = po->types->next->next->next;
     
     while(c12 < t->subtoken_count){
         while(t->subtokens[c12].type != T_TYPEDEF){
@@ -99,7 +107,8 @@ Program* process_program(Token* t, State* state){
         curt = new;
     }   
     c12 = 0;
-    curt = po->types->next->next->next;
+    // has to be first new type ??
+    curt = po->types->next->next->next->next;
     while(c12 < t->subtoken_count){
         while(t->subtokens[c12].type != T_TYPEDEF){
             c12 += 1;
@@ -184,7 +193,7 @@ void compile_type(Token* t, Type* y, Program* prog, State* state){
         Type* cmp = cur->type;
         if((cmp != y) && strcmp(cmp->identifier, t->str) == 0){
             char* msg = format("type %s redefined", t->str);
-            add_error(state, DUPDEFTYPE, t->line, msg);
+            add_error(state, DUPDEFTYPE, t->subtokens->line, msg);
         }
         cur = cur->next;
     }
@@ -229,7 +238,14 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
 }
 
 void compile_function(Token* t, Function* f, Program* prog, State* state){
-    for(int i = 0; i < t->subtokens[1].subtoken_count; i ++){
+    for(int i = 0; i < t->subtokens[1].subtoken_count; i++){
         process_stmt(&t->subtokens[1].subtokens[i], f, NULL, prog, state);
+    }
+    if(t->subtokens[1].subtokens[t->subtokens[1].subtoken_count-1].type != T_RETURN){
+        // allow void
+        if(f->retval == proc_type("void", prog)){
+            return;
+        }
+        add_error(state, INCOMPATTYPE, t->line, format("returning void from function %s of type %s", f->name, f->retval->identifier));
     }
 }

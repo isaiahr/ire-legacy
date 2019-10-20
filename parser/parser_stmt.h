@@ -2,6 +2,7 @@
 #define __PARSER_STMT_H__
 
 Lextoken* parse_type(Lextoken* p, Token* t);
+Lextoken* parse_type_void(Lextoken* p, Token* t);
 Lextoken* parse_varinit(Lextoken* p, Token* t);
 Lextoken* parse_arrset(Lextoken* p, Token* e);
 Lextoken* parse_addeq(Lextoken* p, Token* e);

@@ -1,6 +1,6 @@
 import essential.ire
 
-Int main(){
+void main(){
     // r1,2,3 = 1
     Boolean r1 = false
     Boolean r2 = false

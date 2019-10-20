@@ -1,6 +1,6 @@
 import essential.ire
 
-Int main(){
+void main(){
     Int[] a = new Int[] [1]
     if func(a) {
         

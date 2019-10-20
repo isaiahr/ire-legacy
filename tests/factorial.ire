@@ -8,6 +8,6 @@ Int factorial(Int n){
 }
 
 
-Int main(){
+void main(){
     exit(factorial(5))
 }

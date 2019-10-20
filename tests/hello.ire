@@ -1,6 +1,6 @@
 import essential.ire
 
-Int main () {
+void main () {
     Byte[] a = "Hello, World!\n"
     print(a)
     exit(0)

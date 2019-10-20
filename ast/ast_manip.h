@@ -7,6 +7,7 @@
 VarList* add_varlist(VarList* vl, Variable* var);
 Type* proc_type(char* ident, Program* prog);
 Variable* mkvar(Function* func, Scope* scope, Type* t);
+Variable* voidval(Function* func, Scope* scope, Type* t);
 Statement* mkinit(Variable* var);
 Variable* mknvar(Function* func, Scope* scope, char* str, Type* t);
 Variable* proc_var(char* str, Scope* scope, Function* func);

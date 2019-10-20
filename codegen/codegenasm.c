@@ -26,7 +26,9 @@ void awrite_varinit(Variable* var, State* state){
 
 void awrite_funcreturn(Function* func, Variable* var, State* state){
     func->writ_return = 1;
-    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", var->offset);
+    if(var != NULL){
+        fprintf(state->fp, "movq %i(%%rsp), %%rax\n", var->offset);
+    }
     fprintf(state->fp, "add $%i, %%rsp\nret\n", func->max_offset);
 }
 
@@ -61,7 +63,7 @@ void awrite_funcall(FunctionCall* func, State* state){
         i += 1;
     }
     fprintf(state->fp, "call %s\n", func->func->write_name);
-    if(func->to != NULL){
+    if(func->to != NULL && strcmp(func->to->type->identifier, "void") != 0){
         fprintf(state->fp, "movq %%rax, %i(%%rsp)\n", func->to->offset);
     }
 }

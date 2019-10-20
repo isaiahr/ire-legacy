@@ -7,7 +7,7 @@
 
 
 // note: not a stmt on its own, but used in other stmts.
-// type = indentifier, [ "[", "]"]
+// type = (identifier, [ "[", "]"]) | void
 Lextoken* parse_type(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     if(!i){
@@ -26,6 +26,18 @@ Lextoken* parse_type(Lextoken* p, Token* e){
     }
     e->lnt = 0;
     return next(p);
+}
+
+// like parse_type, but allows void also.
+// typically we do not allow void, so these are different funcs
+// to simplify ast type checking.
+Lextoken* parse_type_void(Lextoken* p, Token* e){
+    if(match(p, VOID)){
+        e->type = T_TYPE;
+        e->str = format("%s", "void");
+        return next(p);
+    }
+    return parse_type(p, e);
 }
 
 // varinit = type, identifier, "=", expression
@@ -108,7 +120,7 @@ Lextoken* parse_addeq(Lextoken* p, Token* e){
     return NULL;
 }
 
-// return = return, expression
+// return = return, [expression]
 Lextoken* parse_return(Lextoken* p, Token* e){
     if(!match(p, RETURN)){
         return NULL;
@@ -118,9 +130,12 @@ Lextoken* parse_return(Lextoken* p, Token* e){
     Lextoken* k = next(p);
     Lextoken* a = parse_expression(k, e->subtokens);
     if(a == NULL){
+        // empty return; valid in void functions.
         destroy_token(e->subtokens);
+        e->subtoken_count = 0;
         e->subtokens = NULL;
-        return NULL;
+        e->type = T_RETURN;
+        return k;
     }
     e->type = T_RETURN;
     return a;

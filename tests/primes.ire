@@ -2,7 +2,7 @@ import conv.ire
 import essential.ire
 
 
-Int main(){
+void main(){
     Int start = 7855
     Int end = 8000
     print("The prime numbers between ")
@@ -13,7 +13,7 @@ Int main(){
     primesuntil(start, end)
 }
 
-Int primesuntil(Int i, Int n){
+void primesuntil(Int i, Int n){
     if(i > n){
         print("\n")
         exit(0)

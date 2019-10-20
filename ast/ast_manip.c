@@ -82,6 +82,15 @@ Variable* mkvar(Function* func, Scope* scope, Type* t){
     return var;
 }
 
+// make void variable.
+Variable* voidval(Function* func, Scope* scope, Type* t){
+    Variable* var = malloc(sizeof(struct Variable));
+    var->inited = 0;
+    var->identifier = NULL;
+    var->type = t;
+    return var;
+}
+
 Statement* mkinit(Variable* var){
     Statement* stmt = malloc(sizeof(struct Statement));
     VarInit* v = malloc(sizeof(struct VarInit));

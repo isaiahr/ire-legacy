@@ -112,10 +112,19 @@ void p_varinit(Token* t, Function* func, Scope* scope, Program* prog, State* sta
 
 void p_return(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Return, ret, S_RETURN);
-    ret->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
-    if(ret->var->type != func->retval){
-        char* msg = format("returning %s from function of type %s", ret->var->type->identifier, func->retval->identifier);
-        add_error(state, INCOMPATTYPE, t->line, msg);
+    if(t->subtoken_count == 0){
+        ret->var = NULL;
+        if(strcmp(func->retval->identifier, "void") != 0){
+            char* msg = format("void return from function of type %s", func->retval->identifier);
+            add_error(state, INCOMPATTYPE, t->line, msg);
+        }
+    }
+    else{
+        ret->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
+        if(ret->var->type != func->retval){
+            char* msg = format("returning %s from function of type %s", ret->var->type->identifier, func->retval->identifier);
+            add_error(state, INCOMPATTYPE, t->line, msg);
+        }
     }
     add_stmt_func(stmt, func, scope);
 }
@@ -230,7 +239,10 @@ Variable* p_funcall(Token* t, Function* func, Scope* scope, Program* prog, State
         char* msg = format("calling %s with %s), but definition wants %s)", fn->func->name, defnd2, defnd);
         add_error(state, INCOMPATTYPE, t->line, msg);
     }
-    if(!fn->func->native){
+    if(!fn->func->native && fn->func->retval == proc_type("void", prog)){
+        fn->to = voidval(func, scope, fn->func->retval);
+    }
+    else if(!fn->func->native){
         fn->to = mkvar(func, scope, fn->func->retval);
         add_stmt_func(mkinit(fn->to), func, scope);
     }

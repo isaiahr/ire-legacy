@@ -4,7 +4,7 @@ Int get33(Int y) {
     return 33
 }
 
-Int main(){
+void main(){
     Int x = 2
     exit(get33(x));
 }

@@ -77,7 +77,7 @@ Lextoken* parse_funcdef(Lextoken* p, Token* def){
     def->subtokens = init_token(p->line);
     def->subtokens = realloc_token(def->subtokens, 2);
     def->subtoken_count = 1;
-    Lextoken* l = parse_type(p, def->subtokens);
+    Lextoken* l = parse_type_void(p, def->subtokens);
     if(l == NULL){
         free(def->subtokens);
         def->subtoken_count = 0;

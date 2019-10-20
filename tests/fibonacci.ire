@@ -11,6 +11,6 @@ Int fib(Int n){
 }
 
 
-Int main(){
+void main(){
     exit(fib(35))
 }
