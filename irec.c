@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     }
     FILE* fpo;
     char* compto;
-    if(!((state->comp_asm && !state->llvm) || state->comp_llvm)){
+    if(!((state->comp_asm && !state->llvm) || (state->comp_llvm && state->optimization == 0))){
         compto = tempnam(NULL, "irecc");
         if((fpo = fopen(compto, "w")) == NULL){
             fprintf(stderr, "error writing to temp");
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
     compile(state, all);
     write_footer(state);
     fclose(state->fp);
-    if(state->comp_llvm){
+    if(state->comp_llvm && state->optimization == 0){
         printf("Done compilation.\n");
         return 0;
     }
@@ -209,7 +209,10 @@ int main(int argc, char **argv)
         if(state->optimization != 0){
             //invoke opt
             printf("Running optimization passes\n");
-            char* t5 = tempnam(NULL, "ireco");
+            char* t5 = state->outputfile;
+            if(!state->comp_llvm){
+                t5 = tempnam(NULL, "ireco");
+            }
             char* ou3;
             if(state->optimization == 0)
                 ou3 = "-O0";
@@ -221,12 +224,16 @@ int main(int argc, char **argv)
                 ou3 = "-O3";
             int i23 = fork();
             if(i23 == 0){
-                execl("/usr/bin/opt", "/usr/bin/opt", compto, ou3, "-o", t5, (char*) NULL);
+                execl("/usr/bin/opt", "/usr/bin/opt", compto, ou3, "-S", "-o", t5, (char*) NULL);
                 return 0;
             }
             int st5;
             wait(&st5);
             compto = t5;
+            if(state->comp_llvm){
+                printf("Done compilation.\n");
+                return 0;
+            }
         }
         //invoke llc
         printf("Done compilation. Generating asm...\n");
