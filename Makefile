@@ -1,5 +1,5 @@
 SRC = irec.c \
-core/compiler.c core/common.c core/error.c \
+core/compiler.c core/common.c core/error.c core/invoker.c\
 precompiler/precompiler.c \
 parser/parser.c parser/lexer.c parser/parser_arith.c parser/parser_expr.c \
 parser/parser_stmt.c parser/parser_type.c parser/parseutils.c \

@@ -1,10 +1,9 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include<unistd.h>
 #include<getopt.h>
 #include<sys/types.h>
-#include<sys/wait.h>
+#include<time.h>
 #include"irec.h"
 #include"core/common.h"
 #include"parser/lexer.h"
@@ -14,6 +13,7 @@
 #include"precompiler/precompiler.h"
 #include"core/error.h"
 #include"build/commitid.h"
+#include"core/invoker.h"
 
 int main(int argc, char **argv)
 {
@@ -179,99 +179,70 @@ int main(int argc, char **argv)
         unloadfile(cur);
         cur = cur->next;
     }
-    FILE* fpo;
-    char* compto;
-    if(!((state->comp_asm && !state->llvm) || (state->comp_llvm && state->optimization == 0))){
-        compto = tempnam(NULL, "irecc");
-        if((fpo = fopen(compto, "w")) == NULL){
-            fprintf(stderr, "error writing to temp");
+    char* source;
+    if((state->comp_asm && !state->llvm) || (state->comp_llvm && state->optimization == 0)){
+        // case where output writes directly to -o file.
+        if((state->fp = fopen(state->outputfile, "w")) == NULL){
+            fprintf(stderr, "error writing output\n");
             return -1;
         }
     }
-    else if((fpo = fopen(state->outputfile, "w")) == NULL)
-    {
-        fprintf(stderr, "error writing output");
-        return -1;
+    else{
+        source = get_tempfile(-1);
+        if((state->fp = fopen(source, "w")) == NULL){
+            fprintf(stderr, "error writing output\n");
+            return -1;
+        }
     }
-    state->fp = fpo;
     write_header(state);
     compile(state, all);
     write_footer(state);
     fclose(state->fp);
-    if(state->comp_llvm && state->optimization == 0){
-        printf("Done compilation.\n");
-        return 0;
+    srand(time(NULL));
+    if((state->comp_asm && !state->llvm) || (state->comp_llvm && state->optimization == 0)){
+        // exit.
     }
-    if(state->comp_asm && !state->llvm){
-        printf("Done compilation.\n");
-    }
-    if(state->llvm){
-        if(state->optimization != 0){
-            //invoke opt
-            printf("Running optimization passes\n");
-            char* t5 = state->outputfile;
-            if(!state->comp_llvm){
-                t5 = tempnam(NULL, "ireco");
-            }
-            char* ou3;
-            if(state->optimization == 0)
-                ou3 = "-O0";
-            else if(state->optimization == 1)
-                ou3 = "-O1";
-            else if(state->optimization == 2)
-                ou3 = "-O2";
-            else if(state->optimization == 3)
-                ou3 = "-O3";
-            int i23 = fork();
-            if(i23 == 0){
-                execl("/usr/bin/opt", "/usr/bin/opt", compto, ou3, "-S", "-o", t5, (char*) NULL);
-                return 0;
-            }
-            int st5;
-            wait(&st5);
-            compto = t5;
-            if(state->comp_llvm){
-                printf("Done compilation.\n");
-                return 0;
-            }
+    else if(state->llvm){
+        // llvm: irec -> [opt] -> llc -> as -> ld
+        if(state->comp_llvm){
+            invoke_opt(source, state->outputfile, state->optimization);
         }
-        //invoke llc
-        printf("Done compilation. Generating asm...\n");
-        char* t = NULL;
-        if(state->comp_asm){
-            t = state->outputfile;
+        else if(state->comp_asm){
+            if(state->optimization == 0){
+                invoke_llc(source, state->outputfile);
+            }
+            else{
+                char* t1 = get_tempfile(OPT);
+                invoke_opt(source, t1, state->optimization);
+                invoke_llc(t1, state->outputfile);
+            }
         }
         else{
-            t = tempnam(NULL, "irecv");
+            if(state->optimization == 0){
+                char* t2 = get_tempfile(LLC);
+                invoke_llc(source, t2);
+                char* t3 = get_tempfile(ASM);
+                invoke_assembler(t2, t3);
+                invoke_linker(t3, state->outputfile);
+            }
+            else{
+                char* t1 = get_tempfile(OPT);
+                invoke_opt(source, t1, state->optimization);
+                char* t2 = get_tempfile(LLC);
+                invoke_llc(t1, t2);
+                char* t3 = get_tempfile(ASM);
+                invoke_assembler(t2, t3);
+                invoke_linker(t3, state->outputfile);
+            }
         }
-        int i = fork();
-        if(i == 0){
-            execl("/usr/bin/llc", "/usr/bin/llc", compto, "-o", t, (char*) NULL);
-            return 0;
-        }
-        int st;
-        wait(&st);
-        compto = t;
+        
     }
-    if(!state->comp_asm){
-        printf("Assembling...\n");
-        char* t = tempnam(NULL, "ireca");
-        int i = fork();
-        if(i == 0){
-            execl("/usr/bin/as", "/usr/bin/as", compto, "-o", t, (char*) NULL);
-            return 0;
-        }
-        int s0;
-        wait(&s0);
-        printf("Linking...\n");
-        i = fork();
-        if(i == 0){
-            execl("/usr/bin/ld", "/usr/bin/ld", t, "-o", state->outputfile, (char*) NULL);
-            return 0;
-        }
-        int s1;
-        wait(&s1);
-        printf("Done. %s\n", state->outputfile);
+    else{
+        // asm: irec -> as -> ld
+        char* t1 = get_tempfile(ASM);
+        invoke_assembler(source, t1);
+        invoke_linker(t1, state->outputfile);
     }
+    printf("Done. => %s\n", state->outputfile);
     return 0;
 }
