@@ -26,6 +26,8 @@ char* geterrorstr(int type){
             return "Incompatible types";
         case MEMBERNOTFOUND:
             return "Member not found";
+        case TAGNOTFOUND:
+            return "Tag not found";
         case DUPMEMBERTYPE:
             return "Duplicate member of type";
         default:
@@ -50,6 +52,7 @@ int stage(int type){
         case DUPDEFTYPE:
         case INCOMPATTYPE:
         case MEMBERNOTFOUND:
+        case TAGNOTFOUND:
         case DUPMEMBERTYPE:
             return ERRORSEMANTIC;
     }

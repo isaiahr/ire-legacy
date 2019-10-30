@@ -26,6 +26,7 @@
 #define S_SETTAG 15
 #define S_IF 16
 #define S_INVERT 17
+#define S_GETTAG 18
 
 #define S_CONST_STRING 1
 #define S_CONST_BYTE 2
@@ -200,8 +201,15 @@ typedef struct Setmember{
 
 typedef struct SetTag{
     Variable* dest;
+    Variable* src;
     int offsetptr;
 } SetTag;
+
+typedef struct GetTag{
+    Variable* src;
+    Variable* dest;
+    int offsetptr;
+} GetTag;
 
 typedef struct Scope{
     VarList* vars;

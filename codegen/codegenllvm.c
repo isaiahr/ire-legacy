@@ -417,6 +417,7 @@ void lwrite_accessor(Variable* dest, Variable* src, int off, State* state){
         state->tempnum += 3;
     }
 }
+
 void lwrite_setmember(Variable* dest, Variable* src, int off, State* state){
     // dest {off} = src
     
@@ -429,16 +430,22 @@ void lwrite_setmember(Variable* dest, Variable* src, int off, State* state){
     fprintf(state->fp, "store %s %%%i, %s* %%%i\n", src->type->llvm, state->tempnum+4, src->type->llvm, state->tempnum+3);
     state->tempnum += 5;
 }
+
 void lwrite_settag(Variable* var, int off, State* state){
-    return;
-    // special case of setmember, where src is const 0.
+    // special case of setmember, where src is const 1.
     fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, var->type->llvm, var->type->llvm, var->num);
-    fprintf(state->fp, "%%%i = load i%i, %s %%%i\n", state->tempnum+1, var->type->internal_width, var->type->llvm, state->tempnum);
-    state->tempnum += 1;
-    fprintf(state->fp, "%%%i = zext i1 1 to i%i\n", state->tempnum+1, var->type->internal_width);
-    fprintf(state->fp, "%%%i = lshr i%i %%%i, %i\n", state->tempnum+2, var->type->internal_width, state->tempnum+1, off);
-    fprintf(state->fp, "%%%i = and i%i %%%i, %%%i\n", state->tempnum+3, var->type->internal_width, state->tempnum+2, state->tempnum);
-    fprintf(state->fp, "store i%i %%%i, %s %%%i\n", var->type->internal_width, state->tempnum+3, var->type->llvm, state->tempnum-1);
+    fprintf(state->fp, "%%%i = bitcast %s %%%i to i8*\n", state->tempnum+1, var->type->llvm, state->tempnum);
+    fprintf(state->fp, "%%%i = getelementptr i8, i8* %%%i, i64 %i\n", state->tempnum+2, state->tempnum+1, off / 8);
+    fprintf(state->fp, "store i8 1, i8* %%%i\n", state->tempnum+2);
+    state->tempnum += 3;
+}
+
+void lwrite_gettag(Variable* src, Variable* dest, int off, State* state){
+    fprintf(state->fp, "%%%i = load %s, %s* %%%i\n", state->tempnum, src->type->llvm, src->type->llvm, src->num);
+    fprintf(state->fp, "%%%i = bitcast %s %%%i to i8*\n", state->tempnum+1, src->type->llvm, state->tempnum);
+    fprintf(state->fp, "%%%i = getelementptr i8, i8* %%%i, i64 %i\n", state->tempnum+2, state->tempnum+1, off / 8);
+    fprintf(state->fp, "%%%i = load i8, i8* %%%i\n", state->tempnum+3, state->tempnum+2);
+    fprintf(state->fp, "store i8 %%%i, i8* %%%i\n", state->tempnum+3, dest->num);
     state->tempnum += 4;
 }
 

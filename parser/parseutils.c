@@ -119,6 +119,7 @@ char* type(Token* p){
         case T_IFBLK: return "IFBLK";
         case T_BOOLEAN: return "BOOLEAN";
         case T_INVERT: return "INVERT";
+        case T_GETTAG: return "GETTAG";
         default: return "UNKNOWN";
     }
     

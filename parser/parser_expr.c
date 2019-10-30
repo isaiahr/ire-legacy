@@ -278,6 +278,32 @@ Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
     return p;
 }
 
+// gettag = expression, ":", identifier
+Lextoken* parse_gettag(Lextoken* p, Token* e){
+    return parse_gettag_flags(p, e, 0);
+}
+
+// note: expression ":" identifier will be boolean, so
+// expression ":" expression ":" identifier is valid semantically.
+// it could be valid syntatically, but since it isnt ever valid semantically
+// we dont parse for it. (you can achieve the same thing by using brackets)
+Lextoken* parse_gettag_flags(Lextoken* p, Token* e, int FLAGS){
+    e->subtokens = init_token(p->line);
+    p = parse_expression_flags(p, e->subtokens, FLAGS | FLAG_GETTAG);
+    if(p == NULL || !match(p, COLON) || !match(next(p), IDENTIFIER)){
+        destroy_token(e->subtokens);
+        e->subtokens = NULL;
+        return NULL;
+    }
+    // ok.
+    e->subtoken_count = 1;
+    e->str = malloc(strlen(next(p)->str) + 1);
+    memcpy(e->str, next(p)->str, strlen(next(p)->str));
+    e->str[strlen(next(p)->str)] = 0;
+    e->type = T_GETTAG;
+    return next(next(p));
+}
+
 
 // constructor = new, type, segconstruct, {&, segconstruct}
 Lextoken* parse_constructor(Lextoken* p, Token* e){
@@ -401,6 +427,9 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((!(FLAGS & FLAG_ARITH)) && (l = parse_arith_flags(p, e, FLAGS))){
         return l;
     }
+    if((!(FLAGS & FLAG_GETTAG)) && (l = parse_gettag_flags(p, e, FLAGS))){
+        return l;
+    }
     if((l = parse_funcall(p, e))){
         return l;
     }
@@ -413,6 +442,7 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((l = parse_newarr(p, e))){
         return l;
     }
+
     if((l = parse_inv(p, e))){
         return l;
     }

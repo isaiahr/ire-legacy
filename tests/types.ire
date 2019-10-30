@@ -12,6 +12,12 @@ void main(){
     Point p = new Point HasY(y=3) & (time=2) & Country(country="Canada") & Continent(continent="North America")
     print(p.continent)
     print("\n")
-    exit(p.y + p.time)
+    if(p:HasX){
+        exit(0)
+    }
+    if(p:HasY){
+        exit(p.y + p.time)
+    }
+    exit(0)
 }
 

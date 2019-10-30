@@ -247,6 +247,15 @@ void write_settag(Variable* var, int off, State* state){
     }
 }
 
+void write_gettag(Variable* src, Variable* dest, int off, State* state){
+    if(state->llvm){
+        lwrite_gettag(src, dest, off, state);
+    }
+    else{
+        awrite_gettag(src, dest, off, state);
+    }
+}
+
 void write_conditional(Variable* test, char* truelbl, char* falselbl, State* state){
     if(state->llvm){
         lwrite_conditional(test, truelbl, falselbl, state);

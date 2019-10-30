@@ -304,7 +304,7 @@ void awrite_accessor(Variable* dest, Variable* src, int off, State* state){
     }
     else if(dest->type->width == 8){
         fprintf(state->fp, "movb %i(%%rax), %%bl\n", off/8);
-        fprintf(state->fp, "movb %%bx, %i(%%rsp)\n", dest->num);
+        fprintf(state->fp, "movb %%bl, %i(%%rsp)\n", dest->num);
     }
 }
 void awrite_setmember(Variable* dest, Variable* src, int off, State* state){
@@ -329,7 +329,14 @@ void awrite_setmember(Variable* dest, Variable* src, int off, State* state){
 }
 
 void awrite_settag(Variable* var, int off, State* state){
-    // TODO
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", var->offset);
+    fprintf(state->fp, "movb $1, %i(%%rax)\n", off/8);
+}
+
+void awrite_gettag(Variable* src, Variable* dest, int off, State* state){
+    fprintf(state->fp, "movq %i(%%rsp), %%rax\n", src->offset);
+    fprintf(state->fp, "movb %i(%%rax), %%bl\n", off/8);
+    fprintf(state->fp, "movb %%bl, %i(%%rsp)\n", dest->num);
 }
 
 void awrite_conditional(Variable* test, char* truelbl, char* falselbl, State* state){

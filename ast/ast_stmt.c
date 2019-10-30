@@ -34,6 +34,7 @@ Variable* p_newarr(Token* t, Function* func, Scope* scope, Program* prog, State*
 Variable* p_invert(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 Variable* p_arith(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 Variable* p_constructor(Token* t, Function* func, Scope* scope, Program* prog, State* state);
+Variable* p_gettag(Token* t, Function* func, Scope* scope, Program* prog, State* state);
                         
 // preprocessor hacks. i think it looks a bit more readable this way. 
 void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State* state){
@@ -58,6 +59,7 @@ void* process_stmt(Token* t, Function* func, Scope* scope, Program* prog, State*
     HANDLE(T_CONSTRUCTOR, p_constructor)
     HANDLE(T_ACCESSOR, p_accessor)
     HANDLE(T_VARIABLE, p_variable)
+    HANDLE(T_GETTAG, p_gettag)
     END_HANDLER
 }
 
@@ -464,6 +466,24 @@ Variable* p_accessor(Token* t, Function* func, Scope* scope, Program* prog, Stat
         ind += 1;
     }
     return last;
+}
+
+Variable* p_gettag(Token* t, Function* func, Scope* scope, Program* prog, State* state){
+    SETUP_VARS(GetTag, gett, S_GETTAG);
+    gett->src = process_stmt(t->subtokens, func, scope, prog, state);
+    if(gett->src == NULL){
+        return NULL;
+    }
+    gett->offsetptr = findoffsettag(gett->src->type, t->str);
+    if(gett->offsetptr == -1){
+        char* msg = format("tag %s of type %s not found", t->str, gett->src->type->identifier);
+        add_error(state, TAGNOTFOUND, t->line, msg);
+        return NULL;
+    }
+    gett->dest = mkvar(func, scope, proc_type("Boolean", prog));
+    add_stmt_func(mkinit(gett->dest), func, scope);
+    add_stmt_func(stmt, func, scope);
+    return gett->dest;
 }
 
 void p_setmember(Token* t, Function* func, Scope* scope, Program* prog, State* state){

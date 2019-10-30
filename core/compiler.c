@@ -179,6 +179,11 @@ inline void compile_stmt(Statement* stmt, Function* f, Scope* scope, State* stat
             SetTag* sett = (SetTag*) stmt->stmt;
             write_settag(sett->dest, sett->offsetptr, state);
             break;
+        case S_GETTAG:
+            ;
+            GetTag* gett = (GetTag*) stmt->stmt;
+            write_gettag(gett->src, gett->dest, gett->offsetptr, state);
+            break;
         case S_RETURN:
             ;
             Return* r = (Return*) stmt->stmt;

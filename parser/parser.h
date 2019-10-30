@@ -45,6 +45,7 @@
 #define T_IFBLK 36
 #define T_ELSEIF 37
 #define T_ELSE 38
+#define T_GETTAG 39
 
 /**
  *

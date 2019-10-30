@@ -8,7 +8,8 @@ import System.Environment
 -- all tokens. see  lexer.h, operators.h
 data Token = LParen | RParen | LSqParen | RSqParen | LCrParen | RCrParen | Integer | Char | String | Identifier
            | Term | Comma | Equals | Return | AddEq | Pipe | New | Void | Type | Colon | Dot | If
-           | Plus | DoubleEquals | Less | Greater | Subtract | Mult | Ampersand | Caret deriving (Show, Eq)
+           | Plus | DoubleEquals | Less | Greater | Subtract | Mult | Ampersand | Caret | Tru | Fals
+           | DoublePipe | Exclamation | Else deriving (Show, Eq)
            
 
 main = putStrLn "Running fuzzer" >> run (next []) 1
@@ -19,7 +20,7 @@ embed n = [10, 10, 1, 2, 5, 11] ++ n ++ [11, 6]
 run a n = (testmsg (embed a)) >> (if mod n 1000 == 0 then (putStrLn ("Tried #" ++ (show n) ++ (show (map prodToken (embed a))))) else return ()) >> (run (next a) (n+1))
 
 next (x:xs)
-    | x >= 30 = 1 : next xs
+    | x >= 35 = 1 : next xs
     | otherwise = (x + 1) : xs
 next _ = [1]
            
@@ -92,6 +93,11 @@ getStr Subtract = "-"
 getStr Mult = "*"
 getStr Ampersand = "&"
 getStr Caret = "^"
+getStr Tru = "true"
+getStr Fals = "false"
+getStr DoublePipe = "||"
+getStr Exclamation = "!"
+getStr Else = "else"
 
 {-
     produces a token given an integer.
@@ -128,3 +134,8 @@ prodToken 27 = Subtract
 prodToken 28 = Mult
 prodToken 29 = Ampersand
 prodToken 30 = Caret
+prodToken 31 = Tru
+prodToken 32 = Fals
+prodToken 33 = DoublePipe
+prodToken 34 = Exclamation
+prodToken 35 = Else
