@@ -23,6 +23,11 @@ char sym(int id){
         case GREATER: return '>';
         case SUBTRACT: return '-';
         case MULT: return '*';
+        case AMPERSAND: return '&';
+        case CARET: return '^';
+        case PIPE: return '|';
+        case FSLASH: return '/';
+        case PERCENT: return '%';
         default: exit(67); // shouldn't happen, but easy to track down if it does
     }
 }

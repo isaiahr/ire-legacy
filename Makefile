@@ -16,7 +16,7 @@ compile:
 	@echo -n "#define COMMIT_ID \"" > build/commitid.h
 	@git rev-parse --short HEAD | tr -d '\n' >> build/commitid.h
 	@echo "\"" >> build/commitid.h
-	gcc -I./ -Wall -g -o irec $(SRC)
+	gcc -I./ -no-pie -fno-pie -Wall -g -o irec $(SRC)
 
 all: compile
 
