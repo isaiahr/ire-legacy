@@ -35,8 +35,7 @@
 
 #define S_MODE_AND 1
 #define S_MODE_OR 2
-#define S_MODE_XOR 3
-#define S_MODE_TYPE 4
+#define S_MODE_TYPE 3
 
 typedef struct Program {
     struct Function* funcs;
@@ -79,13 +78,26 @@ typedef struct Variable {
     struct Type* type;
     char* identifier;
     
+    struct VarMetadata* meta;
     // compile time
     // asm loc
     int offset;
     int inited;
     // llvm loc
     int num;
-} Variable; 
+} Variable;
+
+typedef struct TagList {
+    char* tag;
+    Variable* var;
+    // boolean
+    int valid;
+    struct TagList* next;
+} TagList;
+
+typedef struct VarMetadata {
+    TagList* tags;
+} VarMetadata;
 
 typedef struct Type {
     int width;
@@ -170,16 +182,26 @@ typedef struct Arithmetic{
     int operation;
 } Arithmetic;
 
+/**
+ * Typestructure is effectively a union of some things. it is a recursive type.
+ * valid instance is: (sub, mode) | (sub, mode, next, segment) | (identifier, sbs, mode) | (identifier, sbs, next, segment, mode)
+ * so either sub & mode exist or identifier and sbs exist. the former means we have children, combined according to mode. 
+ * note mode will be set to S_MODE_TYPE if identifier and sbs exist.
+ * if sub exists, then next type will have next and segment existing
+ * also segment doesnt exists if parent is S_MODE_AND
+ * 
+ */
 typedef struct TypeStructure {
     // descend
     struct TypeStructure* sub;
-    // or
+    // mode according to combined children
+    int mode;
+    // end of type.
     char* identifier;
     Type* sbs;
     // lateral
     struct TypeStructure* next;
     char* segment;
-    int mode;
 } TypeStructure;
 
 typedef struct Constructor {
@@ -215,8 +237,13 @@ typedef struct Scope{
     VarList* vars;
     Body* body;
     struct Scope* parent;
+    struct ScopeMetadata* meta;
     int offset;
 } Scope;
+
+typedef struct ScopeMetadata{
+    TagList* tags;
+} ScopeMetadata;
 
 typedef struct IfStmt{
     // head = if, test nonnull = elseif, test null = else

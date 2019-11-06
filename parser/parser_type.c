@@ -50,10 +50,6 @@ Lextoken* parse_subtype_flags(Lextoken* p, Token* e, int FLAGS){
     if(l != NULL){
         return l;
     }
-    l = parse_xortype(p, e);
-    if(l != NULL){
-        return l;
-    }
     return parse_typeval(p, e);
 }
 
@@ -154,66 +150,6 @@ Lextoken* parse_ortype(Lextoken* p, Token* e){
     }
 }
 
-// same as ortype.
-// TODO combine these 2 funcs ?
-// xortype = ( "(", {identifier, ":", (subtype | void) , "^" }, ")" )
-Lextoken* parse_xortype(Lextoken* p, Token* e){
-    if(!match(p, LEFT_PAREN)){
-        return NULL;
-    }
-    p = next(p);
-    e->subtokens = init_token(p->line);
-    e->subtoken_count = 1;
-    while(1){
-        // subtoken_count actually less
-        if(e->subtoken_count > 1){
-            if(!match(p, CARET)){
-                if(match(p, RIGHT_PAREN)){
-                    // good
-                    e->type = T_XORTYPE;
-                    e->subtoken_count = e->subtoken_count-1;
-                    return next(p);
-                } 
-                // bad
-                e->subtoken_count = 0;
-                destroy_token(e->subtokens);
-                e->subtokens = NULL;
-                return NULL;
-            }
-            p = next(p);
-        }
-        if(!(match(p, IDENTIFIER) && match(next(p), COLON))){
-            // bad
-            e->subtoken_count = 0;
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
-            return NULL;
-        }
-        char* seg = p->str;
-        if(match(next(next(p)), VOID)){
-            p = next(next(next(p)));
-            // ok
-            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
-            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
-            e->subtoken_count += 1;
-            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
-        }
-        else{
-            p = parse_subtype(next(next(p)), &e->subtokens[e->subtoken_count-1]);
-            if(p == NULL){
-                // "segment" ":" (invalid)
-                e->subtoken_count = 0;
-                destroy_token(e->subtokens);
-                e->subtokens = NULL;
-                return NULL;
-            }
-            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
-            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
-            e->subtoken_count += 1;
-            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
-        }
-    }
-}
 
 // typeval = type, identifier
 Lextoken* parse_typeval(Lextoken* p, Token* e){

@@ -30,6 +30,8 @@ char* geterrorstr(int type){
             return "Tag not found";
         case DUPMEMBERTYPE:
             return "Duplicate member of type";
+        case FRAUDULENTACCESS:
+            return "Fraudulent access of type";
         default:
             break;
     }
@@ -54,6 +56,7 @@ int stage(int type){
         case MEMBERNOTFOUND:
         case TAGNOTFOUND:
         case DUPMEMBERTYPE:
+        case FRAUDULENTACCESS:
             return ERRORSEMANTIC;
     }
     fprintf(stderr, "Unknown error occurred.\n");

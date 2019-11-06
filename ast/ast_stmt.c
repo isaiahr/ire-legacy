@@ -383,10 +383,55 @@ Variable* p_arith(Token* t, Function* func, Scope* scope, Program* prog, State* 
             arith->to = mkvar(func, scope, t_int);
             op = "/";
             err = verify_types(t_int, arith->left, arith->right, NULL);
+            break;
     }
     if(err){
         char* msg = format("in operation %s", op);
         add_error(state, INCOMPATTYPE, t->line, msg);
+    }
+    // metadata update
+    else if((arith->left->meta != NULL && arith->left->meta->tags != NULL) || (arith->right->meta != NULL && arith->right->meta->tags != NULL)){
+        // NOTE: right now, the presecence of a tag is taken as valid, so the "valid" boolean does nothing.
+        // this is because there is no way to go from invalid -> valid, and it simplifies things a bit if we
+        // dont malloc invalid states.
+        if(arith->operation == AMPERSAND){
+            arith->to->meta = malloc(sizeof(struct VarMetadata));
+            arith->to->meta->tags = malloc(sizeof(struct TagList));
+            TagList* cur = arith->to->meta->tags;
+            if(arith->left->meta != NULL && arith->left->meta->tags != NULL){
+                TagList* append = arith->left->meta->tags;
+                while(append != NULL){
+                    cur->tag = clone(append->tag);
+                    cur->var = append->var;
+                    cur->valid = 1;
+                    cur->next = NULL;
+                    if(append->next != NULL){
+                        cur->next = malloc(sizeof(struct TagList));
+                        cur = cur->next;    
+                    }
+                    append = append->next;
+                }
+                if(arith->right->meta != NULL && arith->right->meta->tags != NULL){
+                    // setup cur for more
+                    cur->next = malloc(sizeof(struct TagList));
+                    cur = cur->next;
+                }
+            }
+            if(arith->right->meta != NULL && arith->right->meta->tags != NULL){
+                TagList* append = arith->right->meta->tags;
+                while(append != NULL){
+                    cur->tag = clone(append->tag);
+                    cur->var = append->var;
+                    cur->valid = 1;
+                    cur->next = NULL;
+                    if(append->next != NULL){
+                        cur->next = malloc(sizeof(struct TagList));
+                        cur = cur->next;    
+                    }
+                    append = append->next;
+                }
+            }
+        }
     }
     add_stmt_func(mkinit(arith->to), func, scope);
     add_stmt_func(stmt, func, scope);
@@ -455,6 +500,11 @@ Variable* p_accessor(Token* t, Function* func, Scope* scope, Program* prog, Stat
             }
             typedacc->to = mkvar(func, scope, ty01);
             typedacc->offsetptr = findoffset(cur->type, ident);
+            if(!check_valid_access(cur, ident, scope == NULL ? NULL : scope->meta)){
+                char* msg = format("unsafe access of member %s of type %s", ident, cur->type->identifier);
+                add_error(state, FRAUDULENTACCESS, t->line, msg);
+                return NULL;
+            }
             add_stmt_func(mkinit(typedacc->to), func, scope);
             add_stmt_func(sta, func, scope);
             last = typedacc->to;
@@ -481,6 +531,13 @@ Variable* p_gettag(Token* t, Function* func, Scope* scope, Program* prog, State*
         return NULL;
     }
     gett->dest = mkvar(func, scope, proc_type("Boolean", prog));
+    // attach meta to gett->dest
+    gett->dest->meta = malloc(sizeof(struct VarMetadata));
+    gett->dest->meta->tags = malloc(sizeof(struct TagList));
+    gett->dest->meta->tags->tag = clone(t->str);
+    gett->dest->meta->tags->var = gett->src;
+    gett->dest->meta->tags->valid = 1;
+    gett->dest->meta->tags->next = NULL;
     add_stmt_func(mkinit(gett->dest), func, scope);
     add_stmt_func(stmt, func, scope);
     return gett->dest;
@@ -494,6 +551,11 @@ void p_setmember(Token* t, Function* func, Scope* scope, Program* prog, State* s
     if(setm->offsetptr == -1){
         char* msg = format("member %s of type %s not found", t->subtokens[2].str, setm->dest->type->identifier);
         add_error(state, MEMBERNOTFOUND, t->line, msg);
+        return;
+    }
+    if(!check_valid_access(setm->dest, t->subtokens[2].str, scope == NULL ? NULL : scope->meta)){
+        char* msg = format("unsafe setting member %s of type %s", t->subtokens[2].str, setm->dest->type->identifier);
+        add_error(state, FRAUDULENTACCESS, t->line, msg);
         return;
     }
     Type* destty = findtype(setm->dest->type, t->subtokens[2].str);
@@ -521,6 +583,7 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
     Statement* stmt = malloc(sizeof(struct Statement));
     stmt->type = S_IF;
     IfStmt* prev = NULL;
+    int check_meta = 0;
     for(int i = 0; i < t->subtoken_count; i++){
         Token* if0 = &t->subtokens[i];
         IfStmt* ifs = malloc(sizeof(struct IfStmt)); 
@@ -541,6 +604,9 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
                 char* msg = format("%s", "ifstmt needs Boolean");
                 add_error(state, INCOMPATTYPE, if0->subtokens->line, msg);
             }
+            else{
+                check_meta = 1;
+            }
             ifs->initlbl = gen_lbl(state);
         }
         ifs->truelbl = gen_lbl(state);
@@ -558,6 +624,13 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
         newscope->body = NULL;
         newscope->offset = 0;
         newscope->vars = NULL;
+        if(check_meta && ifs->test->meta != NULL && ifs->test->meta->tags != NULL){
+            // attach meta to scope
+            newscope->meta = malloc(sizeof(struct ScopeMetadata));
+            // NOTE: possibly clone here, ptr alias might cause problems with gc?
+            newscope->meta->tags = ifs->test->meta->tags;
+        }
+        check_meta = 0;
         Token* body = NULL;
         if(if0->type == T_ELSE){
             body = &if0->subtokens[0];

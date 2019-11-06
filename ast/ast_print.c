@@ -174,7 +174,6 @@ void print_type_helper(TypeStructure* ts){
             switch(ts->mode){
                 case S_MODE_AND: printf(" & "); break;
                 case S_MODE_OR: printf(" | "); break;
-                case S_MODE_XOR: printf(" ^ "); break;
             }
         }
     }

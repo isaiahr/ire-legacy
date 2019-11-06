@@ -20,7 +20,6 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
     int mode = 100000;
     switch(src->type){
         case T_ANDTYPE: mode = S_MODE_AND; break;
-        case T_XORTYPE: mode = S_MODE_XOR; break;
         case T_ORTYPE: mode = S_MODE_OR; break;
         case T_SEGMENT: mode = S_MODE_TYPE; break;
     }
@@ -82,7 +81,7 @@ int bytes(TypeStructure* ts){
         int numtags = 0;
         while(cur != NULL){
             numtags += 8;
-            if(ts->mode == S_MODE_XOR){
+            if(ts->mode == S_MODE_OR){
                 int b = bytes(cur);
                 if(b > total){
                     total = b;
@@ -93,12 +92,8 @@ int bytes(TypeStructure* ts){
             }
             cur = cur->next;
         }
-        if(ts->mode == S_MODE_XOR){
-            // could log2 instead.
-            total += (numtags);
-        }
-        else if(ts->mode == S_MODE_OR){
-            // need a bit for each tag.
+        if(ts->mode == S_MODE_OR){
+            // could log2 space opt
             total += numtags;
         }
         return total;
@@ -195,7 +190,7 @@ int findoffsethelper(TypeStructure* ts, char* ident){
                 numtags += 8;
             int this = findoffsethelper(cur, ident);
             if(this == -1){
-                if((ts->mode != S_MODE_XOR) && cachedresult == 0){
+                if((ts->mode != S_MODE_OR) && cachedresult == 0){
                     sum += bytes(cur);
                 }
             }

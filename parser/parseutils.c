@@ -104,7 +104,6 @@ char* type(Token* p){
         case T_TYPEDEF: return "TYPEDEF";
         case T_ANDTYPE: return "ANDTYPE";
         case T_ORTYPE: return "ORTYPE";
-        case T_XORTYPE: return "XORTYPE";
         case T_TYPEVAL: return "TYPEVAL";
         case T_SEGMENT: return "SEGMENT";
         case T_CONSTRUCTOR: return "CONSTRUCTOR";

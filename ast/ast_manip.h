@@ -16,5 +16,6 @@ Type* arr_subtype(Type* arr, Program* p);
 char* clone(char* str);
 void add_stmt_func(Statement* stmt, Function* func, Scope* scope);
 int verify_types(Type* want, ...);
+int check_valid_access(Variable* var, char* member, ScopeMetadata* meta);
 
 #endif

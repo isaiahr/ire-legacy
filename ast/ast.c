@@ -232,6 +232,7 @@ void process_function(Token* xd, Function* func, Program* prog, State* state){
         Variable* var = malloc(sizeof(struct Variable));
         var->inited = 0;
         var->type = t;
+        var->meta = NULL;
         var->identifier = ident;
         func->params = add_varlist(func->params, var);
     }

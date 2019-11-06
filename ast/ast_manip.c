@@ -74,6 +74,7 @@ Variable* mkvar(Function* func, Scope* scope, Type* t){
     Variable* var = malloc(sizeof(struct Variable));
     var->inited = 0;
     var->identifier = NULL;
+    var->meta = NULL;
     var->type = t;
     if(scope == NULL)
         func->vars = add_varlist(func->vars, var);
@@ -85,6 +86,7 @@ Variable* mkvar(Function* func, Scope* scope, Type* t){
 // make void variable.
 Variable* voidval(Function* func, Scope* scope, Type* t){
     Variable* var = malloc(sizeof(struct Variable));
+    var->meta = NULL;
     var->inited = 0;
     var->identifier = NULL;
     var->type = t;
@@ -105,6 +107,7 @@ Variable* mknvar(Function* func, Scope* scope, char* str, Type* t){
     Variable* data = malloc(sizeof (struct Variable));
     data->inited = 0;
     data->type = t;
+    data->meta = NULL;
     data->identifier = str;
     if(scope != NULL){
         scope->vars = add_varlist(scope->vars, data);
@@ -210,5 +213,57 @@ int verify_types(Type* want, ...){
     }
     va_end(args);
     return 0;
+}
+
+// 1 = valid and exists.
+// 2 = non existent
+// 3 = invalid and exists.
+int check_valid_access_helper(Variable* var, TypeStructure* ts, char* member, TagList* tags){
+    if(ts->sub == NULL){
+        if(strcmp(ts->identifier, member) == 0){
+            return 1;
+        }
+        return 2;
+    }
+    TypeStructure* cur = ts->sub;
+    while(cur != NULL){
+        int res = check_valid_access_helper(var, cur, member, tags);
+        if(res == 3){
+            return 3;
+        }
+        if(res == 2){
+            cur = cur->next;
+            continue;
+        }
+        // res = 1. check if tag is guarded
+        if(ts->mode == S_MODE_AND){
+           // ok.
+            return 1;
+        }
+        // S_MODE_OR
+        TagList* tag = tags;
+        while(tag != NULL){
+            if(var == tag->var){
+                if(strcmp(tag->tag, cur->segment) == 0){
+                    // NOTE: does not check validity. (ok for now)
+                    return 1;
+                }
+            }
+            tag = tag->next;
+        }
+        cur = cur->next;
+    }
+    return 2;
+}
+
+int check_valid_access(Variable* var, char* member, ScopeMetadata* meta){
+    int res;
+    if(meta == NULL){
+        res = check_valid_access_helper(var, var->type->ts, member, NULL);
+    }
+    else{
+        res = check_valid_access_helper(var, var->type->ts, member, meta->tags);
+    }
+    return res == 1;
 }
 
