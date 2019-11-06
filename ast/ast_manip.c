@@ -256,14 +256,30 @@ int check_valid_access_helper(Variable* var, TypeStructure* ts, char* member, Ta
     return 2;
 }
 
-int check_valid_access(Variable* var, char* member, ScopeMetadata* meta){
-    int res;
-    if(meta == NULL){
-        res = check_valid_access_helper(var, var->type->ts, member, NULL);
+int check_valid_access(Variable* var, char* member, Scope* scope){
+    // consolidate scope & parent scope metadata tags.
+    TagList* tl = NULL;
+    Scope* cur = scope;
+    while(cur != NULL){
+        if(cur->meta != NULL && cur->meta->tags != NULL){
+            TagList* cur2 = cur->meta->tags;
+            while(cur2 != NULL){
+                TagList* new = malloc(sizeof(struct TagList));
+                new->tag = cur2->tag;
+                new->var = cur2->var;
+                new->valid = cur2->valid;
+                new->next = NULL;
+                if(tl == NULL){
+                    tl = new;
+                }
+                else{
+                    tl->next = new;
+                }
+                cur2 = cur2->next;
+            }
+        }
+        cur = cur->parent;
     }
-    else{
-        res = check_valid_access_helper(var, var->type->ts, member, meta->tags);
-    }
-    return res == 1;
+    return check_valid_access_helper(var, var->type->ts, member, tl) == 1;
 }
 

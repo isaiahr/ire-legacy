@@ -123,6 +123,9 @@ void p_return(Token* t, Function* func, Scope* scope, Program* prog, State* stat
     }
     else{
         ret->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
+        if(ret->var == NULL){
+            return;
+        }
         if(ret->var->type != func->retval){
             char* msg = format("returning %s from function of type %s", ret->var->type->identifier, func->retval->identifier);
             add_error(state, INCOMPATTYPE, t->line, msg);
@@ -321,6 +324,9 @@ Variable* p_arith(Token* t, Function* func, Scope* scope, Program* prog, State* 
     arith->left = process_stmt(&t->subtokens[0], func, scope, prog, state);
     arith->right = process_stmt(&t->subtokens[1], func, scope, prog, state);
     arith->operation = t->lnt;
+    if(arith->left == NULL || arith->right == NULL){
+        return NULL;
+    }
     int err = 0;
     char* op;
     Type* t_int = proc_type("Int", prog);
@@ -500,7 +506,7 @@ Variable* p_accessor(Token* t, Function* func, Scope* scope, Program* prog, Stat
             }
             typedacc->to = mkvar(func, scope, ty01);
             typedacc->offsetptr = findoffset(cur->type, ident);
-            if(!check_valid_access(cur, ident, scope == NULL ? NULL : scope->meta)){
+            if(!check_valid_access(cur, ident, scope)){
                 char* msg = format("unsafe access of member %s of type %s", ident, cur->type->identifier);
                 add_error(state, FRAUDULENTACCESS, t->line, msg);
                 return NULL;
@@ -553,7 +559,7 @@ void p_setmember(Token* t, Function* func, Scope* scope, Program* prog, State* s
         add_error(state, MEMBERNOTFOUND, t->line, msg);
         return;
     }
-    if(!check_valid_access(setm->dest, t->subtokens[2].str, scope == NULL ? NULL : scope->meta)){
+    if(!check_valid_access(setm->dest, t->subtokens[2].str, scope)){
         char* msg = format("unsafe setting member %s of type %s", t->subtokens[2].str, setm->dest->type->identifier);
         add_error(state, FRAUDULENTACCESS, t->line, msg);
         return;

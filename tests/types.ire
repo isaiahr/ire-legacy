@@ -10,9 +10,13 @@ type P2d { Int x & Int y }
 
 void main(){
     Point p = new Point HasY(y=3) & (time=2) & Country(country="Canada") & Continent(continent="North America")
-    if(p:Continent){
-        print(p.continent)
-        print("\n")
+    if(true & p:Continent){
+        Byte[] x = p.continent
+        // test nested scope work
+        if(true){
+            print(p.continent)
+            print("\n")
+        }
     }
     if(p:HasX){
         exit(0)

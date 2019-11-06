@@ -31,7 +31,7 @@ char* geterrorstr(int type){
         case DUPMEMBERTYPE:
             return "Duplicate member of type";
         case FRAUDULENTACCESS:
-            return "Fraudulent access of type";
+            return "Fraudulent access of type member";
         default:
             break;
     }
