@@ -5,6 +5,7 @@
 #include<sys/types.h>
 #include"parser/lexer.h"
 #include"parser/parser.h"
+#include"parser/parseutils.h"
 #include"compiler.h"
 #include"codegen/writer.h"
 #include"common.h"
@@ -28,11 +29,9 @@ Token* join(Token* first, Token* second){
     if(second == NULL){
         return first;
     }
-    int orig = first->subtoken_count;
-    first->subtoken_count = first->subtoken_count + second->subtoken_count;
-    first->subtokens = realloc(first->subtokens, first->subtoken_count*sizeof(struct Token));
-    for(int i = 0; i < second->subtoken_count; i++){
-        memcpy(&first->subtokens[orig+i], &second->subtokens[i], sizeof(struct Token));
+    
+    for(int i = 0; i < subtoken_count(second); i++){
+        adopt_child_token(first, subtoken(second, i));
     }
     return first;
 }

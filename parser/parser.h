@@ -59,11 +59,14 @@ typedef struct Token{
     char* str;
     long lnt;
     char chr;
-    int subtoken_count;
     int line;
-    struct Token* subtokens;
-    
+    struct TokenList* subtokens;
 } Token;
+
+typedef struct TokenList{
+    Token* token;
+    struct TokenList* next;
+} TokenList;
 
 Token* parse_program(Lextoken* p, State* state);
 Lextoken* parse_body(Lextoken* p, Token* t, State* state);

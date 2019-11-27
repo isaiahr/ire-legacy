@@ -20,7 +20,6 @@ Lextoken* next(Lextoken* p){
 Token* init_token(int line){
     Token* t = malloc(sizeof(struct Token));
     t->str = NULL;
-    t->subtoken_count = 0;
     t->lnt = 0;
     t->line = line;
     t->subtokens = NULL;
@@ -28,34 +27,108 @@ Token* init_token(int line){
     return t;
 }
 
-Token* realloc_token(Token* ptr, int len){
-    Token* pt = realloc(ptr, len*sizeof(struct Token));
-    pt[len-1].str = NULL;
-    pt[len-1].subtoken_count = 0;
-    pt[len-1].lnt = 0;
-    pt[len-1].line = ptr->line;
-    pt[len-1].subtokens = NULL;
-    pt[len-1].chr = 0;
-    return pt;
+Token* allocate_child_token(Token* t, int line){
+    Token* child = init_token(line);
+    TokenList* node = malloc(sizeof(struct TokenList));
+    node->next = NULL;
+    node->token = child;
+    if(t->subtokens == NULL){
+        t->subtokens = node;
+        return child;
+    }
+    TokenList* c = t->subtokens;
+    while(c->next != NULL){
+        c = c->next;
+    }
+    c->next = node;
+    return child;
+}
+
+/**
+ * this function makes the adoptedchild param a child of gaurdian.
+ * since child is already existing and not "birthed" from allocate_child_token, 
+ * we are calling this "adopt" instead. 
+ * 
+ */
+void adopt_child_token(Token* guardian, Token* adoptedchild){
+    TokenList* new = malloc(sizeof(struct TokenList));
+    new->token = adoptedchild;
+    new->next = NULL;
+    if(guardian->subtokens == NULL){
+        guardian->subtokens = new;
+        return;
+    }
+    TokenList* u = guardian->subtokens;
+    while(u->next != NULL){
+        u = u->next;
+    }
+    u->next = new;
+}
+
+int subtoken_count(Token* t){
+    TokenList* c = t->subtokens;
+    int count = 0;
+    while(c != NULL){
+        count = count + 1;
+        c = c->next;
+    }
+    return count;
 }
 
 void destroy_token(Token* ptr){
-    return; // TODO make this work in the future.
-    // note: dont recurse, functions already should do that
-    if(ptr == NULL){
-        return;
-    }
-    for(int i = 0; (i*sizeof(struct Token)) < sizeof(ptr); i++){
-        if(ptr[i].str != NULL){
-            free(ptr[i].str);
-            ptr[i].str = NULL;
-        }
-        if(ptr[i].subtokens != NULL){
-            destroy_token(ptr[i].subtokens);
-            ptr[i].subtokens = NULL;
-        }
+    if(ptr->subtokens != NULL){
+        destroy_children(ptr);
     }
     free(ptr);
+}
+
+void destroy_children(Token* parent){
+    TokenList* c = parent->subtokens;
+    while(c != NULL){
+        destroy_token(c->token);
+        TokenList* n = c->next;
+        free(c);
+        c = n;
+    }
+    parent->subtokens = NULL;
+}
+
+/**
+ * destroys the newest child node. this is done because we eagerly allocate a new token
+ * when a parser can return n tokens.
+ */
+void destroy_youngest(Token* parent){
+    TokenList* c = parent->subtokens;
+    if(c == NULL){
+        return;
+    }
+    if(c->next == NULL){
+        destroy_token(c->token);
+        free(c);
+        parent->subtokens = NULL;
+        return;
+    }
+    while(c->next->next != NULL){
+        c = c->next;
+    }
+    destroy_token(c->next->token);
+    free(c->next);
+    c->next = NULL;
+}
+
+Token* subtoken(Token* parent, int index){
+    TokenList* c = parent->subtokens;
+    if(c == NULL){
+        return NULL;
+    }
+    while(index != 0){
+        if(c->next == NULL){
+            return NULL;
+        }
+        c = c->next;
+        index = index - 1;
+    }
+    return c->token;
 }
 
 void print_tree(Token* p, int lvl){
@@ -67,16 +140,19 @@ void print_tree(Token* p, int lvl){
     if(p->type == T_ARITH){
         printf("%s%s <%c>\n", lvlstr, type(p), sym(p->lnt));
     }
+    else if(p->type == T_INT){
+        printf("%s%s %ld\n", lvlstr, type(p), p->lnt);
+    }
     else if(p->str == NULL){
         printf("%s%s\n", lvlstr, type(p));
     } else {
         printf("%s%s [%s]\n", lvlstr, type(p), p->str);
     }
     free(lvlstr);
-    if(p->subtokens != NULL){
-        for(int i = 0; i < p->subtoken_count; i++){
-            print_tree(&p->subtokens[i], lvl+4);
-        }
+    TokenList* t = p->subtokens;
+    while(t != NULL){
+        print_tree(t->token, lvl+4);
+        t = t->next;
     }
 }
 

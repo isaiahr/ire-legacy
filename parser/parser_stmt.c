@@ -42,16 +42,13 @@ Lextoken* parse_type_void(Lextoken* p, Token* e){
 
 // varinit = type, identifier, "=", expression
 Lextoken* parse_varinit(Lextoken* p, Token* e){
-    e->subtokens = init_token(p->line);
-    e->subtokens = realloc_token(e->subtokens, 2);
-    e->subtoken_count = 2;
-    Lextoken* l = parse_type(p, e->subtokens);
+    Token* child1 = allocate_child_token(e, p->line);
+    Token* child2 = allocate_child_token(e, p->line);
+    Lextoken* l = parse_type(p, child1);
     if(match(l, IDENTIFIER) && match(next(l), EQUALS)){
-        Lextoken* l2 = parse_expression(next(next(l)), &e->subtokens[1]);
+        Lextoken* l2 = parse_expression(next(next(l)), child2);
         if(l2 == NULL){
-            destroy_token(e->subtokens);
-            e->subtoken_count = 0;
-            e->subtokens = NULL;
+            destroy_children(e);
             return NULL;
         }
         e->str = malloc(strlen(l->str)+1);
@@ -59,9 +56,7 @@ Lextoken* parse_varinit(Lextoken* p, Token* e){
         e->type = T_VARINIT;
         return l2;
     }
-    e->subtoken_count = 0;
-    destroy_token(e->subtokens);
-    e->subtokens = NULL;
+    destroy_children(e);
     return NULL;
 }
 
@@ -70,53 +65,47 @@ Lextoken* parse_varinit(Lextoken* p, Token* e){
 Lextoken* parse_assignment(Lextoken* p, Token* e){
     int i = match(p, IDENTIFIER);
     i = i && match(next(p), EQUALS);
-    e->subtokens = init_token(p->line);
-    e->subtoken_count = 1;
-    Lextoken* l = parse_expression(next(next(p)), e->subtokens);
+    Token* child = allocate_child_token(e, p->line);
+    Lextoken* l = parse_expression(next(next(p)), child);
     if(i && l != NULL){
         e->type = T_ASSIGNMENT;
         e->str = malloc(strlen(p->str)+1);
         memcpy(e->str, p->str, strlen(p->str)+1);
         return l;
     }
-    destroy_token(e->subtokens);
-    e->subtokens = NULL;
+    destroy_children(e);
     return NULL;
 }
 
 // arrset = arrind, "=", expression
 Lextoken* parse_arrset(Lextoken* p, Token* e){
-    e->subtokens = init_token(p->line);
-    e->subtokens = realloc_token(e->subtokens, 2);
-    e->subtoken_count = 2;
-    Lextoken* a = parse_arrind(p, e->subtokens);
+    Token* child1 = allocate_child_token(e, p->line);
+    Token* child2 = allocate_child_token(e, p->line);
+    Lextoken* a = parse_arrind(p, child1);
     if(match(a, EQUALS)){
-        Lextoken* p = parse_expression(next(a), &e->subtokens[1]);
+        Lextoken* p = parse_expression(next(a), child2);
         if(p != NULL){
             e->type = T_INDSET;
             return p;
         }
     }
-    destroy_token(e->subtokens);
-    e->subtoken_count = 0;
+    destroy_children(e);
     return NULL;
 }
 
 // addeq = expression, "+=", expression
 Lextoken* parse_addeq(Lextoken* p, Token* e){
-    e->subtokens = init_token(p->line);
-    e->subtokens = realloc_token(e->subtokens, 2);
-    e->subtoken_count = 2;
-    Lextoken* a = parse_expression(p, e->subtokens);
+    Token* child1 = allocate_child_token(e, p->line);
+    Token* child2 = allocate_child_token(e, p->line);
+    Lextoken* a = parse_expression(p, child1);
     if(match(a, ADDEQ)){
-        Lextoken* p = parse_expression(next(a), &e->subtokens[1]);
+        Lextoken* p = parse_expression(next(a), child2);
         if(p != NULL){
             e->type = T_ADDEQ;
             return p;
         }
     }
-    destroy_token(e->subtokens);
-    e->subtoken_count = 0;
+    destroy_children(e);
     return NULL;
 }
 
@@ -125,15 +114,12 @@ Lextoken* parse_return(Lextoken* p, Token* e){
     if(!match(p, RETURN)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
-    e->subtoken_count = 1;
+    Token* child = allocate_child_token(e, p->line);
     Lextoken* k = next(p);
-    Lextoken* a = parse_expression(k, e->subtokens);
+    Lextoken* a = parse_expression(k, child);
     if(a == NULL){
         // empty return; valid in void functions.
-        destroy_token(e->subtokens);
-        e->subtoken_count = 0;
-        e->subtokens = NULL;
+        destroy_children(e);
         e->type = T_RETURN;
         return k;
     }
@@ -144,43 +130,44 @@ Lextoken* parse_return(Lextoken* p, Token* e){
 
 // setmember = accessor = expr
 Lextoken* parse_setmember(Lextoken* p, Token* e){
-    e->subtokens = init_token(p->line);
-    p = parse_accessor(p, e->subtokens);
+    Token* child = allocate_child_token(e, p->line);
+    p = parse_accessor(p, child);
     if(p == NULL || (!match(p, EQUALS))){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtokens = realloc_token(e->subtokens, 2);
-    p = parse_expression(next(p), &e->subtokens[1]);
+    Token* child2 = allocate_child_token(e, p->line);
+    p = parse_expression(next(p), child2);
     if(p == NULL){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtoken_count = 3;
-    e->subtokens = realloc_token(e->subtokens, 3);
+    Token* child3 = allocate_child_token(e, p->line);
     
     // weird hack to split apart the accessor, to make it easy for semantic to proccess.
     int ind = 0;
     int lastdot = -1;
-    while(e->subtokens[0].str[ind] != 0){
-        if(e->subtokens[0].str[ind] == '.')
+    while(child->str[ind] != 0){
+        if(child->str[ind] == '.')
             lastdot = ind;
         ind += 1;
     }
     if(lastdot == -1){
         // corner case: one level of nesting. ("a.b")
         // "lift" the accessor subtoken onto setmember subtoken, to remove accessor.
-        e->subtokens[2].type = T_MEMBERIDENT;
-        e->subtokens[2].str = e->subtokens[0].str;
+        child3->type = T_MEMBERIDENT;
+        child3->str = child->str;
         e->type = T_SETMEMBER;
-        memcpy(e->subtokens, e->subtokens[0].subtokens, sizeof(struct Token));
+        
+        e->subtokens = child->subtokens;
+        // TODO this probably won't work?
+        // set child3 since its only supposed to overwrite first 2
+        //memcpy(e->subtokens, e->subtokens[0].subtokens, sizeof(struct Token));
         return p;
     }
-    e->subtokens[0].str[lastdot] = 0;
-    e->subtokens[2].type = T_MEMBERIDENT;
-    e->subtokens[2].str = &e->subtokens[0].str[lastdot+1];
+    child->str[lastdot] = 0;
+    child3->type = T_MEMBERIDENT;
+    child3->str = &child->str[lastdot+1];
     e->type = T_SETMEMBER;
     return p;
 }
@@ -190,20 +177,19 @@ Lextoken* parse_if(Lextoken* p, Token* e, State* state){
     if(!match(p, IF)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
-    Lextoken* a = parse_expression(next(p), &e->subtokens[0]);
+    Token* child1 = allocate_child_token(e, p->line);
+    Lextoken* a = parse_expression(next(p), child1);
     if(a == NULL || !match(a, LEFT_CRPAREN)){
-        destroy_token(e->subtokens);
+        destroy_children(e);
         return NULL;
     }
-    e->subtokens = realloc_token(e->subtokens, 2);
-    Lextoken* b = parse_body(next(a), &e->subtokens[1], state);
+    Token* child2 = allocate_child_token(e, p->line);
+    Lextoken* b = parse_body(next(a), child2, state);
     if(!match(b, RIGHT_CRPAREN)){
-        destroy_token(e->subtokens);
+        destroy_children(e);
         return NULL;
     }
     e->type = T_IF;
-    e->subtoken_count = 2;
     return next(b);
 }
 
@@ -213,20 +199,19 @@ Lextoken* parse_elseif(Lextoken* p, Token* e, State* state){
         return NULL;
     }
     p = next(p);
-    e->subtokens = init_token(p->line);
-    Lextoken* a = parse_expression(next(p), &e->subtokens[0]);
+    Token* child1 = allocate_child_token(e, p->line);
+    Lextoken* a = parse_expression(next(p), child1);
     if(a == NULL || !match(a, LEFT_CRPAREN)){
-        destroy_token(e->subtokens);
+        destroy_children(e);
         return NULL;
     }
-    e->subtokens = realloc_token(e->subtokens, 2);
-    Lextoken* b = parse_body(next(a), &e->subtokens[1], state);
+    Token* child2 = allocate_child_token(e, p->line);
+    Lextoken* b = parse_body(next(a), child2, state);
     if(!match(b, RIGHT_CRPAREN)){
-        destroy_token(e->subtokens);
+        destroy_children(e);
         return NULL;
     }
     e->type = T_ELSEIF;
-    e->subtoken_count = 2;
     return next(b);
 }
 
@@ -238,31 +223,30 @@ Lextoken* parse_else(Lextoken* p, Token* e, State* state){
     if(!match(next(p), LEFT_CRPAREN)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
-    Lextoken* b = parse_body(next(next(p)), &e->subtokens[0], state);
+    Token* child = allocate_child_token(e, p->line);
+    Lextoken* b = parse_body(next(next(p)), child, state);
     if(!match(b, RIGHT_CRPAREN)){
-        destroy_token(e->subtokens);
+        destroy_children(e);
         return NULL;
     }
     e->type = T_ELSE;
-    e->subtoken_count = 1;
     return next(b);
 }
 
 // ifblk = if, { elseif, }, [else]
 Lextoken* parse_ifblk(Lextoken* p, Token* t, State* state){
-    t->subtokens = init_token(p->line);
-    Lextoken* l = parse_if(p, t->subtokens, state);
+    Token* child1 = allocate_child_token(t, p->line);
+    Lextoken* l = parse_if(p, child1, state);
     Lextoken* o_l = l;
     if(l == NULL){
-        destroy_token(t->subtokens);
+        destroy_children(t);
         return NULL;
     }
     while(match(l, TERM)){
         l = l->next;
     }
-    t->subtokens = realloc_token(t->subtokens, 2);
-    Lextoken* l1 = parse_elseif(l, &t->subtokens[1], state);
+    Token* child2 = allocate_child_token(t, p->line);
+    Lextoken* l1 = parse_elseif(l, child2, state);
     // old l1
     Lextoken* o_l1 = l1;
     while(match(l1, TERM)){
@@ -273,26 +257,26 @@ Lextoken* parse_ifblk(Lextoken* p, Token* t, State* state){
     Lextoken* o_o_l1;
     while(l1 != NULL){
         l = l1;
-        t->subtokens = realloc_token(t->subtokens, i+1);
+        child2 = allocate_child_token(t, l1->line);
         o_o_l1 = o_l1;
-        l1 = parse_elseif(l, &t->subtokens[i], state);
+        l1 = parse_elseif(l, child2, state);
         o_l1 = l1;
         while(match(l1, TERM)){
             l1 = l1->next;
         }
+        
         i = i + 1;
     }
-    Lextoken* l2 = parse_else(l, &t->subtokens[i-1], state);
+    Lextoken* l2 = parse_else(l, child2, state);
     t->type = T_IFBLK;
     if(l2 == NULL){
-        t->subtoken_count = i-1;
+        destroy_youngest(t);
         if(i == 2)// if
             return o_l;
         // elseif.
         return o_o_l1;
     }
     else {
-        t->subtoken_count = i;
         return l2;
     }
 }

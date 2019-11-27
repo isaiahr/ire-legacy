@@ -9,7 +9,6 @@
 // typedef = "type",  identifier, "{", subtype, "}"
 Lextoken* parse_typedef(Lextoken* p, Token* e, State* state){
     // clear from possible parse_function
-    e->subtoken_count = 0;
     if(!match(p, TYPE)){
         return NULL;
     }
@@ -20,14 +19,12 @@ Lextoken* parse_typedef(Lextoken* p, Token* e, State* state){
         return NULL;
     }
     e->type = T_TYPEDEF;
-    e->subtokens = init_token(p->line);
-    Lextoken* a = parse_subtype(next(next(next(p))), e->subtokens);
+    Token* child = allocate_child_token(e, p->line);
+    Lextoken* a = parse_subtype(next(next(next(p))), child);
     if(a == NULL || !match(a, RIGHT_CRPAREN)){
-        destroy_token(e);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtoken_count = 1;
     e->str = malloc(strlen(next(p)->str)+1);
     memcpy(e->str, next(p)->str, strlen(next(p)->str)+1);
     return next(a);
@@ -55,21 +52,18 @@ Lextoken* parse_subtype_flags(Lextoken* p, Token* e, int FLAGS){
 
 // andtype = subtype, "&", subtype, { "&", subtype} 
 Lextoken* parse_andtype_flags(Lextoken* p, Token* e, int FLAGS){
-    e->subtokens = init_token(p->line);
-    Lextoken* l = parse_subtype_flags(p, e->subtokens, FLAG_ANDTYPE);
+    Token* child = allocate_child_token(e, p->line);
+    Lextoken* l = parse_subtype_flags(p, child, FLAG_ANDTYPE);
     if(l == NULL){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtoken_count = 1;
     while(1){
         if(!match(l, AMPERSAND)){
             // possibly ok.
-            if(e->subtoken_count == 1){
+            if(subtoken_count(e) == 1){
                 // bad
-                e->subtokens = NULL;
-                e->subtoken_count = 0;
+                destroy_children(e);
                 return NULL;
             }
             // reached end.
@@ -77,15 +71,12 @@ Lextoken* parse_andtype_flags(Lextoken* p, Token* e, int FLAGS){
             return l;
         }
         // continue
-        e->subtokens = realloc_token(e->subtokens, e->subtoken_count+1);
-        e->subtoken_count += 1;
+        child = allocate_child_token(e, p->line);
         // not for left recursion, but will generate the wrong tree
-        l = parse_subtype_flags(next(l), &e->subtokens[e->subtoken_count-1], FLAG_ANDTYPE);
+        l = parse_subtype_flags(next(l), child, FLAG_ANDTYPE);
         if(l == NULL){
             // invalid
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
-            e->subtoken_count = 0;
+            destroy_children(e);
             return NULL;
         }
         
@@ -98,78 +89,61 @@ Lextoken* parse_ortype(Lextoken* p, Token* e){
         return NULL;
     }
     p = next(p);
-    e->subtokens = init_token(p->line);
-    e->subtoken_count = 1;
+    Token* child = allocate_child_token(e, p->line);
     while(1){
-        if(e->subtoken_count > 1){
+        if(subtoken_count(e) > 1){
             if(!match(p, PIPE)){
                 if(match(p, RIGHT_PAREN)){
                     // good
                     e->type = T_ORTYPE;
-                    e->subtoken_count = e->subtoken_count-1;
+                    destroy_youngest(e);
                     return next(p);
                 } 
                 // bad
-                e->subtoken_count = 0;
-                destroy_token(e->subtokens);
-                e->subtokens = NULL;
+                destroy_children(e);
                 return NULL;
             }
             p = next(p);
         }
         if(!(match(p, IDENTIFIER) && match(next(p), COLON))){
             // bad
-            e->subtoken_count = 0;
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            destroy_children(e);
             return NULL;
         }
         char* seg = p->str;
         if(match(next(next(p)), VOID)){
             p = next(next(next(p)));
             // ok
-            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
-            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
-            e->subtoken_count += 1;
-            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
+            child->str = malloc(strlen(seg)+1);
+            memcpy(child->str, seg, strlen(seg)+1);
         }
         else{
-            p = parse_subtype(next(next(p)), &e->subtokens[e->subtoken_count-1]);
+            p = parse_subtype(next(next(p)), child);
             if(p == NULL){
                 // "segment" ":" (invalid)
-                e->subtoken_count = 0;
-                destroy_token(e->subtokens);
-                e->subtokens = NULL;
+                destroy_children(e);
                 return NULL;
             }
-            e->subtokens[e->subtoken_count-1].str = malloc(strlen(seg)+1);
-            memcpy(e->subtokens[e->subtoken_count-1].str, seg, strlen(seg)+1);
-            e->subtoken_count += 1;
-            e->subtokens = realloc_token(e->subtokens, e->subtoken_count);
+            child->str = malloc(strlen(seg)+1);
+            memcpy(child->str, seg, strlen(seg)+1);
         }
+        child = allocate_child_token(e, p->line);
     }
 }
 
 
 // typeval = type, identifier
 Lextoken* parse_typeval(Lextoken* p, Token* e){
-    e->subtokens = init_token(p->line);
-    e->subtokens->subtokens = init_token(p->line);
-    Lextoken* l = parse_type(p, &e->subtokens->subtokens[0]);
+    Token* child = allocate_child_token(e, p->line);
+    Token* grandchild = allocate_child_token(child, p->line);
+    Lextoken* l = parse_type(p, grandchild);
     if(match(l, IDENTIFIER)){
         e->type = T_SEGMENT;
-        e->subtokens->type = T_TYPEVAL;
-        e->subtokens->str = malloc(strlen(l->str)+1);
-        e->subtokens->subtoken_count = 1;
-        e->subtoken_count = 1;
-        memcpy(e->subtokens->str, l->str, strlen(l->str)+1);
+        child->type = T_TYPEVAL;
+        child->str = malloc(strlen(l->str)+1);
+        memcpy(child->str, l->str, strlen(l->str)+1);
         return next(l); 
     }
-    e->subtokens->subtoken_count = 0;
-    e->subtokens->subtokens = NULL;
-    destroy_token(e->subtokens);
-    destroy_token(e);
-    e->subtoken_count = 0;
-    e->subtokens = NULL;
+    destroy_children(e);
     return NULL;
 }

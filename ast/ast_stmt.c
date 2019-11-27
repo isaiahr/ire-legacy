@@ -13,6 +13,7 @@
 #include"core/error.h"
 #include"ast_manip.h"
 #include"ast_types.h"
+#include"parser/parseutils.h"
 
 void p_assignment(Token* t, Function* func, Scope* scope, Program* prog, State* state);
 void p_varinit(Token* t, Function* func, Scope* scope, Program* prog, State* state);
@@ -67,7 +68,7 @@ void p_assignment(Token* t, Function* func, Scope* scope, Program* prog, State* 
     SETUP_VARS(Assignment, an, S_ASSIGNMENT);
     an->to = proc_var(t->str, scope, func);
     // resolve from into a var
-    an->from = process_stmt(t->subtokens, func, scope, prog, state);
+    an->from = process_stmt(subtoken(t, 0), func, scope, prog, state);
     if(an->to == NULL){
         add_error(state, UNDEFVAR, t->line, format("assigning to undeclared variable %s", t->str));
     }
@@ -89,14 +90,14 @@ void p_varinit(Token* t, Function* func, Scope* scope, Program* prog, State* sta
         add_error(state, DUPDEFVAR, t->line, msg);
     }
     SETUP_VARS(VarInit, v, S_VARINIT);
-    v->var = mknvar(func, scope, t->str, proc_type(t->subtokens[0].str, prog));
+    v->var = mknvar(func, scope, t->str, proc_type(subtoken(t, 0)->str, prog));
     add_stmt_func(stmt, func, scope);
     Assignment* an = malloc(sizeof(struct Assignment));
     Statement* stmt2 = malloc(sizeof(struct Statement));
     stmt2->stmt = an;
     stmt2->type = S_ASSIGNMENT;
     an->to = v->var;
-    an->from = process_stmt(&t->subtokens[1], func, scope, prog, state);
+    an->from = process_stmt(subtoken(t, 1), func, scope, prog, state);
     if(an->from == NULL){
         // probably be silent because it already errored out ???
         // keep for now to be consistent with p_assignment
@@ -114,7 +115,7 @@ void p_varinit(Token* t, Function* func, Scope* scope, Program* prog, State* sta
 
 void p_return(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Return, ret, S_RETURN);
-    if(t->subtoken_count == 0){
+    if(subtoken_count(t) == 0){
         ret->var = NULL;
         if(strcmp(func->retval->identifier, "void") != 0){
             char* msg = format("void return from function of type %s", func->retval->identifier);
@@ -122,7 +123,7 @@ void p_return(Token* t, Function* func, Scope* scope, Program* prog, State* stat
         }
     }
     else{
-        ret->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
+        ret->var = process_stmt(subtoken(t, 0), func, scope, prog, state);
         if(ret->var == NULL){
             return;
         }
@@ -186,8 +187,8 @@ Variable* p_funcall(Token* t, Function* func, Scope* scope, Program* prog, State
         return fn->to;
     }
     VarList* comp = fn->func->params;
-    for(int i = 0; i < t->subtoken_count; i++){
-        Variable* new = process_stmt(&t->subtokens[i], func, scope, prog, state);
+    for(int i = 0; i < subtoken_count(t); i++){
+        Variable* new = process_stmt(subtoken(t, i), func, scope, prog, state);
         if(!new){
             error = 1;
         }
@@ -260,8 +261,8 @@ Variable* p_funcall(Token* t, Function* func, Scope* scope, Program* prog, State
 
 Variable* p_indget(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Index, in, S_INDEX);
-    in->arr = process_stmt(&t->subtokens[0], func, scope, prog, state);
-    in->ind = process_stmt(&t->subtokens[1], func, scope, prog, state);
+    in->arr = process_stmt(subtoken(t, 0), func, scope, prog, state);
+    in->ind = process_stmt(subtoken(t, 1), func, scope, prog, state);
     in->to = mkvar(func, scope, arr_subtype(in->arr->type, prog));
     add_stmt_func(mkinit(in->to), func, scope);
     add_stmt_func(stmt, func, scope);
@@ -270,22 +271,22 @@ Variable* p_indget(Token* t, Function* func, Scope* scope, Program* prog, State*
 
 void p_indset(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(IndexEquals, ie, S_INDEXEQUALS);
-    ie->arr = process_stmt(&t->subtokens[0].subtokens[0], func, scope, prog, state);
-    ie->ind = process_stmt(&t->subtokens[0].subtokens[1], func, scope, prog, state);
-    ie->eq = process_stmt(&t->subtokens[1], func, scope, prog, state);
+    ie->arr = process_stmt(subtoken(subtoken(t, 0), 0), func, scope, prog, state);
+    ie->ind = process_stmt(subtoken(subtoken(t, 0), 1), func, scope, prog, state);
+    ie->eq = process_stmt(subtoken(t, 1), func, scope, prog, state);
     add_stmt_func(stmt, func, scope);
 }
 
 void p_addeq(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(AddEquals, ae, S_ADDEQUALS); 
-    ae->var = process_stmt(&t->subtokens[0], func, scope, prog, state);
-    ae->delta = process_stmt(&t->subtokens[1], func, scope, prog, state);
+    ae->var = process_stmt(subtoken(t, 0), func, scope, prog, state);
+    ae->delta = process_stmt(subtoken(t, 1), func, scope, prog, state);
     add_stmt_func(stmt, func, scope);
 }
 
 Variable* p_cardinality(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Cardinality, card, S_CARDINALITY);
-    card->from = process_stmt(t->subtokens, func, scope, prog, state);
+    card->from = process_stmt(subtoken(t, 0), func, scope, prog, state);
     // TODO un hardcode type here
     card->to = mkvar(func, scope, prog->types->type);
     add_stmt_func(mkinit(card->to), func, scope);
@@ -295,8 +296,8 @@ Variable* p_cardinality(Token* t, Function* func, Scope* scope, Program* prog, S
 
 Variable* p_newarr(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(NewArray, new, S_NEWARRAY);
-    new->size = process_stmt(&t->subtokens[1], func, scope, prog, state);
-    new->to = mkvar(func, scope, proc_type(t->subtokens[0].str, prog));
+    new->size = process_stmt(subtoken(t, 1), func, scope, prog, state);
+    new->to = mkvar(func, scope, proc_type(subtoken(t, 0)->str, prog));
     add_stmt_func(mkinit(new->to), func, scope);
     add_stmt_func(stmt, func, scope);
     return new->to;
@@ -304,7 +305,7 @@ Variable* p_newarr(Token* t, Function* func, Scope* scope, Program* prog, State*
 
 Variable* p_invert(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Invert, inv, S_INVERT);
-    inv->from = process_stmt(&t->subtokens[0], func, scope, prog, state);
+    inv->from = process_stmt(subtoken(t, 0), func, scope, prog, state);
     inv->to = mkvar(func, scope, proc_type("Boolean", prog));
     if(inv->from == NULL){
         return NULL;
@@ -321,8 +322,8 @@ Variable* p_invert(Token* t, Function* func, Scope* scope, Program* prog, State*
 
 Variable* p_arith(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Arithmetic, arith, S_ARITHMETIC);
-    arith->left = process_stmt(&t->subtokens[0], func, scope, prog, state);
-    arith->right = process_stmt(&t->subtokens[1], func, scope, prog, state);
+    arith->left = process_stmt(subtoken(t, 0), func, scope, prog, state);
+    arith->right = process_stmt(subtoken(t, 1), func, scope, prog, state);
     arith->operation = t->lnt;
     if(arith->left == NULL || arith->right == NULL){
         return NULL;
@@ -446,19 +447,19 @@ Variable* p_arith(Token* t, Function* func, Scope* scope, Program* prog, State* 
 
 Variable* p_constructor(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Constructor, cons, S_CONSTRUCTOR);
-    cons->type = proc_type(t->subtokens->str, prog);
+    cons->type = proc_type(subtoken(t, 0)->str, prog);
     cons->to = mkvar(func, scope, cons->type);
     add_stmt_func(mkinit(cons->to), func, scope);
     add_stmt_func(stmt, func, scope);
     // now set each member.
-    for(int i6 = 1; i6 < t->subtoken_count; i6++){
-        Token* tsc = &t->subtokens[i6];
-        for(int io = 0; io < tsc->subtoken_count; io++){
+    for(int i6 = 1; i6 < subtoken_count(t); i6++){
+        Token* tsc = subtoken(t, i6);
+        for(int io = 0; io < subtoken_count(tsc); io++){
             // tsc is array of segconstructs.
             // now iterate through each constructassign
-            Token* consassign = &tsc->subtokens[io];
+            Token* consassign = subtoken(tsc, io);
             Setmember* setm = malloc(sizeof(struct Setmember));
-            setm->from = process_stmt(consassign->subtokens, func, scope, prog, state);
+            setm->from = process_stmt(subtoken(consassign, 0), func, scope, prog, state);
             setm->dest = cons->to;
             setm->offsetptr = findoffset(cons->type, consassign->str);
             Statement* stmt1 = malloc(sizeof(struct Statement));
@@ -484,7 +485,7 @@ Variable* p_accessor(Token* t, Function* func, Scope* scope, Program* prog, Stat
     int ind = 0;
     int init = 0;
     // proc first expr (ex "func(args)" then .something.something etc)
-    Variable* cur = process_stmt(t->subtokens, func, scope, prog, state);
+    Variable* cur = process_stmt(subtoken(t, 0), func, scope, prog, state);
     Variable* last;
     while(1){
         if(t->str[ind] == '.' || t->str[ind] == 0){
@@ -526,7 +527,7 @@ Variable* p_accessor(Token* t, Function* func, Scope* scope, Program* prog, Stat
 
 Variable* p_gettag(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(GetTag, gett, S_GETTAG);
-    gett->src = process_stmt(t->subtokens, func, scope, prog, state);
+    gett->src = process_stmt(subtoken(t, 0), func, scope, prog, state);
     if(gett->src == NULL){
         return NULL;
     }
@@ -551,20 +552,20 @@ Variable* p_gettag(Token* t, Function* func, Scope* scope, Program* prog, State*
 
 void p_setmember(Token* t, Function* func, Scope* scope, Program* prog, State* state){
     SETUP_VARS(Setmember, setm, S_SETMEMBER);
-    setm->dest = process_stmt(t->subtokens, func, scope, prog, state);
-    setm->from = process_stmt(&t->subtokens[1], func, scope, prog, state);
-    setm->offsetptr = findoffset(setm->dest->type, t->subtokens[2].str);
+    setm->dest = process_stmt(subtoken(t, 0), func, scope, prog, state);
+    setm->from = process_stmt(subtoken(t, 1), func, scope, prog, state);
+    setm->offsetptr = findoffset(setm->dest->type, subtoken(t, 2)->str);
     if(setm->offsetptr == -1){
-        char* msg = format("member %s of type %s not found", t->subtokens[2].str, setm->dest->type->identifier);
+        char* msg = format("member %s of type %s not found", subtoken(t, 2)->str, setm->dest->type->identifier);
         add_error(state, MEMBERNOTFOUND, t->line, msg);
         return;
     }
-    if(!check_valid_access(setm->dest, t->subtokens[2].str, scope)){
-        char* msg = format("unsafe setting member %s of type %s", t->subtokens[2].str, setm->dest->type->identifier);
+    if(!check_valid_access(setm->dest, subtoken(t, 2)->str, scope)){
+        char* msg = format("unsafe setting member %s of type %s", subtoken(t, 2)->str, setm->dest->type->identifier);
         add_error(state, FRAUDULENTACCESS, t->line, msg);
         return;
     }
-    Type* destty = findtype(setm->dest->type, t->subtokens[2].str);
+    Type* destty = findtype(setm->dest->type, subtoken(t, 2)->str);
     if(destty != setm->from->type){
         char* msg = format("incompatible types in member set %s = %s", destty->identifier, setm->from->type->identifier);
         add_error(state, INCOMPATTYPE, t->line, msg);
@@ -590,8 +591,8 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
     stmt->type = S_IF;
     IfStmt* prev = NULL;
     int check_meta = 0;
-    for(int i = 0; i < t->subtoken_count; i++){
-        Token* if0 = &t->subtokens[i];
+    for(int i = 0; i < subtoken_count(t); i++){
+        Token* if0 = subtoken(t, i);
         IfStmt* ifs = malloc(sizeof(struct IfStmt)); 
         if(i == 0){
             stmt->stmt = ifs;
@@ -602,13 +603,13 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
             ifs->cond->body = NULL;
             ifs->cond->offset = 0;
             ifs->cond->vars = NULL;
-            ifs->test = process_stmt(if0->subtokens, func, ifs->cond, prog, state);
+            ifs->test = process_stmt(subtoken(if0, 0), func, ifs->cond, prog, state);
             if(ifs->test == NULL){
                 return;// error on expr, should be outputted by other func.
             }
             if(ifs->test->type == NULL || ifs->test->type != proc_type("Boolean", prog)){
                 char* msg = format("%s", "ifstmt needs Boolean");
-                add_error(state, INCOMPATTYPE, if0->subtokens->line, msg);
+                add_error(state, INCOMPATTYPE, subtoken(if0, 0)->line, msg);
             }
             else{
                 check_meta = 1;
@@ -617,7 +618,7 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
         }
         ifs->truelbl = gen_lbl(state);
         ifs->endlbl = NULL;
-        if(i+1 == t->subtoken_count){
+        if(i+1 == subtoken_count(t)){
             // else.
             ifs->endlbl = gen_lbl(state);
             ifs->elsestmt = NULL;
@@ -639,13 +640,13 @@ void p_ifblk(Token* t, Function* func, Scope* scope, Program* prog, State* state
         check_meta = 0;
         Token* body = NULL;
         if(if0->type == T_ELSE){
-            body = &if0->subtokens[0];
+            body = subtoken(if0, 0);
         }
         else{
-            body = &if0->subtokens[1];
+            body = subtoken(if0, 1);
         }
-        for(int j = 0; j < body->subtoken_count; j++){
-            process_stmt(&body->subtokens[j], func, newscope, prog, state);
+        for(int j = 0; j < subtoken_count(body); j++){
+            process_stmt(subtoken(body, j), func, newscope, prog, state);
         }
         ifs->scope = newscope;
         prev = ifs;

@@ -50,7 +50,6 @@ Lextoken* parse_variable(Lextoken* p, Token* e){
     if(!i){
         return NULL;
     }
-    e->subtoken_count = 0;
     e->type = T_VARIABLE;
     e->str = malloc(strlen(p->str)+1);
     memcpy(e->str, p->str, strlen(p->str)+1);
@@ -72,32 +71,27 @@ Lextoken* parse_funcall(Lextoken* p, Token* e){
     e->type = T_FUNCALL;
     e->str = malloc(strlen(p->str) + 1);
     memcpy(e->str, p->str, strlen(p->str)+1);
-    e->subtokens = init_token(p->line);
-    Lextoken* l = parse_expression(next(next(p)), e->subtokens);
+    Token* child = allocate_child_token(e, p->line);
+    Lextoken* l = parse_expression(next(next(p)), child);
     if(l == NULL){
         i = i && match(next(next(p)), RIGHT_PAREN);
         if(i){
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            destroy_children(e);
             return next(next(next(p)));
         }
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         free(e->str);
         return NULL;
     }
     
-    e->subtoken_count = 1;
     i = 1;
     while(l != NULL){
         if(match(l, COMMA)){
-            e->subtokens = realloc_token(e->subtokens, (i+1));
-            e->subtoken_count = i+1;
-            l = parse_expression(next(l), &e->subtokens[i]);
+            Token* chil = allocate_child_token(e, l->line);
+            l = parse_expression(next(l), chil);
             if(l == NULL){
                 free(e->str);
-                destroy_token(e->subtokens);
-                e->subtokens = NULL;
+                destroy_children(e);
                 return NULL;
             }
         }
@@ -105,15 +99,13 @@ Lextoken* parse_funcall(Lextoken* p, Token* e){
             if(match(l, RIGHT_PAREN)){
                 return next(l);
             }
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            destroy_children(e);
             free(e->str);
             return NULL;
         }
         i += 1;
     }
-    destroy_token(e->subtokens);
-    e->subtokens = NULL;
+    destroy_children(e);
     free(e->str);
     return NULL; // not possible (?)
 }
@@ -128,38 +120,41 @@ Lextoken* parse_arrind(Lextoken* p, Token* e){
 // arrind = exprnoarrind "[", expression, "]", {"[", expression, "]" }
 // this _should_ be equivalent. 
 Lextoken* parse_arrind_flags(Lextoken* p, Token* e, int FLAGS){
-    // despite the name its left and right.
     Token* left = init_token(p->line);
-    left = realloc_token(left, 2);
+    Token* right = init_token(p->line);
     Lextoken* expr = parse_expression_flags(p, left, FLAG_ARRIND | FLAGS);
+    if(expr == NULL){
+        destroy_token(left);
+        destroy_token(right);
+        return NULL;
+    }
+    // a = "has at least one match"
     int a = 0;
     while(1){
         int j = match(expr, LEFT_SQPAREN);
         if((!a) && ((!j) || (expr == NULL))){
-            destroy_token(left);
+            destroy_children(e);
             return NULL;
         }
-        Lextoken* l = parse_expression(next(expr), &left[1]);
+        Lextoken* l = j ? parse_expression(next(expr), right) : NULL;
         if(j && (l != NULL) && match(l, RIGHT_SQPAREN)){
             a = 1;
-            e->subtoken_count = 2;
-            e->subtokens = left;
-            e->type = T_INDGET;
-            left = init_token(p->line);
-            left = realloc_token(left, 2);
-            left->subtokens = e->subtokens;
-            left->subtoken_count = 2;
-            left->type = T_INDGET;
+            Token* newl = init_token(p->line);
+            adopt_child_token(newl, left);
+            adopt_child_token(newl, right);
+            newl->type = T_INDGET;
+            left = newl;
             expr = next(l);
         }
         else{
             if (a) {
                 // good.
+                e->type = T_INDGET;
+                e->subtokens = left->subtokens;
+                e->line = left->line;
                 return expr;
             }
-            destroy_token(left);
-            e->subtoken_count = 0;
-            e->subtokens = NULL;
+            destroy_children(e);
             return NULL;
         }
     }
@@ -170,12 +165,11 @@ Lextoken* parse_card(Lextoken* p, Token* e){
     if(!match(p, DOUBLEPIPE)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
+    Token* child = allocate_child_token(e, p->line);
     e->type = T_CARDINALITY;
-    e->subtoken_count = 1;
-    Lextoken* a = parse_expression(next(p), e->subtokens);
+    Lextoken* a = parse_expression(next(p), child);
     if(a == NULL || !match(a, DOUBLEPIPE)){
-        destroy_token(e->subtokens);
+        destroy_children(e);
         return NULL;
     }
     return next(a);
@@ -186,21 +180,16 @@ Lextoken* parse_newarr(Lextoken* p, Token* e){
     if(!match(p, NEW)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
-    e->subtokens = realloc_token(e->subtokens, 2);
-    e->subtoken_count = 2;
-    Lextoken* l = parse_type(next(p), e->subtokens);
+    Token* c1 = allocate_child_token(e, p->line);
+    Token* c2 = allocate_child_token(e, p->line);
+    Lextoken* l = parse_type(next(p), c1);
     if(l == NULL || (!match(l, LEFT_SQPAREN))){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
-        e->subtoken_count = 0;
+        destroy_children(e);
         return NULL;
     }
-    Lextoken* l2 = parse_expression(next(l), &e->subtokens[1]);
+    Lextoken* l2 = parse_expression(next(l), c2);
     if(l2 == NULL || (!match(l2, RIGHT_SQPAREN))){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
-        e->subtoken_count = 0;
+        destroy_children(e);
         return NULL;
     }
     // good
@@ -213,15 +202,12 @@ Lextoken* parse_inv(Lextoken* p, Token* e){
     if(!match(p, EXCLAMATION)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
-    e->subtokens = realloc_token(e->subtokens, 1);
-    Lextoken* l = parse_expression(next(p), e->subtokens);
+    Token* child = allocate_child_token(e, p->line);
+    Lextoken* l = parse_expression(next(p), child);
     if(l == NULL){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtoken_count = 1;
     e->type = T_INVERT;
     return l;
 }
@@ -244,16 +230,14 @@ Lextoken* parse_accessor(Lextoken* p, Token* e){
 }
 
 Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
-    e->subtokens = init_token(p->line);
-    p = parse_expression_flags(p, e->subtokens, FLAGS | FLAG_ACCESSOR);
+    Token* child = allocate_child_token(e, p->line);
+    p = parse_expression_flags(p, child, FLAGS | FLAG_ACCESSOR);
     if(p == NULL){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
     if(!(match(p, DOT) && match(next(p), IDENTIFIER))){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
     e->str = malloc(strlen(next(p)->str)+1);
@@ -262,8 +246,7 @@ Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
     while(match(p, DOT)){
         if(!match(next(p), IDENTIFIER)){
             // bad
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            destroy_children(e);
             return NULL;
         }
         char* old = e->str;
@@ -274,7 +257,6 @@ Lextoken* parse_accessor_flags(Lextoken* p, Token* e, int FLAGS){
         p = next(next(p));
     }
     e->type = T_ACCESSOR;
-    e->subtoken_count = 1;
     return p;
 }
 
@@ -288,15 +270,13 @@ Lextoken* parse_gettag(Lextoken* p, Token* e){
 // it could be valid syntatically, but since it isnt ever valid semantically
 // we dont parse for it. (you can achieve the same thing by using brackets)
 Lextoken* parse_gettag_flags(Lextoken* p, Token* e, int FLAGS){
-    e->subtokens = init_token(p->line);
-    p = parse_expression_flags(p, e->subtokens, FLAGS | FLAG_GETTAG);
+    Token* child = allocate_child_token(e, p->line);
+    p = parse_expression_flags(p, child, FLAGS | FLAG_GETTAG);
     if(p == NULL || !match(p, COLON) || !match(next(p), IDENTIFIER)){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
     // ok.
-    e->subtoken_count = 1;
     e->str = malloc(strlen(next(p)->str) + 1);
     memcpy(e->str, next(p)->str, strlen(next(p)->str));
     e->str[strlen(next(p)->str)] = 0;
@@ -310,34 +290,30 @@ Lextoken* parse_constructor(Lextoken* p, Token* e){
     if(!match(p, NEW)){
         return NULL;
     }
-    e->subtokens = init_token(p->line);
-    p = parse_type(next(p), e->subtokens);
+    Token* child = allocate_child_token(e, p->line);
+    p = parse_type(next(p), child);
     if(p == NULL){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtokens = realloc_token(e->subtokens, 2);
-    p = parse_segconstruct(p, &e->subtokens[1]);
+    Token* ch2 = allocate_child_token(e, p->line);
+    p = parse_segconstruct(p, ch2);
     if(p == NULL){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
     int ind = 2;
     while(1){
         if(!match(p, AMPERSAND)){
             // ok.
-            e->subtoken_count = ind;
             e->type = T_CONSTRUCTOR;
             return p;
         }
-        e->subtokens = realloc_token(e->subtokens, ind+1);
-        p = parse_segconstruct(next(p), &e->subtokens[ind]);
+        Token* y = allocate_child_token(e, p->line);
+        p = parse_segconstruct(next(p), y);
         if(p == NULL){
             // "&", then not segconstruct. fail.
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            destroy_children(e);
             return NULL;
         }
         ind += 1;
@@ -382,40 +358,33 @@ Lextoken* parse_segconstruct(Lextoken* p, Token* e){
         return next(next(o));
     }
     o = next(o);
-    e->subtokens = init_token(o->line);
-    int ind = 0;
+    Token* child = allocate_child_token(e, o->line);
     while(1){
         if(!(match(o, IDENTIFIER) && match(next(o), EQUALS))){
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            destroy_children(e);
             return NULL;
         }
-        e->subtokens[ind].str = malloc(strlen(o->str)+1);
-        e->subtokens[ind].type = T_CONSTRUCTASSIGN;
-        memcpy(e->subtokens[ind].str, o->str, strlen(o->str)+1);
-        e->subtokens[ind].subtokens = init_token(o->line);
-        o = parse_expression(next(next(o)), e->subtokens[ind].subtokens);
+        child->str = malloc(strlen(o->str)+1);
+        child->type = T_CONSTRUCTASSIGN;
+        memcpy(child->str, o->str, strlen(o->str)+1);
+        Token* grandchild = allocate_child_token(child, o->line);
+        o = parse_expression(next(next(o)), grandchild);
         if(o == NULL){
             // invalid.
-            // NOTE. not destroying e->subtokens[x].subtokens.
-            destroy_token(e->subtokens);
-            e->subtokens = NULL;
+            // NOTE: previous note is wrong probably
+            destroy_children(e);
             return NULL;
         }
-        e->subtokens[ind].subtoken_count = 1;
         if(!match(o, COMMA)){
             break;
         }
-        ind += 1;
-        e->subtokens = realloc_token(e->subtokens, ind+1);
+        child = allocate_child_token(e, o->line);
         o = next(o);
     }
     if(!match(o, RIGHT_PAREN)){
-        destroy_token(e->subtokens);
-        e->subtokens = NULL;
+        destroy_children(e);
         return NULL;
     }
-    e->subtoken_count = ind+1;
     e->type = T_SEGCONSTRUCT;
     return next(o);
 }
@@ -442,7 +411,6 @@ Lextoken* parse_expression_flags(Lextoken* p, Token* e, int FLAGS){
     if((l = parse_newarr(p, e))){
         return l;
     }
-
     if((l = parse_inv(p, e))){
         return l;
     }

@@ -116,9 +116,9 @@ Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags){
     if(l == NULL){
         destroy_token(head->p);
         destroy_token(o);
-        free(head);
-        free(head->next);
         free(head->next->next);
+        free(head->next);
+        free(head);
         return NULL;
     }
     head->next->next->p = o;
@@ -175,15 +175,10 @@ Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags){
             if(ordermatches(order, cur->next->type)){
                 // replace this one.
                 Token* repl = init_token(cur->p->line);
-                repl->subtoken_count = 2;
-                repl->subtokens = init_token(cur->p->line);
-                repl->subtokens = realloc_token(repl->subtokens, 2);
+                adopt_child_token(repl, cur->p);
+                adopt_child_token(repl, cur->next->next->p);
                 repl->lnt = cur->next->type; // set operation
-                memcpy(repl->subtokens, cur->p, sizeof(struct Token));
-                memcpy(&repl->subtokens[1], cur->next->next->p, sizeof(struct Token));
                 repl->type = T_ARITH;
-                destroy_token(cur->p);
-                destroy_token(cur->next->next->p);
                 cur->p = repl;
                 OpExpr* destroy = cur->next;
                 cur->next = cur->next->next->next;
@@ -203,6 +198,5 @@ Lextoken* parse_arith_flags(Lextoken* p, Token* e, int flags){
     }
     // should be binary tree now.
     memcpy(e, head->p, sizeof(struct Token));
-    destroy_token(head->p);
     return l;
 }

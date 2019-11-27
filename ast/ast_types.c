@@ -10,6 +10,7 @@
 #include"core/error.h"
 #include"ast_manip.h"
 #include"ast_types.h"
+#include"parser/parseutils.h"
 
 char* duptypes_helper(TypeStructure* ts, List* l);
 int findoffsethelper(TypeStructure* ts, char* ident);
@@ -26,13 +27,13 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
     write->mode = mode;
     if(write->mode == S_MODE_TYPE){
         // src = ident, so type is src->subtoken
-        write->sbs = proc_type(src->subtokens->subtokens->str, prog);
-        write->identifier = clone(src->subtokens->str);
+        write->sbs = proc_type(subtoken(subtoken(src, 0), 0)->str, prog);
+        write->identifier = clone(subtoken(src, 0)->str);
         if(src->str != NULL){
             write->segment = clone(src->str);
         }
         if(write->sbs == NULL){
-            char* msg = format("unknown type %s", src->subtokens->str);
+            char* msg = format("unknown type %s", subtoken(src, 0)->str);
             add_error(state, UNDEFTYPE, src->line, msg);
         }
         return;
@@ -45,14 +46,14 @@ void write_structure(TypeStructure* write, Token* src, Program* prog, State* sta
     subcur->sbs = NULL;
     write->sub = subcur;
     TypeStructure* prev = NULL;
-    for(int i = 0; i < src->subtoken_count; i++){
+    for(int i = 0; i < subtoken_count(src); i++){
         subcur->sub = NULL; // for well-definedness, possibly overwritten.
-        write_structure(subcur, &src->subtokens[i], prog, state);
+        write_structure(subcur, subtoken(src, i), prog, state);
         if(write->mode == T_ANDTYPE){
             subcur->segment = NULL;
         }
         else{
-            subcur->segment = src->subtokens[i].str;
+            subcur->segment = subtoken(src, i)->str;
         }
         if(prev != NULL){
             prev->next = subcur;
